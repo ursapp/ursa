@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crédit d'impôt - URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="../css/variables.css" />
+  <link rel="stylesheet" href="../css/layout.css" />
+  <link rel="stylesheet" href="../css/sidebar.css" />
+  <link rel="stylesheet" href="../css/navbar.css" />
+  <style>
+    /* ============================================================
+       CI.CSS — propre à pages/ci.html
+       ============================================================ */
+
+    /* La saisie/création d'un bilan se fait désormais sur bilan.html
+       (voir "Nouveau bilan" ci-dessous) — ci.html ne garde que le récap. */
+
+    .ci_recap_actions {
+      display: flex;
+      gap: var(--space_2);
+      flex-wrap: wrap;
+    }
+
+    .ci_status_chip {
+      font-family: var(--font_mono);
+      font-size: var(--fs_xs);
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .ci_status_chip.depose { background: rgba(176, 141, 87, 0.15); color: var(--color_seal); }
+    .ci_status_chip.valide { background: rgba(60, 110, 104, 0.15); color: var(--color_teal); }
+    .ci_status_chip.rejete { background: rgba(161, 71, 63, 0.15); color: var(--color_danger); }
+
+    /* Colonne "Traitement" : valeur fixe "En cours" en attendant le
+       développement du suivi réel du traitement d'un bilan. */
+    .ci_traitement_chip {
+      font-family: var(--font_mono);
+      font-size: var(--fs_xs);
+      color: var(--text_secondary);
+      background: var(--color_paper_raised);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      padding: 2px 8px;
+    }
+
+    /* Section Statistiques : contenu à venir (données agrégées depuis un
+       fichier de stats Drive, mis à jour par bilan.html — à implémenter). */
+    .ci_placeholder {
+      color: var(--text_secondary);
+      font-style: italic;
+    }
+
+    /* ---------- Modale "Nouveau bilan" — reproduction de la modale
+       "Editer" de bilan.html (mêmes classes .bl_editer_*, préfixées
+       ci_creer_ ici), limitée aux champs d'identité nécessaires à la
+       création d'un bilan vierge. Le reste (fiscal, FI, FC...) se
+       saisit ensuite dans bilan.html. ---------- */
+    .ci_creer_grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: var(--space_3);
+    }
+    .ci_creer_grid label {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_1);
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+    }
+    .ci_creer_grid label input,
+    .ci_creer_grid label select {
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper);
+      color: var(--text_primary);
+    }
+    .ci_creer_grid label input:focus,
+    .ci_creer_grid label select:focus {
+      outline: 2px solid var(--color_teal_light);
+      outline-offset: 1px;
+    }
+    .ci_creer_grid [data-tn-only],
+    .ci_creer_grid [data-sa-only] { display: none; }
+    .ci_creer_grid.is_tunis [data-tn-only] { display: flex; }
+    .ci_creer_grid.is_siliana [data-sa-only] { display: flex; }
+    .ci_creer_refbil {
+      margin-top: var(--space_1);
+      font-size: var(--fs_xs);
+      font-family: var(--font_mono);
+      color: var(--text_secondary);
+    }
+    .ci_creer_sections {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space_3) var(--space_5);
+      margin-top: var(--space_4);
+      padding-top: var(--space_4);
+      border-top: 1px solid var(--border_soft);
+    }
+    .ci_creer_sections_label {
+      width: 100%;
+      font-size: var(--fs_xs);
+      font-family: var(--font_mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text_secondary);
+    }
+    .ci_creer_checkbox {
+      display: flex;
+      align-items: center;
+      gap: var(--space_1);
+      font-size: var(--fs_sm);
+      color: var(--text_primary);
+      cursor: pointer;
+    }
+    .ci_creer_checkbox input { cursor: pointer; }
+    .ci_creer_footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space_3);
+      padding: var(--space_4);
+      border-top: 1px solid var(--border_soft);
+    }
+  </style>
+  <script src="../js/session.js"></script>
+</head>
+<body data-nav-mode="toggle">
+
+  <div class="sidebar_overlay" id="sidebar_overlay"></div>
+
+  <header class="navbar">
+    <button type="button" class="hamburger_btn"><i class="bi bi-list"></i></button>
+    <div class="page_title_group">
+      <span class="page_eyebrow">CI · Crédit d'impôt</span>
+      <h1 class="page_title">Crédit d'impôt</h1>
+    </div>
+    <div class="navbar_actions">
+      <span class="navbar_breadcrumb">
+        <a href="../index.html">Accueil</a> <i class="bi bi-chevron-right"></i> Crédit d'impôt
+      </span>
+    </div>
+  </header>
+
+  <div class="app_shell">
+    <aside class="sidebar" id="sidebar_root">
+      <button type="button" class="sidebar_close_btn" aria-label="Fermer le menu">
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <nav class="sidebar_nav">
+        <a class="sidebar_module_link" href="../index.html"><i class="bi bi-house"></i> Accueil</a>
+        <div class="sidebar_divider"></div>
+        <div class="sidebar_group_label">Sur cette page</div>
+        <a class="sidebar_section_link is_active" href="#statistiques">Statistiques</a>
+        <a class="sidebar_section_link" href="#bilans_siliana">Bilans Siliana</a>
+        <a class="sidebar_section_link" href="#bilans_tunis">Bilans Tunis</a>
+
+        <div class="sidebar_divider"></div>
+
+        <div class="sidebar_group_label">Autres modules</div>
+        <a class="sidebar_module_link" href="dti.html"><i class="bi bi-building"></i> Droits de tirage individuels</a>
+        <a class="sidebar_module_link" href="dtc.html"><i class="bi bi-buildings"></i> Droits de tirage collectifs</a>
+        <a class="sidebar_module_link" href="pp.html"><i class="bi bi-mortarboard"></i> Promotion professionnelle</a>
+        <a class="sidebar_module_link" href="part.html"><i class="bi bi-diagram-3"></i> Partenaires</a>
+        <a class="sidebar_module_link" href="docs.html"><i class="bi bi-file-earmark-text"></i> Documents</a>
+      </nav>
+
+      <div class="sidebar_footer">
+        <span class="sidebar_footer_user"><span class="user_badge" id="sidebar_user_badge" title="Non connecté">--</span></span>
+        <span>CNFCPP © 2026</span>
+      </div>
+    </aside>
+
+    <main class="app_content">
+
+      <!-- Section Statistiques : à terme, alimentée par un fichier de
+           stats agrégées (mis à jour depuis chaque bilan via bilan.html).
+           Pour l'instant : emplacement réservé. Affichée en premier par défaut. -->
+      <section id="statistiques" class="panel">
+        <div class="panel_header"><h2><i class="bi bi-bar-chart-line"></i> Statistiques</h2></div>
+        <p class="ci_placeholder">À construire.</p>
+      </section>
+
+      <section id="bilans_siliana" class="panel" hidden>
+          <div class="panel_header">
+            <h2><i class="bi bi-geo-alt"></i> Bilans Siliana</h2>
+            <button type="button" class="btn_seal no_mobile" id="ci_btn_nouveau_sa"><i class="bi bi-plus-lg"></i> Nouveau bilan</button>
+          </div>
+
+          <table class="data_table" data-table="bilans_siliana">
+            <thead>
+              <tr>
+                <th>Entreprise</th>
+                <th>Exercice</th>
+                <th>Montant</th>
+                <th>Statut</th>
+                <th>Traitement</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="empty_state" data-empty="bilans_siliana" hidden>
+            <i class="bi bi-inbox"></i>
+            Aucun bilan enregistré pour Siliana.
+          </div>
+        </section>
+
+        <section id="bilans_tunis" class="panel" hidden>
+          <div class="panel_header">
+            <h2><i class="bi bi-geo-alt"></i> Bilans Tunis</h2>
+            <button type="button" class="btn_seal no_mobile" id="ci_btn_nouveau_tn"><i class="bi bi-plus-lg"></i> Nouveau bilan</button>
+          </div>
+
+          <table class="data_table" data-table="bilans_tunis">
+            <thead>
+              <tr>
+                <th>Entreprise</th>
+                <th>Exercice</th>
+                <th>Montant</th>
+                <th>Statut</th>
+                <th>Traitement</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="empty_state" data-empty="bilans_tunis" hidden>
+            <i class="bi bi-inbox"></i>
+            Aucun bilan enregistré pour Tunis.
+          </div>
+        </section>
+
+      <!-- ---------------- Modale "Nouveau bilan" ---------------- -->
+      <div class="modal_overlay" id="ci_modal_nouveau_bilan">
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3>Nouveau bilan — <span id="ci_creer_antenne_label">Siliana</span></h3>
+            <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <div class="ci_creer_grid" id="ci_creer_grid">
+              <label data-sa-only>Entreprise
+                <select id="ci_creer_entreprise_select"></select>
+              </label>
+              <label data-tn-only>Entreprise
+                <input type="text" id="ci_creer_entreprise" placeholder="Saisir le nom de l'entreprise" />
+              </label>
+              <label>Abréviation
+                <input type="text" id="ci_creer_abreviation" placeholder="Saisir l'abréviation" />
+              </label>
+              <label>Matricule
+                <input type="text" id="ci_creer_matricule" placeholder="Saisir le matricule" />
+              </label>
+              <label>Année bilan
+                <input type="number" id="ci_creer_annee" min="2000" max="2100" step="1" />
+              </label>
+              <label>Numéro bilan
+                <input type="text" id="ci_creer_numero" />
+                <span class="ci_creer_refbil" id="ci_creer_refbil">BPF/----/----/--</span>
+              </label>
+              <label>Avance
+                <input type="number" id="ci_creer_avance" min="0" step="0.001" />
+              </label>
+              <label>Base
+                <input type="number" id="ci_creer_base" min="0" step="0.001" />
+              </label>
+            </div>
+
+            <div class="ci_creer_sections">
+              <span class="ci_creer_sections_label">Sections du bilan</span>
+              <label class="ci_creer_checkbox">
+                <input type="checkbox" id="ci_creer_section_fi" checked /> Formation initiale
+              </label>
+              <label class="ci_creer_checkbox">
+                <input type="checkbox" id="ci_creer_section_resp" checked /> Responsable formation
+              </label>
+              <label class="ci_creer_checkbox">
+                <input type="checkbox" id="ci_creer_section_fc" checked /> Formation continue
+              </label>
+            </div>
+          </div>
+          <div class="ci_creer_footer">
+            <button type="button" class="btn_success" id="ci_creer_enregistrer"><i class="bi bi-check-lg"></i> Créer le bilan</button>
+          </div>
+        </div>
+      </div>
+
+      </main>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/format.js"></script>
+  <script src="../js/sidebar_toggle.js"></script>
+  <script src="../js/navbar_breadcrumb.js"></script>
+  <script src="../js/modal_forms.js"></script>
+  <script>
+    /* ============================================================
+       CI.JS
+       Un bilan = un fichier HTML unique dans le dossier Drive des bilans
+       CI (BILANS_CI_FOLDER_ID / listBilansCI() côté Code.gs), nommé
+       "#refbil_abbreviation.html" — même modèle que les classes FAD
+       (pp.html / class.html). Cette page n'affiche que le récap et
+       redirige vers bilan.html pour la saisie.
+       ============================================================ */
+
+    // clé de tableau -> antenne utilisée dans l'URL de bilan.html
+    const CI_TABLES = { bilans_siliana: "sa", bilans_tunis: "tn" };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      Object.keys(CI_TABLES).forEach((table) => loadTable(table));
+      renderUserBadge(document.getElementById("sidebar_user_badge"));
+      injecterBoutonDeconnexion(document.getElementById("sidebar_user_badge"));
+      initSectionToggle();
+      wireModaleNouveauBilan();
+    });
+
+    /* ---------------- Une seule section visible à la fois (voir dti.html) ---------------- */
+
+    function initSectionToggle() {
+      const links = document.querySelectorAll(".sidebar_section_link[href^='#']");
+      const sections = document.querySelectorAll("main.app_content > section.panel");
+
+      function showSection(id) {
+        sections.forEach((s) => { s.hidden = s.id !== id; });
+        links.forEach((l) => l.classList.toggle("is_active", l.getAttribute("href") === `#${id}`));
+      }
+
+      links.forEach((link) => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          const id = link.getAttribute("href").slice(1);
+          showSection(id);
+          history.replaceState(null, "", `#${id}`);
+        });
+      });
+
+      // Lancée depuis index.html (pas de hash, ou hash inconnu) -> Statistiques
+      // affichée. Lancée sur un lien de section précis (ex: #bilans_siliana)
+      // -> cette section est affichée, les autres masquées.
+      const id = window.location.hash.slice(1);
+      const initial = Array.from(sections).some((s) => s.id === id) ? id : "statistiques";
+      showSection(initial);
+    }
+
+    async function loadTable(table) {
+      const tbody = document.querySelector(`[data-table="${table}"] tbody`);
+      const emptyEl = document.querySelector(`[data-empty="${table}"]`);
+      if (!tbody) return;
+
+      tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr>`;
+      try {
+        const rows = await apiCall("listBilansCI", { antenne: CI_TABLES[table] });
+        renderRows(table, tbody, emptyEl, rows);
+      } catch (err) {
+        tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+      }
+    }
+
+    function renderRows(table, tbody, emptyEl, rows) {
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = "";
+        if (emptyEl) emptyEl.hidden = false;
+        return;
+      }
+      if (emptyEl) emptyEl.hidden = true;
+
+      const antenne = CI_TABLES[table];
+
+      tbody.innerHTML = rows.map((row) => {
+        const abreviation = extraireAbreviationDuNom(row.name);
+        return `
+        <tr>
+          <td>${abreviation || row.abreviation || row.entreprise || row.name || ""}</td>
+          <td>${row.exercice ?? ""}</td>
+          <td>${formatAmount(row.montant)}</td>
+          <td><span class="ci_status_chip ${row.statut ?? ""}">${row.statut ?? ""}</span></td>
+          <td><span class="ci_traitement_chip">En cours</span></td>
+          <td class="ci_recap_actions">
+            <a class="btn_info" href="bilan.html?${antenne}&id=${row.id}">
+              <i class="bi bi-eye"></i> Afficher
+            </a>
+          </td>
+        </tr>`;
+      }).join("");
+    }
+
+    function formatAmount(value) {
+      return value === "" || value === null || value === undefined ? "" : formatMontant(value);
+    }
+
+    /**
+     * Extrait l'abréviation depuis le nom du fichier Drive d'un bilan,
+     * au format "BPF_<numero>_<année>_<code>_<abreviation>.html" (voir
+     * nomFichierBilan() dans bilan.html : "refbil_abbreviation.html", où
+     * refbil = "BPF/<numero>/<année>/<code>" a déjà ses "/" remplacés par
+     * "_"). Les 4 premiers segments ("BPF", numéro, année, code)
+     * appartiennent à la référence ; le reste (rejoint par "_") est
+     * l'abréviation. Retourne "" si le nom ne correspond pas à ce format.
+     * @param {string} name
+     */
+    function extraireAbreviationDuNom(name) {
+      if (!name) return "";
+      const sansExtension = name.replace(/\.html?$/i, "");
+      const segments = sansExtension.split("_");
+      if (segments.length <= 4) return "";
+      return segments.slice(4).join("_");
+    }
+
+    /* ============================================================
+       MODALE "NOUVEAU BILAN"
+       Reproduit les champs d'identité de la modale "Editer" de
+       bilan.html (voir ouvrirModaleEditer/wireModaleEditer là-bas),
+       pour créer directement un bilan vierge depuis ci.html. Une fois
+       créé (id renvoyé par exportBilanToDrive), on redirige vers
+       bilan.html?<antenne>&id=<id> pour la suite de la saisie
+       (fiscal, FI, FC...) — bilan.html ne gère plus la création.
+       ============================================================ */
+
+    let CI_CREER_ANTENNE = null;
+
+    /** Spinner sur un bouton pendant un appel serveur (cf. bilan.html/class.html). */
+    function setBtnSaving(btn, saving, savingLabel = "Enregistrement...") {
+      if (!btn) return;
+      if (saving) {
+        if (btn.dataset.originalHtml === undefined) btn.dataset.originalHtml = btn.innerHTML;
+        btn.innerHTML = `<span class="btn_saving_spinner"></span> ${savingLabel}`;
+        btn.classList.add("btn_saving");
+        btn.disabled = true;
+      } else {
+        if (btn.dataset.originalHtml !== undefined) btn.innerHTML = btn.dataset.originalHtml;
+        btn.classList.remove("btn_saving");
+        btn.disabled = false;
+      }
+    }
+
+    // La liste des entreprises (Siliana) n'est chargée qu'une seule fois
+    // par session de page, à la première ouverture de la modale — pas à
+    // chaque clic sur "Nouveau bilan".
+    let CI_ENTREPRISES_CHARGEES = false;
+
+    function wireModaleNouveauBilan() {
+      document.getElementById("ci_btn_nouveau_sa")?.addEventListener("click", () => ouvrirModaleNouveauBilan("sa"));
+      document.getElementById("ci_btn_nouveau_tn")?.addEventListener("click", () => ouvrirModaleNouveauBilan("tn"));
+
+      document.getElementById("ci_creer_entreprise_select")?.addEventListener("change", surChangementEntrepriseSelectCreation);
+      document.getElementById("ci_creer_numero")?.addEventListener("input", mettreAJourRefBilCreation);
+      document.getElementById("ci_creer_annee")?.addEventListener("input", mettreAJourRefBilCreation);
+      document.getElementById("ci_creer_enregistrer")?.addEventListener("click", creerBilan);
+    }
+
+    function ouvrirModaleNouveauBilan(antenne) {
+      CI_CREER_ANTENNE = antenne;
+
+      const grid = document.getElementById("ci_creer_grid");
+      if (grid) {
+        grid.classList.toggle("is_siliana", antenne === "sa");
+        grid.classList.toggle("is_tunis", antenne === "tn");
+      }
+      const label = document.getElementById("ci_creer_antenne_label");
+      if (label) label.textContent = antenne === "tn" ? "Tunis" : "Siliana";
+
+      // Formulaire vierge à chaque ouverture (année par défaut : année
+      // courante pour Siliana, année précédente pour Tunis — même règle
+      // que bilan.html).
+      document.getElementById("ci_creer_entreprise").value = "";
+      const select = document.getElementById("ci_creer_entreprise_select");
+      if (select) select.value = "";
+      document.getElementById("ci_creer_abreviation").value = "";
+      document.getElementById("ci_creer_matricule").value = "";
+      document.getElementById("ci_creer_numero").value = "";
+      document.getElementById("ci_creer_annee").value = antenne === "tn" ? new Date().getFullYear() - 1 : new Date().getFullYear();
+      document.getElementById("ci_creer_avance").value = "";
+      document.getElementById("ci_creer_base").value = "";
+      document.getElementById("ci_creer_section_fi").checked = true;
+      document.getElementById("ci_creer_section_resp").checked = true;
+      document.getElementById("ci_creer_section_fc").checked = true;
+
+      mettreAJourRefBilCreation();
+      openFormModal("ci_modal_nouveau_bilan");
+
+      if (antenne === "sa" && !CI_ENTREPRISES_CHARGEES) {
+        chargerEntreprisesPourSelectCreation();
+      }
+    }
+
+    async function chargerEntreprisesPourSelectCreation() {
+      const select = document.getElementById("ci_creer_entreprise_select");
+      if (!select) return;
+
+      select.innerHTML = '<option value="">Chargement...</option>';
+      try {
+        const entreprises = await apiCall("listEses", {});
+        const options = entreprises
+          .map((entreprise) => {
+            const valeur = entreprise["Raison sociale"] || entreprise["Nom commerciale"] || "";
+            const nomCommercial = entreprise["Nom commerciale"] || "";
+            return valeur ? { value: valeur, label: valeur, nomCommercial } : null;
+          })
+          .filter(Boolean);
+
+        const optionsHtml = options
+          .map((option) => `<option value="${option.value}" data-nom-commercial="${option.nomCommercial}">${option.label}</option>`)
+          .join("");
+        select.innerHTML = `<option value="">----</option>${optionsHtml}`;
+        CI_ENTREPRISES_CHARGEES = true;
+      } catch (err) {
+        console.error("Erreur lors du chargement des entreprises", err);
+        select.innerHTML = '<option value="">----</option><option value="" disabled>Erreur de chargement</option>';
+      }
+    }
+
+    // Sélection d'une entreprise (Siliana) : reprend son "Nom commerciale"
+    // comme Abréviation par défaut (modifiable ensuite librement).
+    function surChangementEntrepriseSelectCreation() {
+      const select = document.getElementById("ci_creer_entreprise_select");
+      const abreviationInput = document.getElementById("ci_creer_abreviation");
+      if (!select || !abreviationInput) return;
+      const nomCommercial = select.selectedOptions?.[0]?.dataset?.nomCommercial || "";
+      if (nomCommercial) abreviationInput.value = nomCommercial;
+    }
+
+    function mettreAJourRefBilCreation() {
+      const span = document.getElementById("ci_creer_refbil");
+      if (!span) return;
+      const numero = document.getElementById("ci_creer_numero")?.value.trim() || "----";
+      const annee = document.getElementById("ci_creer_annee")?.value.trim() || "----";
+      const code = CI_CREER_ANTENNE === "tn" ? "11" : "34";
+      span.textContent = `BPF/${numero}/${annee}/${code}`;
+    }
+
+    async function creerBilan() {
+      const antenne = CI_CREER_ANTENNE;
+      if (!antenne) return;
+
+      const abreviation = document.getElementById("ci_creer_abreviation")?.value.trim() || "";
+      const numero = document.getElementById("ci_creer_numero")?.value.trim() || "";
+      if (!abreviation || !numero) {
+        alert("Merci de renseigner l'Abréviation et le Numéro bilan.");
+        return;
+      }
+
+      let entreprise = "";
+      if (antenne === "sa") {
+        const select = document.getElementById("ci_creer_entreprise_select");
+        entreprise = select?.selectedOptions?.[0]?.textContent?.trim() || select?.value?.trim() || "";
+      } else {
+        entreprise = document.getElementById("ci_creer_entreprise")?.value.trim() || "";
+      }
+
+      const annee = Number(document.getElementById("ci_creer_annee")?.value) || new Date().getFullYear();
+      const code = antenne === "tn" ? "11" : "34";
+      const avanceInput = document.getElementById("ci_creer_avance");
+      const baseInput = document.getElementById("ci_creer_base");
+
+      // Bilan vierge : mêmes valeurs par défaut que reinitialiserBilanVierge()
+      // côté bilan.html (fiscal/FI/FC seront saisis ensuite là-bas).
+      const bilan = {
+        antenne,
+        entreprise,
+        abreviation,
+        matricule: document.getElementById("ci_creer_matricule")?.value.trim() || "",
+        numero,
+        refbil: `BPF/${numero}/${annee}/${code}`,
+        annee,
+        etat: "actif",
+        avance: avanceInput?.value === "" ? null : Number(avanceInput.value),
+        base: baseInput?.value === "" ? null : Number(baseInput.value),
+        nbEmployes: null,
+        pvcceDepose: "",
+        dateCloture: "",
+        moisEpuisement: "",
+        rne: "",
+        sections: {
+          formation_initiale: document.getElementById("ci_creer_section_fi")?.checked !== false,
+          responsable_formation: document.getElementById("ci_creer_section_resp")?.checked !== false,
+          formation_continue: document.getElementById("ci_creer_section_fc")?.checked !== false
+        },
+        fiscal: { declarations: {}, quittances: {}, deductions: {}, regularisation: {} },
+        formationInitiale: {},
+        formationContinue: []
+      };
+
+      const btn = document.getElementById("ci_creer_enregistrer");
+      setBtnSaving(btn, true);
+      try {
+        const { id } = await apiCall("exportBilanToDrive", { bilan, fileId: null });
+        window.location.href = `bilan.html?${antenne}&id=${id}`;
+      } catch (err) {
+        alert(`Erreur : ${err.message}`);
+        setBtnSaving(btn, false);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Formation initiale — URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="../css/variables.css" />
+  <link rel="stylesheet" href="../css/layout.css" />
+  <link rel="stylesheet" href="../css/navbar.css" />
+  <link rel="stylesheet" href="../css/smig.css" />
+  <style>
+    /* ============================================================
+       Styles propres à fi.html (page autonome, sans sidebar).
+       Palette locale "dossier" : bandeau pêche = actions/identité.
+       ============================================================ */
+
+    .block_metiers {
+      --fi_header_bg: #f7ddc0;
+      --fi_header_border: #e8c49a;
+    }
+
+    /* Rangée de boutons (.btns_metiers, désormais placée en HTML hors de
+       .app_content_metier pour occuper toute la largeur — voir layout.css)
+       et ligne d'infos (.infos_metiers) définies globalement. */
+
+    /*.fi_ese_chip {
+      background: transparent;
+      border: none;
+      font-size: var(--fs_sm);
+      font-weight: 600;
+      color: var(--text_primary);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space_2);
+    }*/
+
+    .fi_info_inline {
+      font-size: var(--fs_sm);
+      font-family: var(--font_mono);
+      color: var(--text_secondary);
+    }
+
+    .fi_info_inline span {
+      font-weight: bold;
+      color: var(--text_primary);
+    }
+
+    /* Statut de la navbar (chargement / alerte "à sauvegarder") : voir
+       .navbar_metier / .navbar_status / .navbar_load / .navbar_alert dans
+       navbar.css, partagés désormais par fi.html, bilan.html et class.html. */
+
+    .fi_form_placeholder {
+      background: var(--color_paper);
+      border: 1px dashed var(--border_soft);
+      border-radius: var(--radius_md);
+      padding: var(--space_4);
+      margin-bottom: var(--space_5);
+      color: var(--text_secondary);
+      font-style: italic;
+      font-size: var(--fs_sm);
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+    }
+
+    .fi_table { border: 1px solid var(--border_soft); border-top: none; }
+
+    /* Sans cet override, .empty_state (générique, voir layout.css) est bien
+       trop haut ici : une seule ligne de tableau suffit pour dire qu'une
+       catégorie est vide. */
+    .block_metiers .empty_state {
+      text-align: center;
+      padding: var(--space_3) var(--space_4);
+      border: 1px solid var(--border_soft);
+      border-top: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space_2);
+    }
+    .block_metiers .empty_state i {
+      font-size: var(--fs_base);
+      color: var(--border_soft);
+      display: inline;
+      margin-bottom: 0;
+    }
+    /* Sans cette règle, [hidden] est écrasé par le display:flex ci-dessus
+       (même piège que .navbar_alert / .navbar_load dans navbar.css) : la
+       ligne "Aucun stage enregistré" restait visible même quand des stages
+       étaient déjà saisis. */
+    .block_metiers .empty_state[hidden] { display: none; }
+
+    .fi_row_input {
+      width: 100%;
+      font-family: inherit;
+      font-size: var(--fs_sm);
+      padding: var(--space_1) var(--space_2);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+    }
+    .fi_row_actions { display: flex; align-items: center; gap: var(--space_2); }
+    .fi_row_edit { background: transparent; border: none; color: var(--text_secondary); }
+    .fi_row_edit:hover { color: var(--color_info); }
+    .fi_row_delete { background: transparent; border: none; color: var(--text_secondary); }
+    .fi_row_delete:hover { color: var(--color_danger); }
+    .fi_row_reset { background: transparent; border: none; color: var(--text_secondary); }
+    .fi_row_reset:hover { color: var(--color_warning); }
+
+    /* Colonne Actions (dernière colonne des 3 tableaux) masquée sur mobile :
+       les boutons qu'elle contient le sont déjà (voir .no_mobile dans
+       layout.css), mais la colonne elle-même restait affichée, vide. */
+    @media (max-width: 1080px) {
+      .fi_table th:last-child,
+      .fi_table td:last-child {
+        display: none;
+      }
+    }
+
+    /* ---------- Modales (Reprendre/Nouveau, Choix entreprise, Réglages Smig) ---------- */
+    .fi_modal_overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(22, 38, 42, 0.55);
+      z-index: 200;
+      align-items: flex-start;
+      justify-content: center;
+      padding: var(--space_7) var(--space_4);
+      overflow-y: auto;
+    }
+    .fi_modal_overlay.is_visible { display: flex; }
+
+    .fi_modal {
+      background: var(--color_paper_raised);
+      border-radius: var(--radius_md);
+      width: 100%;
+      max-width: 480px;
+      box-shadow: var(--shadow_panel);
+    }
+    .fi_modal_header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space_4);
+      border-bottom: 1px solid var(--border_soft);
+    }
+    .fi_modal_header h3 { margin: 0; font-family: var(--font_display); font-size: var(--fs_md); }
+    .fi_modal_close { background: transparent; border: none; font-size: var(--fs_lg); color: var(--text_secondary); }
+    .fi_modal_close:hover { color: var(--color_danger); }
+    .fi_modal_body { padding: var(--space_4); max-height: 60vh; overflow-y: auto; }
+    .fi_modal_footer { padding: var(--space_4); border-top: 1px solid var(--border_soft); display: flex; justify-content: flex-end; gap: var(--space_3); }
+
+    .fi_modal_search {
+      width: 100%;
+      font-family: inherit;
+      font-size: var(--fs_sm);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      margin-bottom: var(--space_3);
+    }
+
+    .fi_calc_list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space_2); }
+    .fi_calc_item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space_3);
+      padding: var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper);
+      cursor: pointer;
+      font-size: var(--fs_sm);
+    }
+    .fi_calc_item:hover { border-color: var(--color_seal); }
+    .fi_calc_item.fi_calc_new { border-style: dashed; color: var(--color_teal); font-weight: 600; }
+    .fi_calc_item .fi_calc_badge {
+      font-family: var(--font_mono);
+      font-size: var(--fs_xs);
+      color: var(--text_secondary);
+    }
+
+    .fi_smig_table { width: 100%; border-collapse: collapse; font-size: var(--fs_sm); margin-bottom: var(--space_4); }
+    .fi_smig_table th, .fi_smig_table td { padding: var(--space_2); border-bottom: 1px solid var(--border_soft); text-align: left; }
+    .fi_smig_table input {
+      width: 90px;
+      font-family: inherit;
+      font-size: var(--fs_sm);
+      padding: var(--space_1) var(--space_2);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+    }
+    .fi_smig_note {
+      font-size: var(--fs_xs);
+      color: var(--text_secondary);
+      font-style: italic;
+      margin: 0;
+    }
+
+    /* ---------- Modale Calculette (ajout / édition d'un stage) ---------- */
+    .fi_modal_stage .fi_modal_body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space_3) var(--space_4);
+    }
+    .fi_stage_field { display: flex; flex-direction: column; gap: var(--space_1); }
+    .fi_stage_field label { font-size: var(--fs_xs); color: var(--text_secondary); font-weight: 600; }
+    .fi_stage_field input {
+      font-family: inherit;
+      font-size: var(--fs_sm);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      text-align: center;
+    }
+    .fi_stage_field input:read-only { background: var(--color_paper); color: var(--text_secondary); }
+
+    .fi_modal_stage.is_standalone [data-standalone-hide] { display: none; }
+
+    .fi_stage_btn_genre { min-width: 96px; }
+    .fi_stage_btn_genre.is_homme { background: #cfe8ff; border-color: #9cc9ee; color: var(--color_ink); }
+    .fi_stage_btn_genre.is_femme { background: #ffd8e8; border-color: #eea9c5; color: var(--color_ink); }
+
+    /* Lignes de stage : lecture seule, édition via double-clic (calculette) */
+    .fi_table tbody tr { cursor: pointer; }
+    .fi_table tbody tr:hover { background: rgba(0, 0, 0, 0.03); }
+
+    /* ---------- Impression (bouton "Imprimer") ----------
+       Reprend la mise en page HTML générée par le projet VB.NET (page de
+       garde, blocs de stats, tableaux par catégorie avec sauts de page),
+       mais imprimée directement depuis la page (pas de fichier séparé). */
+    #fi_print_area { display: none; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #fi_print_area, #fi_print_area * { visibility: visible; }
+      html, body { background: #fff !important; }
+      #fi_print_area {
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 20px;
+        background: #fff;
+      }
+      .fi_print_break { page-break-before: always; padding-top: 20px; }
+    }
+
+    .fi_print_page { text-align: center; margin-top: 15px; }
+    .fi_print_page h1, .fi_print_page h2 { margin: 2px 0; }
+    .fi_print_stats_block {
+      border: 1px solid #000;
+      padding: 10px;
+      margin: 15px auto;
+      width: 70%;
+      text-align: left;
+    }
+    .fi_print_stats_block h3 { background: #d3d3d3; padding: 6px; margin: -10px -10px 10px -10px; }
+    .fi_print_aucun { text-align: center; padding: 5px; font-weight: bold; color: #666; }
+    .fi_print_header_flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .fi_print_header_flex h2 { margin: 0; font-size: 16px; }
+    .fi_print_ese_budget {
+      display: flex;
+      justify-content: space-between;
+      background-color: #d3d3d3;
+      padding: 0 10px 0;
+      font-weight: bold;
+    }
+    .fi_print_titre_secondaire { background-color: #d3d3d3; padding: 0 10px 0; }
+    .fi_print_titre_secondaire h3 { margin: 0; }
+    .fi_print_status { margin: 4px; padding-bottom: 10px; font-size: 12px; font-weight: normal; color: #333; }
+    .fi_print_table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+    .fi_print_table th, .fi_print_table td { border: 1px solid #000; padding: 4px; text-align: center; }
+  </style>
+  <script src="../js/session.js"></script>
+</head>
+<body>
+
+  <header class="navbar navbar_metier">
+    <div class="page_title_group">
+      <span class="page_eyebrow">DTI · Droits de tirage individuels</span>
+      <h1 class="page_title fi_dossier_title">Formation initiale <span data-field="annee">----</span></h1>
+    </div>
+    <div class="navbar_status" id="navbar_status">
+      <span class="loading_state navbar_load" id="navbar_loading">Chargement...</span>
+      <span class="navbar_alert" id="navbar_alert_save" hidden>
+        <i class="bi bi-exclamation-triangle-fill"></i> Données à sauvegarder !
+      </span>
+    </div>
+    <div class="navbar_actions">
+      <span class="navbar_breadcrumb">
+        <a href="../index.html">Accueil</a> <i class="bi bi-chevron-right"></i>
+        <a href="dti.html#formation_initiale">Droits de tirage individuels</a> <i class="bi bi-chevron-right"></i>
+        Formation initiale
+      </span>
+      <button type="button" class="btn_logout_navbar" id="navbar_btn_logout" hidden title="Se déconnecter">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Boutons métiers -->
+  <div class="btns_metiers">
+    <a href="dti.html#formation_initiale" class="btn_ghost btn_retour"><i class="bi bi-arrow-return-left"></i> Retour</a>
+    <button type="button" class="btn_teal" id="fi_btn_calculette">
+      <i class="bi bi-calculator"></i> Calculette
+    </button>
+    <button type="button" class="btn_seal" id="fi_btn_reprendre_nouveau">
+      <i class="bi bi-folder2-open"></i> Reprendre / Nouveau
+    </button>
+    <button type="button" class="btn_success" id="fi_btn_enregistrer">
+      <i class="bi bi-save"></i> Enregistrer
+    </button>
+    <button type="button" class="btn_info" id="fi_btn_imprimer">
+      <i class="bi bi-printer"></i> Imprimer
+    </button>
+  </div>
+
+  <div class="infos_metiers">
+    <span class="fi_info_inline">Entreprise : <span data-field="ese">----</span></span>
+    <span class="fi_info_inline">
+      <button type="button" class="fi_smig_chip" id="fi_btn_smig_settings" title="Réglages Smig">
+        <i class="bi bi-gear-fill"></i>
+      </button>
+      Smig FI : <span data-field="smigEse">----</span>
+    </span>
+    <span class="fi_info_inline">Budget : <span data-field="budget">----</span></span>
+  </div>
+
+  <main class="app_content app_content_metier">
+    <section class="block_metiers is_collapsed" data-category="apprentissage">
+        <div class="block_metiers_header">
+          <h3>Apprentissage</h3>
+          <span class="block_metiers_status" data-status="apprentissage">Aucun stage</span>
+          <button type="button" class="btn_info fi_add_btn" data-add="apprentissage">
+            <i class="bi bi-plus-lg"></i> Ajouter un stage
+          </button>
+          <button type="button" class="btn_info section_toggle_btn" title="Développer la section" aria-label="Développer la section">
+            <i class="bi bi-chevron-down"></i>
+          </button>
+        </div>
+        <table class="data_table fi_table" data-table="apprentissage">
+          <thead>
+            <tr>
+              <th>N°</th><th>Date début</th><th>Date fin</th>
+              <th>Durée déclarée</th><th>Durée calculée</th><th>Durée agréée</th>
+              <th>Genre</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty_state" data-empty="apprentissage">
+          <i class="bi bi-inbox"></i>Aucun stage enregistré.
+        </div>
+      </section>
+
+    <section class="block_metiers is_collapsed" data-category="alternance">
+        <div class="block_metiers_header">
+          <h3>Formation en Alternance</h3>
+          <span class="block_metiers_status" data-status="alternance">Aucun stage</span>
+          <button type="button" class="btn_info fi_add_btn" data-add="alternance">
+            <i class="bi bi-plus-lg"></i> Ajouter un satge
+          </button>
+          <button type="button" class="btn_info section_toggle_btn" title="Développer la section" aria-label="Développer la section">
+            <i class="bi bi-chevron-down"></i>
+          </button>
+        </div>
+        <table class="data_table fi_table" data-table="alternance">
+          <thead>
+            <tr>
+              <th>N°</th><th>Date début</th><th>Date fin</th>
+              <th>Durée déclarée</th><th>Durée calculée</th><th>Durée agréée</th>
+              <th>Genre</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty_state" data-empty="alternance">
+          <i class="bi bi-inbox"></i>Aucun stage enregistré.
+        </div>
+      </section>
+
+    <section class="block_metiers is_collapsed" data-category="stages">
+        <div class="block_metiers_header">
+          <h3>Stages pratiques et obligatoires</h3>
+          <span class="block_metiers_status" data-status="stages">Aucun stage</span>
+          <button type="button" class="btn_info fi_add_btn" data-add="stages">
+            <i class="bi bi-plus-lg"></i> Ajouter un satge
+          </button>
+          <button type="button" class="btn_info section_toggle_btn" title="Développer la section" aria-label="Développer la section">
+            <i class="bi bi-chevron-down"></i>
+          </button>
+        </div>
+        <table class="data_table fi_table" data-table="stages">
+          <thead>
+            <tr>
+              <th>N°</th><th>Date début</th><th>Date fin</th>
+              <th>Durée déclarée</th><th>Durée calculée</th><th>Durée agréée</th>
+              <th>Genre</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty_state" data-empty="stages">
+          <i class="bi bi-inbox"></i>Aucun stage enregistré.
+        </div>
+    </section>
+
+  <!-- Modale Reprendre / Nouveau -->
+  <div class="fi_modal_overlay" id="fi_modal_calculs">
+    <div class="fi_modal">
+      <div class="fi_modal_header">
+        <h3>Reprendre ou créer un calcul</h3>
+        <button type="button" class="fi_modal_close" data-close-modal="fi_modal_calculs"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body">
+        <input type="text" class="fi_modal_search" id="fi_calc_search" placeholder="Rechercher (raison sociale, nom commercial)…" />
+        <ul class="fi_calc_list" id="fi_calc_list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale Choix entreprise (base "eses") -->
+  <div class="fi_modal_overlay" id="fi_modal_ese">
+    <div class="fi_modal">
+      <div class="fi_modal_header">
+        <h3>Choisir une entreprise</h3>
+        <button type="button" class="fi_modal_close" data-close-modal="fi_modal_ese"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body">
+        <input type="text" class="fi_modal_search" id="fi_ese_search" placeholder="Rechercher (raison sociale, nom commercial)…" />
+        <ul class="fi_calc_list" id="fi_ese_list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale Réglages Smig -->
+  <div class="fi_modal_overlay" id="fi_modal_smig">
+    <div class="fi_modal">
+      <div class="fi_modal_header">
+        <h3>Réglages Smig</h3>
+        <button type="button" class="fi_modal_close" data-close-modal="fi_modal_smig"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body">
+        <table class="fi_smig_table" id="fi_smig_table">
+          <thead>
+            <tr><th>Année</th><th>Smig 40h</th><th>Smig 48h</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="fi_smig_note">
+          l'année en cours est créée automatiquement.
+        </p>
+      </div>
+      <div class="fi_modal_footer fi_smig_footer">
+        <button type="button" class="btn_ghost" data-smig-copy hidden><i class="bi bi-clipboard-plus"></i> Copier SMIG</button>
+        <button type="button" class="btn_ghost" data-smig-save hidden><i class="bi bi-check-lg"></i> Enregistrer</button>
+        <!-- <button type="button" class="btn_ghost" data-smig-cancel>Annuler</button> -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Zone d'impression : peuplée dynamiquement par imprimerDossier() puis
+       affichée seule via @media print (voir <style> plus haut). Le header
+       (.navbar) et tout le reste de la page restent masqués à l'impression. -->
+  <div id="fi_print_area"></div>
+
+  <!-- Modale Calculette : ajout/édition d'un stage (ouverte via "Ajouter" ou double-clic
+       sur une ligne), ou calculette autonome (bouton "Calculette" du bandeau, sans N°/durée
+       déclarée/agréée/genre — juste le calcul de durée entre deux dates). -->
+  <div class="fi_modal_overlay" id="fi_modal_stage">
+    <div class="fi_modal fi_modal_stage" id="fi_modal_stage_box">
+      <div class="fi_modal_header">
+        <h3 id="fi_stage_mode_label">----</h3>
+        <button type="button" class="fi_modal_close" data-close-modal="fi_modal_stage"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body">
+        <div class="fi_stage_field" data-standalone-hide>
+          <label>N°</label>
+          <input type="text" id="fi_stage_num" readonly tabindex="-1" />
+        </div>
+        <div class="fi_stage_field">
+          <label>Début</label>
+          <input type="text" id="fi_stage_deb" placeholder="jj/mm" />
+        </div>
+        <div class="fi_stage_field">
+          <label>Fin</label>
+          <input type="text" id="fi_stage_fin" placeholder="jj/mm" />
+        </div>
+        <div class="fi_stage_field" data-standalone-hide>
+          <label>Durée déclarée</label>
+          <input type="text" id="fi_stage_dec" inputmode="decimal" />
+        </div>
+        <div class="fi_stage_field">
+          <label>Durée calculée</label>
+          <input type="text" id="fi_stage_cal" readonly tabindex="-1" />
+        </div>
+        <div class="fi_stage_field" data-standalone-hide>
+          <label>Durée agréée</label>
+          <input type="text" id="fi_stage_agr" readonly tabindex="-1" />
+        </div>
+      </div>
+      <div class="fi_modal_footer">
+        <button type="button" class="fi_stage_btn_genre btn_ghost" id="fi_stage_btn_genre" data-standalone-hide disabled>Genre</button>
+        <button type="button" class="btn_success" id="fi_stage_btn_valider" data-standalone-hide disabled>Ajouter</button>
+        <button type="button" class="btn_ghost" id="fi_stage_btn_reset">Réinitialiser</button>
+      </div>
+    </div>
+  </div>
+
+  </main>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/format.js"></script>
+  <script src="../js/navbar_breadcrumb.js"></script>
+  <script src="../js/smig.js"></script>
+  <script src="../js/sticky_metiers.js"></script>
+
+  <script>
+    /* ============================================================
+       Logique propre à fi.html.
+       - Pas de fi_dossiers/fi_stages : un calcul = un fichier HTML
+         exporté vers Drive (voir enregistrerCalcul()). Ce fichier
+         embarque un bloc JSON (entreprise, année, régime, smig,
+         stages) en plus de sa mise en page imprimable — c'est ce qui
+         permet de le recharger tel quel plus tard.
+       - "Reprendre / Nouveau" : liste les calculs Drive de l'année
+         active (N-1) + option "Nouveau calcul". Cliquer sur un calcul
+         existant recharge ses stages dans les tableaux par catégorie
+         (chargerCalculExistant()) — comme au moment de la saisie.
+       - "Afficher" (dti.html) fait exactement la même chose, via
+         fi.html?calcul=<fileId> détecté au chargement de la page.
+       - "Entreprise" : modale de choix depuis la base "eses"
+         (Sheet 1_Xeo5zwB3fEpIkYUWRzfIw1ESSu95zIQ7KJk0S55qKU)
+       - Smig : chip cliquable ouvrant une modale de réglages
+       ============================================================ */
+
+    const FI_CATEGORIES = ["apprentissage", "alternance", "stages"];
+    const FI_CATEGORY_PREFIX = { apprentissage: "APP", alternance: "FA", stages: "SPO" };
+    const FI_CATEGORY_LABELS = {
+      apprentissage: "Apprentissage",
+      alternance: "Formation en alternance",
+      stages: "Stages pratiques et obligatoires"
+    };
+    const FI_ANNEE_ACTIVE = new Date().getFullYear() - 1;
+    const FI_ANNEE_COURANTE = new Date().getFullYear();
+
+    // Pas de fi_dossiers/fi_stages : un calcul = un fichier HTML exporté vers
+    // Drive (voir enregistrerCalcul()). L'état du calcul en cours tient dans
+    // ces deux variables + le DOM (entreprise/smig/budget affichés, lignes
+    // de stage dans les tableaux) — rien n'est persisté en Sheets.
+    let fiWorkingAnnee = FI_ANNEE_ACTIVE;
+    let fiWorkingRegime = "40H";
+    let fiDerniereUrlExport = null; // URL Drive du dernier export réussi (pour "Imprimer"/référence)
+    let fiEsesCache = null; // cache de la liste "eses" pour la recherche instantanée
+    let fiCalculsCache = null; // cache des calculs Drive de l'année FI active (N-1)
+
+    // État de la modale Calculette (ajout/édition de stage, ou calculette autonome)
+    let fiStageModalCategorie = null; // "apprentissage" | "alternance" | "stages" | null (autonome)
+    let fiStageModalEditRow = null;   // <tr> en cours d'édition, ou null en mode ajout/autonome
+    let fiStageGenre = "";            // "Homme" | "Femme" | ""
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      wireActionButtons();
+      wireModals();
+      wireStageModal();
+      wireSectionToggles();
+      initSmigShared({
+        buttonId: "fi_btn_smig_settings",
+        modalId: "fi_modal_smig",
+        tableId: "fi_smig_table",
+        currentYear: FI_ANNEE_COURANTE,
+        apiCaller: apiCallDirect
+      });
+
+      // Préchargement du smig (toutes années) pour que la sélection d'une
+      // entreprise n'attende plus un aller-retour réseau.
+      await chargerCacheSmig();
+
+      FI_CATEGORIES.forEach((cat) => {
+        document.querySelector(`[data-add="${cat}"]`)?.addEventListener("click", () => {
+          deplierSection(document.querySelector(`[data-category="${cat}"]`));
+          ouvrirModalStage(cat);
+        });
+        refreshCategoryStatus(cat);
+      });
+
+      const params = new URLSearchParams(window.location.search);
+      const calculId = params.get("calcul");
+
+      if (calculId) {
+        await chargerCalculExistant(calculId);
+      } else {
+        resetToNewDossier(FI_ANNEE_ACTIVE);
+      }
+
+      document.getElementById("navbar_loading").hidden = true;
+    });
+
+    function wireActionButtons() {
+      document.getElementById("fi_btn_reprendre_nouveau")?.addEventListener("click", ouvrirModalCalculs);
+      document.getElementById("fi_btn_smig_settings")?.addEventListener("click", () => ouvrirModalSmig());
+      document.getElementById("fi_btn_enregistrer")?.addEventListener("click", enregistrerCalcul);
+      document.getElementById("fi_btn_imprimer")?.addEventListener("click", imprimerDossier);
+      document.getElementById("fi_btn_calculette")?.addEventListener("click", ouvrirCalculetteAutonome);
+    }
+
+    // Sections repliables : chaque .block_metiers_header porte un bouton
+    // .section_toggle_btn qui bascule .is_collapsed sur sa section (voir
+    // règle partagée dans layout.css). Accordéon exclusif : ouvrir une
+    // section referme les autres (même principe que class.html).
+    function wireSectionToggles() {
+      document.querySelectorAll(".block_metiers").forEach((section) => {
+        const btn = section.querySelector(".section_toggle_btn");
+        if (!btn) return;
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const isCollapsed = section.classList.contains("is_collapsed");
+          if (isCollapsed) {
+            deplierSection(section);
+            requestAnimationFrame(() => {
+              section.querySelector(".block_metiers_header")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+          } else {
+            section.classList.add("is_collapsed");
+            btn.innerHTML = `<i class="bi bi-chevron-down"></i>`;
+            btn.title = "Développer la section";
+            btn.setAttribute("aria-label", btn.title);
+          }
+        });
+      });
+    }
+
+    // Referme toutes les sections .block_metiers de la page (accordéon
+    // exclusif). Utilisée avant d'ouvrir une section (deplierSection) et
+    // après un Enregistrer réussi.
+    function fermerToutesLesSections() {
+      document.querySelectorAll(".block_metiers").forEach((section) => {
+        section.classList.add("is_collapsed");
+        const btn = section.querySelector(".section_toggle_btn");
+        if (btn) {
+          btn.innerHTML = `<i class="bi bi-chevron-down"></i>`;
+          btn.title = "Développer la section";
+          btn.setAttribute("aria-label", btn.title);
+        }
+      });
+    }
+
+    // Déplie une section en refermant toutes les autres (accordéon
+    // exclusif). Réutilisée par wireSectionToggles et par les boutons
+    // "Ajouter" (déplient leur section avant d'ouvrir la modale).
+    function deplierSection(section) {
+      if (!section) return;
+      fermerToutesLesSections();
+      section.classList.remove("is_collapsed");
+      const btn = section.querySelector(".section_toggle_btn");
+      if (btn) {
+        btn.innerHTML = `<i class="bi bi-chevron-up"></i>`;
+        btn.title = "Réduire la section";
+        btn.setAttribute("aria-label", btn.title);
+      }
+    }
+
+    function wireModals() {
+      document.querySelectorAll("[data-close-modal]").forEach((btn) => {
+        btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
+      });
+      document.querySelectorAll(".fi_modal_overlay").forEach((overlay) => {
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) closeModal(overlay.id);
+        });
+      });
+    }
+
+    function openModal(id) { document.getElementById(id)?.classList.add("is_visible"); }
+    function closeModal(id) { document.getElementById(id)?.classList.remove("is_visible"); }
+
+    /* ---------------- Reprendre / Nouveau (calculs Drive) ----------------
+       Pas de fi_dossiers : la liste vient de listCalculs() (fichiers HTML du
+       sous-dossier Drive de l'année). Cliquer sur un calcul existant recharge
+       les stages dans les tableaux par catégorie via chargerCalculExistant()
+       (données embarquées dans le fichier HTML — voir Code.gs). */
+
+ /* ---------------- Reprendre / Nouveau (Calculs & Entreprises avec recherche) ---------------- */
+    async function ouvrirModalCalculs() {
+      const list = document.getElementById("fi_calc_list");
+      const searchInput = document.getElementById("fi_calc_search");
+
+      if (searchInput) searchInput.value = "";
+      list.innerHTML = `<li class="list_state"><span class="loading_state">Chargement...</span></li>`;
+      openModal("fi_modal_calculs");
+
+      try {
+        // 1. Récupération parallèle des calculs sauvegardés et des entreprises
+        const [calculs, eses] = await Promise.all([
+          apiCallDirect("listCalculs", { annee: FI_ANNEE_ACTIVE }),
+          fiEsesCache ? Promise.resolve(fiEsesCache) : apiCallDirect("listEses", {})
+        ]);
+
+        fiEsesCache = eses;
+
+        // Indexation des calculs sauvegardés par nom d'entreprise
+        const calculsParEntreprise = new Map();
+        calculs.forEach((c) => calculsParEntreprise.set(c.entreprise, c));
+
+        // 2. Traitement et structuration des données
+        const entreprisesAvecCalcul = [];
+        const autresEntreprises = [];
+
+        eses.forEach((ese) => {
+          const nomEse = ese["Raison sociale"] || ese["Nom commerciale"] || "";
+          if (calculsParEntreprise.has(nomEse)) {
+            entreprisesAvecCalcul.push({
+              ese,
+              calcul: calculsParEntreprise.get(nomEse)
+            });
+          } else {
+            autresEntreprises.push(ese);
+          }
+        });
+
+        // 3. Fonction de rendu dynamique avec filtrage
+        const renderList = (query = "") => {
+          const q = query.trim().toLowerCase();
+          let htmlContent = "";
+
+          // Filtrage des calculs sauvegardés
+          const calculsFiltres = entreprisesAvecCalcul.filter(({ ese }) => {
+            const nom = `${ese["Raison sociale"] || ""} ${ese["Nom commerciale"] || ""}`.toLowerCase();
+            return nom.includes(q);
+          });
+
+          // Filtrage des autres entreprises
+          const autresFiltres = autresEntreprises.filter((ese) => {
+            const nom = `${ese["Raison sociale"] || ""} ${ese["Nom commerciale"] || ""}`.toLowerCase();
+            return nom.includes(q);
+          });
+
+          // Rendu : Section calculs sauvegardés
+          if (calculsFiltres.length > 0) {
+            htmlContent += calculsFiltres.map(({ ese, calcul }) => {
+              const nomEse = ese["Raison sociale"] || ese["Nom commerciale"] || "(sans nom)";
+              return `
+                <li class="fi_calc_item" style="border-left: 4px solid var(--color_seal, #2d708e);">
+                  <div>
+                    <strong>${nomEse}</strong>
+                    <div class="fi_calc_badge">Calcul sauvegardé (${FI_ANNEE_ACTIVE})</div>
+                  </div>
+                  <button type="button" class="btn_seal btn_reprendre_item" data-calcul-id="${calcul.id}">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reprendre calcul
+                  </button>
+                </li>`;
+            }).join("");
+          }
+
+          // Rendu : Section reste des entreprises
+          if (autresFiltres.length > 0) {
+            htmlContent += autresFiltres.map((ese) => {
+              const nomEse = ese["Raison sociale"] || ese["Nom commerciale"] || "(sans nom)";
+              const indexGlobal = fiEsesCache.indexOf(ese);
+              return `
+                <li class="fi_calc_item">
+                  <div>
+                    <strong>${nomEse}</strong>
+                    <div class="fi_calc_badge">${ese["Régime Horaire"] || "40H"}</div>
+                  </div>
+                  <button type="button" class="btn_info btn_nouveau_item" data-ese-index="${indexGlobal}">
+                    <i class="bi bi-plus-lg"></i> Nouveau calcul
+                  </button>
+                </li>`;
+            }).join("");
+          }
+
+          if (!htmlContent) {
+            htmlContent = `<li class="fi_calc_item">Aucune entreprise trouvée.</li>`;
+          }
+
+          list.innerHTML = htmlContent;
+          wireListButtons();
+        };
+
+        // Attachement des clics sur les boutons de la liste
+        const wireListButtons = () => {
+          list.querySelectorAll(".btn_reprendre_item").forEach((btn) => {
+            btn.addEventListener("click", async (e) => {
+              e.stopPropagation();
+              closeModal("fi_modal_calculs");
+              await chargerCalculExistant(btn.dataset.calculId);
+            });
+          });
+
+          list.querySelectorAll(".btn_nouveau_item").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              closeModal("fi_modal_calculs");
+              const ese = fiEsesCache[Number(btn.dataset.eseIndex)];
+              resetToNewDossier(FI_ANNEE_ACTIVE);
+              choisirEse(ese);
+            });
+          });
+        };
+
+        // Rendu initial et écouteur de la recherche
+        renderList("");
+        if (searchInput) {
+          searchInput.oninput = () => renderList(searchInput.value);
+          searchInput.focus();
+        }
+
+      } catch (err) {
+        list.innerHTML = `<li class="list_state"><span class="error_state">Erreur : ${err.message}</span></li>`;
+      }
+    }
+
+    // Recharge un calcul déjà enregistré (bouton "Reprendre" ici, ou lien
+    // "Afficher" depuis dti.html via fi.html?calcul=<fileId>) : relit les
+    // données embarquées dans le fichier HTML exporté et repeuple entreprise,
+    // smig et les tableaux de stages — le budget se recalcule alors tout
+    // seul, exactement comme pendant une saisie normale.
+    async function chargerCalculExistant(fileId) {
+      try {
+        const data = await apiCallDirect("chargerCalcul", { fileId });
+
+        fiWorkingAnnee = data.annee;
+        fiWorkingRegime = data.regime || "40H";
+        history.replaceState(null, "", `fi.html?calcul=${fileId}`);
+
+        setField("annee", data.annee);
+        setField("ese", data.entreprise || "----");
+        setField("smigEse", data.smig || "----");
+        FI_CATEGORIES.forEach((cat) => renderCategoryRows(cat, (data.stages && data.stages[cat]) || []));
+        calculerBudgetTotal();
+        marquerDonneesSauvegardees();
+      } catch (err) {
+        alert(`Erreur lors du chargement du calcul : ${err.message}`);
+      }
+    }
+
+    function resetToNewDossier(annee) {
+      fiWorkingAnnee = annee;
+      fiWorkingRegime = "40H";
+      fiDerniereUrlExport = null;
+      history.replaceState(null, "", "fi.html");
+
+      setField("annee", annee);
+      setField("ese", "----");
+      setField("smigEse", "----"); // vide tant qu'aucune entreprise n'est sélectionnée
+      FI_CATEGORIES.forEach((cat) => renderCategoryRows(cat, []));
+      calculerBudgetTotal();
+      marquerDonneesSauvegardees();
+    }
+
+    // Enchaînement "Nouveau calcul" : on repart d'un dossier vierge, puis on
+    // impose immédiatement le choix de l'entreprise (seul point d'entrée
+    // pour sélectionner une entreprise désormais).
+    function demarrerNouveauCalcul() {
+      resetToNewDossier(FI_ANNEE_ACTIVE);
+      ouvrirModalEse();
+    }
+
+    /* ---------------- Choix entreprise (base "eses") ---------------- */
+
+    async function ouvrirModalEse() {
+      openModal("fi_modal_ese");
+      const searchInput = document.getElementById("fi_ese_search");
+      searchInput.value = "";
+      searchInput.oninput = () => renderEseList(searchInput.value);
+
+      if (!fiEsesCache) {
+        document.getElementById("fi_ese_list").innerHTML = `<li class="list_state"><span class="loading_state">Chargement...</span></li>`;
+        try {
+          fiEsesCache = await apiCallDirect("listEses", {});
+        } catch (err) {
+          document.getElementById("fi_ese_list").innerHTML = `<li class="list_state"><span class="error_state">Erreur : ${err.message}</span></li>`;
+          return;
+        }
+      }
+      renderEseList("");
+    }
+
+    function renderEseList(query) {
+      const list = document.getElementById("fi_ese_list");
+      const q = query.trim().toLowerCase();
+
+      const filtered = !q ? fiEsesCache : fiEsesCache.filter((e) =>
+        `${e["Raison sociale"] || ""} ${e["Nom commerciale"] || ""}`.toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<li class="fi_calc_item">Aucune entreprise trouvée.</li>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map((e, i) => `
+        <li class="fi_calc_item" data-index="${fiEsesCache.indexOf(e)}">
+          <span>${e["Raison sociale"] || e["Nom commerciale"] || "(sans nom)"}</span>
+          <span class="fi_calc_badge">${e["Régime Horaire"] || ""}</span>
+        </li>`).join("");
+
+      list.querySelectorAll("[data-index]").forEach((el) => {
+        el.addEventListener("click", async () => {
+          const ese = fiEsesCache[Number(el.dataset.index)];
+          const choisi = await choisirEse(ese);
+          if (choisi) closeModal("fi_modal_ese");
+        });
+      });
+    }
+
+    async function choisirEse(ese) {
+      const calculExistant = await trouverCalculExistantPourEse(ese);
+      if (calculExistant?.verificationFailed) return false;
+
+      if (calculExistant) {
+        alert(
+          `Un calcul existe déjà pour "${calculExistant.entreprise}" dans le dossier Formation initiale ${FI_ANNEE_ACTIVE}.\n\n` +
+          `Utilisez « Reprendre » au lieu de créer un nouveau calcul.`
+        );
+        return false;
+      }
+
+      fiWorkingRegime = ese["Régime Horaire"] || "40H";
+      setField("ese", ese["Raison sociale"] || ese["Nom commerciale"] || "");
+      updateSmigChip();
+      return true;
+    }
+
+    async function chargerCalculsExistants(forceRefresh = false) {
+      if (forceRefresh || !fiCalculsCache) {
+        fiCalculsCache = await apiCallDirect("listCalculs", { annee: FI_ANNEE_ACTIVE });
+      }
+      return fiCalculsCache;
+    }
+
+    async function trouverCalculExistantPourEse(ese) {
+      const nomEse = normaliserNomEntreprise(ese["Raison sociale"] || ese["Nom commerciale"] || "");
+      if (!nomEse) return null;
+
+      let calculs;
+      try {
+        calculs = await chargerCalculsExistants(true);
+      } catch (err) {
+        alert(`Vérification des calculs existants impossible : ${err.message}`);
+        return { verificationFailed: true };
+      }
+
+      return calculs.find((c) => normaliserNomEntreprise(c.entreprise || c.name || "") === nomEse) || null;
+    }
+
+    function normaliserNomEntreprise(value) {
+      return String(value || "")
+        .replace(/[\\/:*?"<>|]/g, "_")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+    }
+
+    /* ---------------- Smig ---------------- */
+
+    // Liste brute [{annee, smig40, smig48}, ...] préchargée au chargement de
+    // la page (voir DOMContentLoaded) pour que choisirEse()/updateSmigChip()
+    // n'aient plus besoin d'un aller-retour réseau à chaque sélection.
+    let fiSmigCache = null;
+
+    async function chargerCacheSmig() {
+      try {
+        fiSmigCache = await apiCallDirect("listSmig", {});
+      } catch (err) {
+        console.error("Préchargement du smig impossible :", err.message);
+        fiSmigCache = [];
+      }
+    }
+
+    async function updateSmigChip() {
+      if (!fiWorkingAnnee) return;
+      const smig = await getSmigPourRegime(fiWorkingAnnee, fiWorkingRegime);
+      setField("smigEse", smig || "----");
+      rafraichirTousLesStages();
+    }
+
+    async function getSmigPourRegime(annee, regime) {
+      // Comparaison normalisée : la base "eses" stocke "40H" / "48H" (H majuscule).
+      const regimeNorm = String(regime || "").trim().toUpperCase();
+
+      // Lecture depuis le cache préchargé au démarrage : instantané, aucun
+      // appel réseau (voir chargerCacheSmig()).
+      if (fiSmigCache) {
+        const row = fiSmigCache.find((r) => String(r.annee) === String(annee));
+        return row ? (regimeNorm === "48H" ? row.smig48 : row.smig40) : "";
+      }
+
+      // Filet de sécurité si le préchargement n'a pas encore abouti.
+      try {
+        const smigParams = await apiCallDirect("getSmig", { annee });
+        if (!smigParams) return "";
+        return regimeNorm === "48H" ? smigParams.smig48 : smigParams.smig40;
+      } catch (err) {
+        console.error("Smig introuvable :", err.message);
+        return "";
+      }
+    }
+
+    async function ouvrirModalSmig() {
+      ouvrirModalSmigShared(
+        document.getElementById("fi_modal_smig"),
+        document.getElementById("fi_smig_table"),
+        FI_ANNEE_COURANTE,
+        apiCallDirect
+      );
+    }
+
+    /* ---------------- Dossier courant / catégories ---------------- */
+
+    function setField(name, value) {
+      const el = document.querySelector(`[data-field="${name}"]`);
+      if (el) el.textContent = value || "----";
+    }
+
+    function entrepriseSelectionnee() {
+      const texte = document.querySelector('[data-field="ese"]')?.textContent || "";
+      return texte.trim() && texte.trim() !== "----";
+    }
+
+    /* ---------------- Alerte "Données à sauvegarder !" ---------------- */
+
+    function marquerDonneesNonSauvegardees() {
+      const lbl = document.getElementById("navbar_alert_save");
+      if (lbl) lbl.hidden = false;
+    }
+
+    function marquerDonneesSauvegardees() {
+      const lbl = document.getElementById("navbar_alert_save");
+      if (lbl) lbl.hidden = true;
+    }
+
+    window.addEventListener("beforeunload", (e) => {
+      const lbl = document.getElementById("navbar_alert_save");
+      if (lbl && !lbl.hidden) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    });
+
+    /* ---------------- Calculette : ajout / édition d'un stage ----------------
+       Logique portée du projet VB.NET (calculForm/MainForm) : numérotation
+       automatique par préfixe (APP/FA/SPO), calcul de durée entre deux dates
+       "jj/mm" (mois de 26 jours ouvrés), durée agréée = min(déclarée, calculée),
+       stats par catégorie (hommes/femmes/durées/montant) et budget global. */
+
+    function wireStageModal() {
+      document.getElementById("fi_stage_deb")?.addEventListener("input", recalculerDureesStage);
+      document.getElementById("fi_stage_fin")?.addEventListener("input", recalculerDureesStage);
+      document.getElementById("fi_stage_deb")?.addEventListener("blur", (e) => { e.target.value = normaliserDateStage(e.target.value); recalculerDureesStage(); });
+      document.getElementById("fi_stage_fin")?.addEventListener("blur", (e) => { e.target.value = normaliserDateStage(e.target.value); recalculerDureesStage(); });
+      document.getElementById("fi_stage_dec")?.addEventListener("input", () => {
+        recalculerDureesStage();
+        const genreBtn = document.getElementById("fi_stage_btn_genre");
+        if (genreBtn) genreBtn.disabled = false;
+      });
+      document.getElementById("fi_stage_btn_genre")?.addEventListener("click", toggleGenreStage);
+      document.getElementById("fi_stage_btn_reset")?.addEventListener("click", reinitialiserFormStage);
+      document.getElementById("fi_stage_btn_valider")?.addEventListener("click", validerStage);
+    }
+
+    function ouvrirModalStage(categorie, ligne) {
+      if (!entrepriseSelectionnee()) {
+        alert("Veuillez sélectionner une entreprise avant de continuer (bouton « Reprendre / Nouveau » puis « Nouveau calcul »).");
+        return;
+      }
+
+      fiStageModalCategorie = categorie;
+      fiStageModalEditRow = ligne || null;
+      fiStageGenre = ligne ? (ligne.dataset.genre || "") : "";
+
+      document.getElementById("fi_modal_stage_box").classList.remove("is_standalone");
+      document.getElementById("fi_stage_mode_label").textContent = FI_CATEGORY_LABELS[categorie];
+
+      const genreBtn = document.getElementById("fi_stage_btn_genre");
+      const validerBtn = document.getElementById("fi_stage_btn_valider");
+
+      if (ligne) {
+        document.getElementById("fi_stage_num").value = ligne.dataset.numero || "";
+        document.getElementById("fi_stage_deb").value = ligne.dataset.dateDebut || "";
+        document.getElementById("fi_stage_fin").value = ligne.dataset.dateFin || "";
+        document.getElementById("fi_stage_dec").value = ligne.dataset.dureeDeclaree || "";
+        document.getElementById("fi_stage_cal").value = ligne.dataset.dureeCalculee || "";
+        document.getElementById("fi_stage_agr").value = ligne.dataset.dureeAgreee || "";
+        genreBtn.textContent = fiStageGenre || "Genre";
+        genreBtn.disabled = false;
+        validerBtn.disabled = false;
+        validerBtn.textContent = "Modifier";
+      } else {
+        document.getElementById("fi_stage_num").value = prochainNumeroStage(categorie);
+        document.getElementById("fi_stage_deb").value = "";
+        document.getElementById("fi_stage_fin").value = "";
+        document.getElementById("fi_stage_dec").value = "";
+        document.getElementById("fi_stage_cal").value = "";
+        document.getElementById("fi_stage_agr").value = "";
+        genreBtn.textContent = "Genre";
+        genreBtn.disabled = true;
+        validerBtn.disabled = true;
+        validerBtn.textContent = "Ajouter";
+      }
+      majStyleGenreBtn();
+      openModal("fi_modal_stage");
+      document.getElementById("fi_stage_deb").focus();
+    }
+
+    function ouvrirCalculetteAutonome() {
+      fiStageModalCategorie = null;
+      fiStageModalEditRow = null;
+      document.getElementById("fi_modal_stage_box").classList.add("is_standalone");
+      document.getElementById("fi_stage_mode_label").textContent = "Calculette";
+      reinitialiserFormStage();
+      openModal("fi_modal_stage");
+      document.getElementById("fi_stage_deb").focus();
+    }
+
+    function prochainNumeroStage(categorie) {
+      const prefix = FI_CATEGORY_PREFIX[categorie];
+      const tbody = document.querySelector(`[data-table="${categorie}"] tbody`);
+      let max = 0;
+      Array.from(tbody.children).forEach((tr) => {
+        const n = parseInt(String(tr.dataset.numero || "").replace(prefix, ""), 10);
+        if (!isNaN(n) && n > max) max = n;
+      });
+      return prefix + String(max + 1).padStart(2, "0");
+    }
+
+    function toggleGenreStage() {
+      fiStageGenre = fiStageGenre === "Homme" ? "Femme" : "Homme";
+      document.getElementById("fi_stage_btn_genre").textContent = fiStageGenre;
+      majStyleGenreBtn();
+      document.getElementById("fi_stage_btn_valider").disabled = false;
+    }
+
+    function majStyleGenreBtn() {
+      const btn = document.getElementById("fi_stage_btn_genre");
+      btn.classList.toggle("is_homme", fiStageGenre === "Homme");
+      btn.classList.toggle("is_femme", fiStageGenre === "Femme");
+    }
+
+    function reinitialiserFormStage() {
+      document.getElementById("fi_stage_deb").value = "";
+      document.getElementById("fi_stage_fin").value = "";
+      document.getElementById("fi_stage_dec").value = "";
+      document.getElementById("fi_stage_cal").value = "";
+      document.getElementById("fi_stage_agr").value = "";
+      fiStageGenre = "";
+      const genreBtn = document.getElementById("fi_stage_btn_genre");
+      genreBtn.textContent = "Genre";
+      genreBtn.disabled = true;
+      majStyleGenreBtn();
+      document.getElementById("fi_stage_btn_valider").disabled = true;
+      document.getElementById("fi_stage_deb").focus();
+    }
+
+    // Année de référence pour la validité des dates jj/mm (celle du dossier en cours).
+    function anneeReferenceStage() {
+      return fiWorkingAnnee;
+    }
+
+    function joursDansMois(annee, mois) {
+      return new Date(annee, mois, 0).getDate();
+    }
+
+    function parserDateStageJJMM(valeur) {
+      const parts = String(valeur || "").trim().split("/");
+      if (parts.length !== 2) return null;
+      const jour = parseInt(parts[0], 10);
+      const mois = parseInt(parts[1], 10);
+      if (!Number.isInteger(jour) || !Number.isInteger(mois)) return null;
+      return { jour, mois };
+    }
+
+    function normaliserDateStage(valeur) {
+      const p = parserDateStageJJMM(valeur);
+      if (!p) return "";
+      const annee = anneeReferenceStage();
+      if (p.mois < 1 || p.mois > 12) return "";
+      if (p.jour < 1 || p.jour > joursDansMois(annee, p.mois)) return "";
+      return String(p.jour).padStart(2, "0") + "/" + String(p.mois).padStart(2, "0");
+    }
+
+    // Calcul de la durée en mois entre deux dates jj/mm (convention "mois de 26 jours").
+    function calculerDureeStage() {
+      const annee = anneeReferenceStage();
+      const debInput = document.getElementById("fi_stage_deb");
+      const finInput = document.getElementById("fi_stage_fin");
+      const calInput = document.getElementById("fi_stage_cal");
+
+      calInput.value = "";
+      if (!debInput.value.trim() || !finInput.value.trim()) return null;
+
+      const deb = parserDateStageJJMM(debInput.value);
+      const fin = parserDateStageJJMM(finInput.value);
+      if (!deb || !fin) { calInput.value = "⚠️ Format invalide"; return null; }
+      if (deb.mois < 1 || deb.mois > 12 || fin.mois < 1 || fin.mois > 12) { calInput.value = "⚠️ Mois invalide"; return null; }
+      if (deb.jour < 1 || deb.jour > joursDansMois(annee, deb.mois) || fin.jour < 1 || fin.jour > joursDansMois(annee, fin.mois)) {
+        calInput.value = "⚠️ Jour invalide";
+        return null;
+      }
+
+      const debutStage = new Date(annee, deb.mois - 1, deb.jour);
+      const finStage = new Date(annee, fin.mois - 1, fin.jour);
+      if (debutStage > finStage) { calInput.value = "⚠️ Début > fin"; return null; }
+
+      let dureeTotale;
+      if (deb.jour === fin.jour) {
+        dureeTotale = (finStage.getMonth() - debutStage.getMonth()) + (finStage.getFullYear() - debutStage.getFullYear()) * 12;
+      } else {
+        let mois = 0;
+        let courant = new Date(debutStage);
+
+        while (true) {
+          const finMoisCourant = new Date(courant.getFullYear(), courant.getMonth() + 1, courant.getDate() - 1);
+          if (finMoisCourant <= finStage) {
+            mois += 1;
+            courant = new Date(courant.getFullYear(), courant.getMonth() + 1, courant.getDate());
+          } else {
+            break;
+          }
+        }
+
+        const dernierJourMoisComplet = new Date(courant.getFullYear(), courant.getMonth(), courant.getDate() - 1);
+        let joursRestants = Math.round((finStage - dernierJourMoisComplet) / 86400000);
+
+        if (joursRestants >= 26) {
+          mois += 1;
+          joursRestants = 0;
+        }
+        dureeTotale = Math.floor((mois + joursRestants / 26) * 100) / 100;
+      }
+
+      calInput.value = dureeTotale.toFixed(2);
+      return dureeTotale;
+    }
+
+    function calculerDureeAgreeeStage() {
+      const decInput = document.getElementById("fi_stage_dec");
+      const calInput = document.getElementById("fi_stage_cal");
+      const agrInput = document.getElementById("fi_stage_agr");
+
+      const durDec = parseFloat(String(decInput.value).replace(",", "."));
+      const durCal = parseFloat(String(calInput.value).replace(",", "."));
+
+      agrInput.value = (!isNaN(durDec) && !isNaN(durCal)) ? Math.min(durDec, durCal).toFixed(2) : "";
+    }
+
+    function recalculerDureesStage() {
+      calculerDureeStage();
+      calculerDureeAgreeeStage();
+    }
+
+    function validerStage() {
+      const categorie = fiStageModalCategorie;
+      const record = {
+        numero: document.getElementById("fi_stage_num").value,
+        date_debut: document.getElementById("fi_stage_deb").value,
+        date_fin: document.getElementById("fi_stage_fin").value,
+        duree_declaree: (() => {
+          const v = parseFloat(String(document.getElementById("fi_stage_dec").value).replace(",", "."));
+          return (isNaN(v) ? 0 : v).toFixed(2);
+        })(),
+        duree_calculee: document.getElementById("fi_stage_cal").value,
+        duree_agreee: document.getElementById("fi_stage_agr").value,
+        genre: fiStageGenre
+      };
+
+      if (fiStageModalEditRow) {
+        remplirLigneStage(fiStageModalEditRow, record);
+        wireStageRow(fiStageModalEditRow, categorie);
+        refreshCategoryStatus(categorie);
+        calculerBudgetTotal();
+        marquerDonneesNonSauvegardees();
+        closeModal("fi_modal_stage");
+      } else {
+        const tbody = document.querySelector(`[data-table="${categorie}"] tbody`);
+        const tr = document.createElement("tr");
+        remplirLigneStage(tr, record);
+        wireStageRow(tr, categorie);
+        tbody.appendChild(tr);
+        tbody.parentElement.scrollTop = tbody.parentElement.scrollHeight;
+
+        refreshCategoryStatus(categorie);
+        calculerBudgetTotal();
+        marquerDonneesNonSauvegardees();
+
+        // Comme dans le projet VB.NET : la calculette reste ouverte en mode
+        // ajout, prête pour le stage suivant (N° incrémenté automatiquement).
+        reinitialiserFormStage();
+        document.getElementById("fi_stage_num").value = prochainNumeroStage(categorie);
+      }
+    }
+
+    function remplirLigneStage(tr, record) {
+      tr.dataset.numero = record.numero || "";
+      tr.dataset.dateDebut = record.date_debut || "";
+      tr.dataset.dateFin = record.date_fin || "";
+      tr.dataset.dureeDeclaree = record.duree_declaree || "";
+      tr.dataset.dureeCalculee = record.duree_calculee || "";
+      tr.dataset.dureeAgreee = record.duree_agreee || "";
+      tr.dataset.genre = record.genre || "";
+
+      tr.innerHTML = `
+        <td>${record.numero || ""}</td>
+        <td>${record.date_debut || ""}</td>
+        <td>${record.date_fin || ""}</td>
+        <td>${record.duree_declaree || ""}</td>
+        <td>${record.duree_calculee || ""}</td>
+        <td>${record.duree_agreee || ""}</td>
+        <td>${record.genre || ""}</td>
+        <td class="fi_row_actions">
+          <button type="button" class="fi_row_edit" title="Modifier">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button type="button" class="fi_row_reset" title="Vider la ligne (le N° est conservé)">
+            <i class="bi bi-arrow-counterclockwise"></i>
+          </button>
+          <button type="button" class="fi_row_delete" title="Supprimer le dernier stage saisi">
+            <i class="bi bi-trash3"></i>
+          </button>
+        </td>`;
+    }
+
+    // Le clic sur la ligne ou sur le crayon ouvre la calculette pré-remplie.
+    // La corbeille n'est visible que sur le DERNIER stage de la catégorie :
+    // la numérotation (APP01, APP02...) est strictement séquentielle, donc
+    // seule la dernière entrée peut être retirée sans casser la suite.
+    function wireStageRow(tr, categorie) {
+      tr.addEventListener("dblclick", () => ouvrirModalStage(categorie, tr));
+
+      tr.querySelector(".fi_row_edit").addEventListener("click", (e) => {
+        e.stopPropagation();
+        ouvrirModalStage(categorie, tr);
+      });
+
+      tr.querySelector(".fi_row_delete").addEventListener("click", (e) => {
+        e.stopPropagation();
+        tr.remove();
+        refreshCategoryStatus(categorie);
+        calculerBudgetTotal();
+        marquerDonneesNonSauvegardees();
+      });
+
+      tr.querySelector(".fi_row_reset").addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!confirm("Vider cette ligne ? Le N° sera conservé, le reste sera effacé.")) return;
+        reinitialiserLigneStage(tr, categorie);
+      });
+    }
+
+    // Remet une ligne à vide (dates, durées, genre) en conservant uniquement
+    // son N° — la numérotation étant strictement séquentielle, on ne peut
+    // pas retirer une ligne intermédiaire sans casser la suite (voir
+    // fi_row_delete, réservé à la dernière ligne).
+    function reinitialiserLigneStage(tr, categorie) {
+      const numero = tr.dataset.numero || "";
+      remplirLigneStage(tr, { numero });
+      wireStageRow(tr, categorie);
+      refreshCategoryStatus(categorie);
+      calculerBudgetTotal();
+      marquerDonneesNonSauvegardees();
+    }
+
+    // N'affiche le bouton de suppression que sur la dernière ligne de la
+    // catégorie (numérotation séquentielle) ; le bouton RAZ, lui, n'est
+    // proposé que sur les lignes précédentes (la dernière a déjà "Supprimer").
+    function mettreAJourSuppressionCategorie(categorie) {
+      const tbody = document.querySelector(`[data-table="${categorie}"] tbody`);
+      const rows = Array.from(tbody.children);
+      rows.forEach((tr, i) => {
+        const isLast = i === rows.length - 1;
+        const btnDelete = tr.querySelector(".fi_row_delete");
+        const btnReset = tr.querySelector(".fi_row_reset");
+        if (btnDelete) btnDelete.hidden = !isLast;
+        if (btnReset) btnReset.hidden = isLast;
+      });
+    }
+
+    function renderCategoryRows(categorie, rows) {
+      const tbody = document.querySelector(`[data-table="${categorie}"] tbody`);
+      tbody.innerHTML = "";
+
+      rows.forEach((row, i) => {
+        const tr = document.createElement("tr");
+        tr.dataset.id = row.id || "";
+        remplirLigneStage(tr, {
+          numero: row.numero || (FI_CATEGORY_PREFIX[categorie] + String(i + 1).padStart(2, "0")),
+          date_debut: row.date_debut || "",
+          date_fin: row.date_fin || "",
+          duree_declaree: row.duree_declaree || "",
+          duree_calculee: row.duree_calculee || "",
+          duree_agreee: row.duree_agreee || "",
+          genre: row.genre || ""
+        });
+        wireStageRow(tr, categorie);
+        tbody.appendChild(tr);
+      });
+
+      refreshCategoryStatus(categorie);
+    }
+
+    /* ---------------- Stats par catégorie + budget global ----------------
+       Montant agréé = durée agréée totale × Smig × 0,5 (Apprentissage)
+       ou × 1 (Alternance / Stages pratiques), arrondi au millime inférieur. */
+
+    function smigCourantNumerique() {
+      const texte = document.querySelector('[data-field="smigEse"]')?.textContent || "";
+      const val = parseFloat(texte.replace(",", "."));
+      return isNaN(val) ? 0 : val;
+    }
+
+    function calculerStatsCategorie(categorie) {
+      const tbody = document.querySelector(`[data-table="${categorie}"] tbody`);
+      let nbH = 0, nbF = 0, total4 = 0, total6 = 0;
+
+      Array.from(tbody.children).forEach((tr) => {
+        const durDec = parseFloat(String(tr.dataset.dureeDeclaree || "").replace(",", "."));
+        const durAgr = parseFloat(String(tr.dataset.dureeAgreee || "").replace(",", "."));
+        if (!isNaN(durDec)) total4 += durDec;
+        if (!isNaN(durAgr)) total6 += durAgr;
+
+        const genre = String(tr.dataset.genre || "").trim().toLowerCase();
+        if (genre === "homme") nbH += 1;
+        if (genre === "femme") nbF += 1;
+      });
+
+      // Durée déclarée : arrondi à 2 décimales (cohérent avec la précision
+      // saisie via la calculette). Durée agréée retenue : tronquée à 1
+      // décimale, sans arrondissement (25,48 => 25,4, jamais 25,5).
+      total4 = Math.round(total4 * 100) / 100;
+      total6 = Math.floor(total6 * 10) / 10;
+
+      const smig = smigCourantNumerique();
+      const montant = categorie === "apprentissage"
+        ? Math.floor(total6 * smig * 0.5 * 1000) / 1000
+        : Math.floor(total6 * smig * 1000) / 1000;
+
+      return { nbH, nbF, total4, total6, montant, count: tbody.children.length };
+    }
+    function formatGenreTexte(nb, masculin) {
+      if (nb === 0) return masculin ? "Aucun homme" : "Aucune femme";
+      if (nb === 1) return masculin ? "1 homme" : "1 femme";
+      return masculin ? `${nb} hommes` : `${nb} femmes`;
+    }
+
+    // Durées toujours affichées avec 2 chiffres après la virgule (ex: "1,50").
+    function formatDuree(n) {
+      const val = Number(n);
+      return Number.isNaN(val) ? "----" : val.toFixed(2).replace(".", ",");
+    }
+
+    function refreshCategoryStatus(categorie) {
+      const emptyEl = document.querySelector(`[data-empty="${categorie}"]`);
+      const statusEl = document.querySelector(`[data-status="${categorie}"]`);
+      const stats = calculerStatsCategorie(categorie);
+
+      if (emptyEl) emptyEl.hidden = stats.count > 0;
+      if (statusEl) {
+        statusEl.textContent = stats.count > 0
+          ? `${formatGenreTexte(stats.nbH, true)} | ${formatGenreTexte(stats.nbF, false)} | Durée déclarée : ${formatDuree(stats.total4)} mois | Durée agréée : ${formatDuree(stats.total6)} mois | Mt agréé : ${formatMontant(stats.montant)}`
+          : "Aucun stage";
+      }
+      mettreAJourSuppressionCategorie(categorie);
+    }
+
+    function calculerBudgetTotal() {
+      if (!entrepriseSelectionnee() || smigCourantNumerique() === 0) {
+        setField("budget", "----");
+        return;
+      }
+      const total = FI_CATEGORIES.reduce((somme, cat) => somme + calculerStatsCategorie(cat).montant, 0);
+      setField("budget", formatMontant(total));
+    }
+
+    function rafraichirTousLesStages() {
+      FI_CATEGORIES.forEach((cat) => refreshCategoryStatus(cat));
+      calculerBudgetTotal();
+    }
+
+    function readAllStagesGrouped() {
+      const grouped = {};
+      FI_CATEGORIES.forEach((cat) => {
+        const tbody = document.querySelector(`[data-table="${cat}"] tbody`);
+        grouped[cat] = Array.from(tbody.children).map((tr) => ({
+          numero: tr.dataset.numero || "",
+          date_debut: tr.dataset.dateDebut || "",
+          date_fin: tr.dataset.dateFin || "",
+          duree_declaree: tr.dataset.dureeDeclaree || "",
+          duree_calculee: tr.dataset.dureeCalculee || "",
+          duree_agreee: tr.dataset.dureeAgreee || "",
+          genre: tr.dataset.genre || ""
+        }));
+      });
+      return grouped;
+    }
+
+    /* ---------------- Impression (même page, inspirée du projet VB.NET) ----------------
+       BtnPrint_Click générait un fichier HTML temporaire puis l'ouvrait dans le
+       navigateur pour impression. Ici, on peuple #fi_print_area directement dans
+       la page puis on appelle window.print() ; le CSS @media print masque tout
+       le reste (y compris le header) et n'affiche que cette zone. */
+
+    function imprimerDossier() {
+      const total = FI_CATEGORIES.reduce((s, cat) => s + calculerStatsCategorie(cat).montant, 0);
+      if (!entrepriseSelectionnee() || total === 0) {
+        alert("Aucune donnée à imprimer.");
+        return;
+      }
+
+      const eseTexte = document.querySelector('[data-field="ese"]').textContent;
+      const budgetTexte = formatMontant(total);
+      const anneePrecedente = document.querySelector('[data-field="annee"]').textContent;
+
+      let html = `
+        <div class="fi_print_page">
+          <h1>Droits de tirage individuels ${FI_ANNEE_COURANTE}</h1>
+          <h2>${eseTexte}</h2>
+          <h2>Budget global : ${budgetTexte}</h2>
+        </div>`;
+
+      FI_CATEGORIES.forEach((cat) => {
+        const s = calculerStatsCategorie(cat);
+        html += `<div class="fi_print_stats_block">
+          <h3>${FI_CATEGORY_LABELS[cat]}</h3>`;
+        html += s.count > 0
+          ? `<div><strong>Hommes :</strong> ${s.nbH}</div>
+             <div><strong>Femmes :</strong> ${s.nbF}</div>
+             <div><strong>Durée déclarée :</strong> ${formatDuree(s.total4)} mois</div>
+             <div><strong>Durée agréée :</strong> ${formatDuree(s.total6)} mois</div>
+             <div><strong>Montant agréé :</strong> ${formatMontant(s.montant)}</div>`
+          : `<div class="fi_print_aucun">Aucun stage</div>`;
+        html += `</div>`;
+      });
+
+      const categoriesAvecDonnees = FI_CATEGORIES.filter((cat) => calculerStatsCategorie(cat).count > 0);
+
+      categoriesAvecDonnees.forEach((cat, index) => {
+        const tbody = document.querySelector(`[data-table="${cat}"] tbody`);
+        const s = calculerStatsCategorie(cat);
+        const statusTexte = `${formatGenreTexte(s.nbH, true)} | ${formatGenreTexte(s.nbF, false)} | Durée déclarée : ${formatDuree(s.total4)} mois | Durée agréée : ${formatDuree(s.total6)} mois | Mt agréé : ${formatMontant(s.montant)}`;
+
+        html += `<div class="fi_print_break">
+          <div class="fi_print_header_flex">
+            <h2>Droits de tirage individuels ${FI_ANNEE_COURANTE}</h2>
+            <h2>Formation initiale ${anneePrecedente}</h2>
+          </div>
+          <div class="fi_print_ese_budget">
+            <h2>${eseTexte}</h2>
+            <h2>${budgetTexte}</h2>
+          </div>
+          <div class="fi_print_titre_secondaire">
+            <h3>${FI_CATEGORY_LABELS[cat]}</h3>
+            <div class="fi_print_status" data-status="${cat}">${statusTexte}</div>
+          </div>
+          <table class="fi_print_table">
+            <thead>
+              <tr><th>N°</th><th>Date début</th><th>Date fin</th><th>Durée déclarée</th><th>Durée calculée</th><th>Durée agréée</th><th>Genre</th></tr>
+            </thead>
+            <tbody>`;
+
+        Array.from(tbody.children).forEach((tr) => {
+          html += `<tr>
+            <td>${tr.dataset.numero || ""}</td>
+            <td>${tr.dataset.dateDebut || ""}</td>
+            <td>${tr.dataset.dateFin || ""}</td>
+            <td>${tr.dataset.dureeDeclaree || ""}</td>
+            <td>${tr.dataset.dureeCalculee || ""}</td>
+            <td>${tr.dataset.dureeAgreee || ""}</td>
+            <td>${tr.dataset.genre || ""}</td>
+          </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+      });
+
+      document.getElementById("fi_print_area").innerHTML = html;
+      window.print();
+    }
+
+    /* ---------------- Enregistrement (dossier + stages + export Drive) ---------------- */
+
+    /* ---------------- Enregistrement (= export Drive du calcul) ----------------
+       Pas de fi_dossiers/fi_stages : le fichier HTML généré dans Drive EST
+       le calcul enregistré. "Enregistrer" construit cet export directement
+       depuis l'état affiché à l'écran (entreprise, smig, stages, budget). */
+
+    async function enregistrerCalcul() {
+      if (!entrepriseSelectionnee()) {
+        alert("Sélectionnez une entreprise avant d'enregistrer (bouton « Reprendre / Nouveau » → « Nouveau calcul »).");
+        return;
+      }
+
+      const total = FI_CATEGORIES.reduce((s, cat) => s + calculerStatsCategorie(cat).montant, 0);
+      if (total === 0) {
+        alert("Aucun stage saisi : rien à enregistrer.");
+        return;
+      }
+
+      const calcul = {
+        entreprise: document.querySelector('[data-field="ese"]').textContent,
+        annee: fiWorkingAnnee,
+        regime: fiWorkingRegime,
+        smig: document.querySelector('[data-field="smigEse"]').textContent,
+        budget: total
+      };
+
+      const btnEnregistrer = document.getElementById("fi_btn_enregistrer");
+      setBtnSaving(btnEnregistrer, true);
+      try {
+        const stagesGrouped = readAllStagesGrouped();
+        const { url, id } = await apiCallDirect("exportToDrive", { dossier: calcul, stages: stagesGrouped });
+        fiDerniereUrlExport = url;
+        fiCalculsCache = null;
+        history.replaceState(null, "", `fi.html?calcul=${id}`);
+
+        marquerDonneesSauvegardees();
+        fermerToutesLesSections();
+        alert("Calcul enregistré.");
+      } catch (err) {
+        alert(`Erreur lors de l'enregistrement : ${err.message}`);
+      } finally {
+        setBtnSaving(btnEnregistrer, false);
+      }
+    }
+
+    // Affiche/masque un spinner sur un bouton "Enregistrer" pendant l'appel
+    // serveur (utilisé par tous les boutons de sauvegarde des .btns_metiers).
+    function setBtnSaving(btn, saving, savingLabel = "Enregistrement...") {
+      if (!btn) return;
+      if (saving) {
+        if (btn.dataset.originalHtml === undefined) btn.dataset.originalHtml = btn.innerHTML;
+        btn.innerHTML = `<span class="btn_saving_spinner"></span> ${savingLabel}`;
+        btn.classList.add("btn_saving");
+        btn.disabled = true;
+      } else {
+        if (btn.dataset.originalHtml !== undefined) btn.innerHTML = btn.dataset.originalHtml;
+        btn.classList.remove("btn_saving");
+        btn.disabled = false;
+      }
+    }
+
+    async function apiCallDirect(action, payload = {}) {
+      const res = await fetch(GAS_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action, ...payload })
+      });
+      if (!res.ok) throw new Error(`Erreur réseau (${res.status})`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Erreur backend inconnue");
+      return data.result;
+    }
+  </script>
+</body>
+</html>

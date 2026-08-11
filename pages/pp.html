@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Promotion professionnelle — URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="../css/variables.css" />
+  <link rel="stylesheet" href="../css/layout.css" />
+  <link rel="stylesheet" href="../css/sidebar.css" />
+  <link rel="stylesheet" href="../css/navbar.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    /* ============================================================
+       Styles propres à pages/pp.html
+       ============================================================ */
+
+    /* Garde-fou : garantit que tout élément avec l'attribut "hidden"
+       reste bien masqué, même si une classe (ex: .btn_seal, .no_mobile)
+       définit un display ailleurs qui pourrait sinon prendre le pas
+       sur l'attribut natif [hidden]. */
+    [hidden] { display: none !important; }
+
+    /*.search_wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      flex: 1 1 220px;
+      min-width: 160px;
+    }*/
+    .search_icon {
+      position: absolute;
+      left: var(--space_3);
+      color: var(--text_secondary);
+      font-size: var(--fs_sm);
+      pointer-events: none;
+    }
+    /*.search_wrap */
+    .pp_search {
+      padding-left: calc(var(--space_3) * 2 + 12px);
+      padding-right: calc(var(--space_3) * 2 + 12px);
+    }
+    .search_clear {
+      position: absolute;
+      right: var(--space_2);
+      display: flex;
+      align-items: center;
+      background: transparent;
+      border: none;
+      color: var(--text_secondary);
+      font-size: var(--fs_base);
+      cursor: pointer;
+      padding: 4px;
+    }
+    .search_clear:hover { color: var(--color_danger); }
+
+    .pp_search {
+      width: 100%;
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: 0 var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      height: 34px;
+      min-height: 34px;
+      margin-bottom: 0;
+    }
+    .pp_table td, .pp_table th {
+      padding: var(--space_1) var(--space_2);
+      vertical-align: top;
+      text-align: left;
+    }
+    .pp_table td:last-child, .pp_table th:last-child {
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    /* ------------------------------------------------------------
+       Modale "Nouvelle classe" — grille de formulaire reprise de la
+       fiche signalétique de class.html (mêmes styles, mêmes id de
+       champs, pour rester cohérent avec la fiche éditée là-bas).
+       ------------------------------------------------------------ */
+    .classe_form_grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space_3);
+    }
+    .classe_form_grid label {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_1);
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+    }
+    .classe_form_grid label input,
+    .classe_form_grid label select {
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper_raised);
+      color: var(--text_primary);
+    }
+    .classe_form_grid label input:focus,
+    .classe_form_grid label select:focus {
+      outline: 2px solid var(--color_teal_light);
+      outline-offset: 1px;
+    }
+    .classe_form_grid .matiere_form_actions {
+      grid-column: 1 / -1;
+    }
+    .classe_semestre_group {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: var(--space_2);
+    }
+    .matiere_form_actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space_3);
+      margin-top: var(--space_4);
+      padding-top: var(--space_4);
+      border-top: 1px solid var(--border_soft);
+    }
+
+    /* ------------------------------------------------------------
+       Section "Demandes" — chips cliquables de filtrage par
+       spécialité (au-dessus du tableau).
+       ------------------------------------------------------------ */
+    .demandes_specialite_filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space_2);
+      margin-bottom: var(--space_4);
+    }
+    .demandes_specialite_chip {
+      background: var(--color_paper_raised);
+      border: 1px solid var(--border_soft);
+      padding: var(--space_1) var(--space_3);
+      border-radius: 999px;
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+      cursor: pointer;
+      line-height: 1.4;
+    }
+    .demandes_specialite_chip:hover {
+      border-color: var(--color_teal_light);
+      color: var(--color_teal);
+    }
+    .demandes_specialite_chip.is_active {
+      background: var(--color_teal);
+      border-color: var(--color_teal);
+      color: var(--text_inverse);
+    }
+
+    /* Section "Dossiers" / "Inscrits" : contenu pas encore implémenté */
+    .panel_todo {
+      color: var(--text_secondary);
+      font-style: italic;
+    }
+
+    /* Liste cochable de la modale d'aperçu import Excel (reprise de
+       class.html#liste_inscrits) */
+    .inscrits_check_list {
+      max-height: 50vh;
+      overflow-y: auto;
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+    }
+    .inscrits_check_list table { width: 100%; border-collapse: collapse; }
+    .inscrits_check_list th, .inscrits_check_list td {
+      padding: var(--space_2);
+      border-bottom: 1px solid var(--border_soft);
+      text-align: left;
+      font-size: var(--fs_sm);
+    }
+    .inscrits_check_list tr:last-child td { border-bottom: none; }
+    .inscrits_import_hint {
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+      margin-bottom: var(--space_2);
+    }
+    .inscrits_toggle_all {
+      margin-bottom: var(--space_2);
+    }
+
+    /* Cellule composite "Coordonnées" (Tél/Tél2/Email) de la modale
+       Demande — même convention que .coord_group dans part.html. */
+    .demande_coord_field {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_1);
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+    }
+    .demande_coord_group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: var(--space_3);
+    }
+    .demande_coord_group label {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_1);
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+    }
+    .demande_coord_group label input {
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper_raised);
+      color: var(--text_primary);
+    }
+    .demande_coord_group label input:focus {
+      outline: 2px solid var(--color_teal_light);
+      outline-offset: 1px;
+    }
+
+    /* Survol de la colonne Tél du tableau Demandes : affiche toutes les
+       coordonnées (Tél / Tél2 / Email) en infobulle. */
+    .demande_tel_tooltip {
+      position: relative;
+      cursor: help;
+      border-bottom: 1px dotted var(--text_secondary);
+    }
+    .demande_tel_tooltip:hover::after,
+    .demande_tel_tooltip:focus-visible::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 0;
+      top: 100%;
+      margin-top: var(--space_1);
+      z-index: 30;
+      background: var(--color_ink);
+      color: var(--text_inverse);
+      white-space: pre-line;
+      min-width: 200px;
+      padding: var(--space_2) var(--space_3);
+      border-radius: var(--radius_sm);
+      box-shadow: var(--shadow_card);
+      font-size: var(--fs_sm);
+      line-height: 1.5;
+    }
+  </style>
+  <script src="../js/session.js"></script>
+</head>
+<body data-nav-mode="toggle">
+
+  <div class="sidebar_overlay" id="sidebar_overlay"></div>
+
+  <header class="navbar">
+    <button type="button" class="hamburger_btn"><i class="bi bi-list"></i></button>
+    <div class="page_title_group">
+      <span class="page_eyebrow">PP · Promotion professionnelle</span>
+      <h1 class="page_title">Promotion professionnelle</h1>
+    </div>
+    <div class="navbar_actions">
+      <span class="navbar_breadcrumb">
+        <a href="../index.html">Accueil</a> <i class="bi bi-chevron-right"></i> Promotion professionnelle
+      </span>
+    </div>
+  </header>
+
+  <div class="app_shell">
+    <aside class="sidebar" id="sidebar_root">
+      <button type="button" class="sidebar_close_btn" aria-label="Fermer le menu">
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <nav class="sidebar_nav">
+        <a class="sidebar_module_link" href="../index.html"><i class="bi bi-house"></i> Accueil</a>
+        <div class="sidebar_divider"></div>
+        <div class="sidebar_group_label">Sur cette page</div>
+        <a class="sidebar_section_link is_active" href="#demandes">Demandes</a>
+        <a class="sidebar_section_link" href="#dossiers">Dossiers</a>
+        <a class="sidebar_section_link" href="#inscrits">Inscrits</a>
+        <a class="sidebar_section_link" href="#classes">Classes</a>
+
+        <div class="sidebar_divider"></div>
+
+        <div class="sidebar_group_label">Autres modules</div>
+        <a class="sidebar_module_link" href="ci.html"><i class="bi bi-percent"></i> Crédit d'impôt</a>
+        <a class="sidebar_module_link" href="dti.html"><i class="bi bi-building"></i> Droits de tirage individuels</a>
+        <a class="sidebar_module_link" href="dtc.html"><i class="bi bi-buildings"></i> Droits de tirage collectifs</a>
+        <a class="sidebar_module_link" href="part.html"><i class="bi bi-diagram-3"></i> Partenaires</a>
+        <a class="sidebar_module_link" href="docs.html"><i class="bi bi-file-earmark-text"></i> Documents</a>
+      </nav>
+
+      <div class="sidebar_footer">
+        <span class="sidebar_footer_user"><span class="user_badge" id="sidebar_user_badge" title="Non connecté">--</span></span>
+        <span>CNFCPP © 2026</span>
+      </div>
+    </aside>
+
+    <main class="app_content">
+      <section id="demandes" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-person-lines-fill"></i> Demandes</h2>
+          <div class="panel_header_actions">
+            <button type="button" class="btn_info no_mobile" id="demande_btn_import">
+              <i class="bi bi-file-earmark-spreadsheet"></i> Importer Excel
+            </button>
+            <input type="file" id="demande_import_file" accept=".xlsx,.xls" hidden />
+            <button type="button" class="btn_seal no_mobile" id="demande_btn_nouveau">
+              <i class="bi bi-plus-lg"></i> Nouvelle demande
+            </button>
+          </div>
+        </div>
+
+        <div class="demandes_specialite_filters" id="demande_specialite_filters"></div>
+
+        <!-- MODALE DEMANDE (ajout / modif) -->
+        <div class="modal_overlay" id="demande_modal">
+          <div class="modal_dialog">
+            <div class="modal_header">
+              <h3 id="demande_modal_titre">Nouvelle demande</h3>
+              <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal_body">
+              <form id="demande_form" class="classe_form_grid">
+                <input type="hidden" name="_row" />
+                <label>CIN
+                  <input type="text" name="CIN" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 chiffres" />
+                </label>
+                <label>Prénom
+                  <input type="text" name="Prénom" required />
+                </label>
+                <label>Nom
+                  <input type="text" name="Nom" required />
+                </label>
+                <label>Spécialité
+                  <select name="Spécialité">
+                    <option value="">----</option>
+                    <option value="TI">TI</option>
+                    <option value="MAF">MAF</option>
+                    <option value="TMI">TMI</option>
+                    <option value="TSIG">TSIG</option>
+                    <option value="AD">AD</option>
+                    <option value="Aucune">Aucune</option>
+                  </select>
+                </label>
+                <div class="demande_coord_field">
+                  <span>Coordonnées</span>
+                  <div class="demande_coord_group" id="demande_coord_group">
+                    <label>Tél <input type="tel" id="demande_coord_tel" /></label>
+                    <label>Tél2 <input type="tel" id="demande_coord_tel2" /></label>
+                    <label>Email <input type="email" id="demande_coord_email" /></label>
+                  </div>
+                </div>
+                <div class="matiere_form_actions">
+                  <button type="button" class="btn_danger" id="demande_btn_supprimer" hidden>
+                    <i class="bi bi-trash3"></i> Supprimer
+                  </button>
+                  <button type="submit" class="btn_success"><i class="bi bi-check-lg"></i> Enregistrer</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODALE APERÇU IMPORT EXCEL -->
+        <div class="modal_overlay" id="demande_import_modal">
+          <div class="modal_dialog modal_lg">
+            <div class="modal_header">
+              <h3>Importer une liste Excel</h3>
+              <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal_body">
+              <p class="inscrits_import_hint" id="demande_import_hint"></p>
+              <button type="button" class="btn_ghost inscrits_toggle_all" id="demande_import_toggle_all">
+                <i class="bi bi-check-all"></i> Tout cocher / décocher
+              </button>
+              <form id="demande_import_form">
+                <div class="inscrits_check_list">
+                  <table>
+                    <thead><tr><th></th><th>CIN</th><th>Prénom</th><th>Nom</th><th>Tél</th><th>Spécialité</th></tr></thead>
+                    <tbody id="demande_import_body"></tbody>
+                  </table>
+                </div>
+                <div class="matiere_form_actions">
+                  <button type="submit" class="btn_success"><i class="bi bi-check-lg"></i> Importer la sélection</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <table class="data_table pp_table">
+          <thead>
+            <tr>
+              <th>CIN</th>
+              <th>Prénom</th>
+              <th>Nom</th>
+              <th>Tél</th>
+              <th>Spécialité</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="demande_table_body"></tbody>
+        </table>
+        <div class="empty_state" id="demande_empty" hidden>
+          <i class="bi bi-inbox"></i>Aucune demande enregistrée.
+        </div>
+      </section>
+
+      <section id="dossiers" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-folder2-open"></i> Dossiers</h2>
+        </div>
+        <p class="panel_todo" id="dossiers_contexte">Contenu à implémenter.</p>
+      </section>
+
+      <section id="inscrits" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-people"></i> Inscrits</h2>
+        </div>
+        <p class="panel_todo">Contenu à implémenter.</p>
+      </section>
+
+      <section id="classes" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-book"></i> Classes</h2>
+          <button type="button" id="pp_btn_nouvelle_classe" class="btn_seal no_mobile"><i class="bi bi-plus-lg"></i> Nouvelle classe</button>
+            <!--
+            <div class="search_wrap">
+              <i class="bi bi-search search_icon"></i>
+              <input type="text" class="pp_search" id="pp_search" placeholder="Rechercher (partenaire, classe, promotion)…" />
+              <button type="button" class="search_clear" data-clear="pp_search" hidden aria-label="Effacer la recherche">
+                <i class="bi bi-x-circle-fill"></i>
+              </button>
+            </div>
+            -->
+            
+        </div>
+
+        <!-- Une classe = un fichier HTML unique dans le dossier Drive
+             CLASSES_PP_FOLDER_ID (comme "Formation initiale" / fi.html),
+             pas de Sheet ni de modale ici : la création et l'édition se
+             font entièrement dans class.html, qui gère la sauvegarde du
+             fichier. Cette section n'affiche que le récap et redirige. -->
+
+        <table class="data_table pp_table">
+          <thead>
+            <tr>
+              <th>Classe</th> <!-- nom du fichier sans "_" -->
+              <th>Début</th>
+              <th>Fin</th>
+              <th>Facturation</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pp_classe_table_body"></tbody>
+        </table>
+        <div class="empty_state" id="pp_classe_empty" hidden>
+          <i class="bi bi-inbox"></i>Aucune classe enregistrée.
+        </div>
+      </section>
+
+      <!-- MODALE "NOUVELLE CLASSE" — reprend la fiche signalétique de
+           class.html (mêmes id de champs, même logique de génération du
+           nom de fichier), sans les boutons Inscrits / Frais de
+           coordination : une classe fraîchement créée n'a ni l'un ni
+           l'autre pour l'instant, ils se gèrent depuis class.html une
+           fois la classe ouverte. -->
+      <div class="modal_overlay" id="classe_fiche_modal">
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3 id="classe_fiche_modal_titre">Nouvelle classe</h3>
+            <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <form id="classe_fiche_form" class="classe_form_grid">
+              <label>Etablissement
+                <select id="classe_partenaire" required>
+                  <option value="">----</option>
+                </select>
+              </label>
+              <label>Classe
+                <select id="classe_classe" required>
+                  <option value="">----</option>
+                </select>
+              </label>
+              <label>Spécialité
+                <select id="classe_specialite" required>
+                  <option value="">----</option>
+                </select>
+              </label>
+              <label>Promotion
+                <input type="text" id="classe_promotion" placeholder="insérer numéro de la promotion" required />
+              </label>
+              <label>Niveau
+                <select id="classe_niveau" required>
+                  <option value="">----</option>
+                </select>
+              </label>
+              <label>Semestre
+                <span class="classe_semestre_group">
+                  <select id="classe_semestre_num">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                  </select>
+                  <input type="number" id="classe_semestre_annee" placeholder="Année (ex: 2026)" min="2000" max="2100" />
+                </span>
+              </label>
+              <label>État
+                <select id="classe_etat">
+                  <option value="Prévue">Prévue</option>
+                  <option value="En cours">En cours</option>
+                  <option value="Close">Clôturée</option>
+                </select>
+              </label>
+              <label id="label_date_debut" hidden>Date début de formation
+                <input type="date" id="classe_date_debut" />
+              </label>
+              <label id="label_date_fin" hidden>Date fin de formation
+                <input type="date" id="classe_date_fin" />
+              </label>
+              <label>Nom du premier responsable
+                <input type="text" id="classe_responsable_nom" placeholder="Rempli automatiquement depuis la base" />
+              </label>
+              <label>Fonction du premier responsable
+                <input type="text" id="classe_responsable_fonction" value="Directeur" />
+              </label>
+              <label>Facturation
+                <select id="classe_facturation_statut">
+                  <option value="">Non reçue</option>
+                  <option value="recue">Reçue</option>
+                  <option value="transfere">Transférée</option>
+                </select>
+              </label>
+              <label id="label_facturation_date_reception" hidden>Date de réception
+                <input type="date" id="classe_facturation_date_reception" />
+              </label>
+              <label id="label_facturation_date_transfert" hidden>Date de transfert
+                <input type="date" id="classe_facturation_date_transfert" />
+              </label>
+              <div class="matiere_form_actions">
+                <button type="submit" class="btn_success" id="classe_fiche_btn_enregistrer"><i class="bi bi-check-lg"></i> Enregistrer</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/modal_forms.js"></script>
+  <script src="../js/sidebar_toggle.js"></script>
+  <script src="../js/navbar_breadcrumb.js"></script>
+  <script>
+/* ============================================================
+   PP.JS — section "Classes"
+   Une classe FAD = un fichier HTML unique dans le dossier Drive dédié
+   (voir CLASSES_PP_FOLDER_ID / listClassesPP() côté Code.gs), sur le
+   même modèle que "Formation initiale" (fi.html/dti.html) : pas de
+   Sheet, pas de modale ici. Cette page n'affiche que le récap
+   (Partenaire PP, Classe, Spécialité, Promotion, Niveau, Semestre) et
+   redirige :
+     - [+ Nouvelle classe] -> class.html (création)
+     - [Afficher] d'une ligne -> class.html?classe={id} (édition)
+   class.html gère la saisie complète et la sauvegarde du fichier.
+   ============================================================ */
+
+let ppClasseListCache = [];
+let partenairesCache = [];
+// État d'édition : fileId de la classe en cours de modification (null =
+// création). editingExtraData conserve les listes (matières, inscrits,
+// regroupements...) déjà présentes dans le fichier Drive de la classe
+// éditée, pour les renvoyer telles quelles à exportClasseToDrive (la
+// fiche éditée ici ne concerne que la partie signalétique + facturation).
+let editingFileId = null;
+let editingExtraData = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadPPClasses();
+  document.getElementById("pp_search")?.addEventListener("input", (e) => renderPPClasseTable(e.target.value));
+  renderUserBadge(document.getElementById("sidebar_user_badge"));
+  injecterBoutonDeconnexion(document.getElementById("sidebar_user_badge"));
+
+  ["pp_search"].forEach(wireSearchClear);
+
+  wireNouvelleClasseModal();
+
+  wireDemandesUi();
+  loadDemandes();
+
+  initSectionToggle();
+});
+
+/* ---------------- Une seule section visible à la fois ---------------- */
+/* Ordre : Demandes (active par défaut) - Dossiers - Inscrits - Classes. */
+
+function showPPSection(id) {
+  document.querySelectorAll("main.app_content > section.panel").forEach((s) => { s.hidden = s.id !== id; });
+  document.querySelectorAll(".sidebar_section_link[href^='#']").forEach((l) =>
+    l.classList.toggle("is_active", l.getAttribute("href") === `#${id}`));
+  history.replaceState(null, "", `#${id}`);
+}
+
+function initSectionToggle() {
+  document.querySelectorAll(".sidebar_section_link[href^='#']").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      showPPSection(link.getAttribute("href").slice(1));
+    });
+  });
+
+  const initial = window.location.hash ? window.location.hash.slice(1) : "demandes";
+  showPPSection(initial);
+}
+
+/* ============================================================
+   SECTION "DEMANDES"
+   Onglet "Demandes" de la Sheet PP_DEMANDES_SHEET_ID. En-têtes :
+   CIN | Prénom | Nom | Coordonnées | Spécialité.
+   "Coordonnées" est une cellule composite (Tél / Tél2 / Email), une
+   ligne "Label : valeur" par sous-champ — même convention que
+   "Coordonnées" dans part.html (voir getCoordField()/buildCoordText()
+   ci-dessous, dupliqués ici car pp.html n'inclut pas le script de
+   part.html).
+   ============================================================ */
+
+const DEMANDE_COORD_LABELS = ["Tél", "Tél2", "Email"];
+
+function getCoordField(text, label) {
+  const lines = String(text || "").split("\n");
+  for (const line of lines) {
+    const idx = line.indexOf(":");
+    if (idx === -1) continue;
+    if (line.slice(0, idx).trim() === label) return line.slice(idx + 1).trim();
+  }
+  return "";
+}
+
+function buildCoordText(labels, values) {
+  return labels.map((l) => `${l} : ${values[l] || ""}`).join("\n");
+}
+
+let demandesCache = [];
+let demandeSpecialiteFiltre = "";
+let demandeImportCandidats = []; // liste temporaire affichée dans la modale d'import Excel
+
+function wireDemandesUi() {
+  document.getElementById("demande_btn_nouveau")?.addEventListener("click", () => openDemandeForm(null));
+  document.getElementById("demande_form")?.addEventListener("submit", onSubmitDemandeForm);
+
+  document.getElementById("demande_btn_supprimer")?.addEventListener("click", async () => {
+    const rowId = document.getElementById("demande_form")._row.value;
+    if (!rowId) return;
+    if (!confirm("Supprimer cette demande ?")) return;
+    try {
+      await apiCallDirect("deleteDemandePP", { _row: rowId });
+      closeFormModal("demande_modal");
+      await loadDemandes();
+    } catch (err) {
+      alert(`Erreur lors de la suppression : ${err.message}`);
+    }
+  });
+
+  document.getElementById("demande_table_body")?.addEventListener("click", (e) => {
+    const btnAfficher = e.target.closest(".demande_row_afficher");
+    if (btnAfficher) {
+      const d = demandesCache.find((x) => String(x._row) === btnAfficher.dataset.row);
+      if (d) openDemandeForm(d);
+      return;
+    }
+
+    const btnDossier = e.target.closest(".demande_row_vers_dossier");
+    if (btnDossier) {
+      const d = demandesCache.find((x) => String(x._row) === btnDossier.dataset.row);
+      if (d) allerVersDossiers(d);
+      return;
+    }
+  });
+
+  document.getElementById("demande_specialite_filters")?.addEventListener("click", (e) => {
+    const chip = e.target.closest(".demandes_specialite_chip");
+    if (!chip) return;
+    demandeSpecialiteFiltre = chip.dataset.specialite || "";
+    renderDemandeTable();
+  });
+
+  // Import Excel
+  document.getElementById("demande_btn_import")?.addEventListener("click", () => {
+    document.getElementById("demande_import_file").click();
+  });
+  document.getElementById("demande_import_file")?.addEventListener("change", onFichierExcelDemandesChoisi);
+  document.getElementById("demande_import_toggle_all")?.addEventListener("click", () => {
+    const boxes = document.querySelectorAll('#demande_import_body input[type="checkbox"]');
+    const toutCoche = Array.from(boxes).every((b) => b.checked);
+    boxes.forEach((b) => (b.checked = !toutCoche));
+  });
+  document.getElementById("demande_import_form")?.addEventListener("submit", onSubmitDemandeImportForm);
+}
+
+async function loadDemandes() {
+  const tbody = document.getElementById("demande_table_body");
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr>`;
+
+  try {
+    demandesCache = await apiCallDirect("listDemandesPP", {});
+    renderSpecialiteFilters();
+    renderDemandeTable();
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+  }
+}
+
+// Chips cliquables générés à partir des spécialités réellement présentes
+// dans les demandes (+ "Toutes" pour réinitialiser le filtre).
+function renderSpecialiteFilters() {
+  const wrap = document.getElementById("demande_specialite_filters");
+  if (!wrap) return;
+  const specialites = [...new Set(demandesCache.map((d) => (d["Spécialité"] || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "fr"));
+
+  if (demandeSpecialiteFiltre && !specialites.includes(demandeSpecialiteFiltre)) demandeSpecialiteFiltre = "";
+
+  const chip = (label, val) => `
+    <span class="demandes_specialite_chip${demandeSpecialiteFiltre === val ? " is_active" : ""}" data-specialite="${val}">${label}</span>`;
+
+  wrap.innerHTML = chip("Toutes", "") + specialites.map((s) => chip(s, s)).join("");
+}
+
+function renderDemandeTable() {
+  const tbody = document.getElementById("demande_table_body");
+  const emptyEl = document.getElementById("demande_empty");
+
+  const filtered = !demandeSpecialiteFiltre
+    ? demandesCache
+    : demandesCache.filter((d) => (d["Spécialité"] || "").trim() === demandeSpecialiteFiltre);
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+  if (emptyEl) emptyEl.hidden = true;
+
+  tbody.innerHTML = filtered.map((d) => {
+    const coord = d["Coordonnées"] || "";
+    const tel = getCoordField(coord, "Tél");
+    const tooltip = DEMANDE_COORD_LABELS
+      .map((l) => `${l} : ${getCoordField(coord, l) || "—"}`)
+      .join("\n");
+    return `
+    <tr>
+      <td>${d["CIN"] || ""}</td>
+      <td>${d["Prénom"] || ""}</td>
+      <td>${d["Nom"] || ""}</td>
+      <td><span class="demande_tel_tooltip" tabindex="0" data-tooltip="${escapeHtmlDemande(tooltip)}">${tel || "—"}</span></td>
+      <td>${d["Spécialité"] || ""}</td>
+      <td>
+        <button type="button" class="btn_info demande_row_afficher" data-row="${d._row}">
+          <i class="bi bi-eye"></i> Afficher
+        </button>
+        <button type="button" class="btn_ghost demande_row_vers_dossier" data-row="${d._row}">
+          <i class="bi bi-arrow-right-circle"></i> Vers Dossiers
+        </button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+// Action "Vers Dossiers" : bascule vers la section Dossiers (contenu à
+// implémenter) en gardant le contexte de la demande d'origine, pour la
+// future création du dossier correspondant.
+function allerVersDossiers(demande) {
+  const contexte = document.getElementById("dossiers_contexte");
+  if (contexte) {
+    contexte.textContent = `Contenu à implémenter — dossier à créer pour ${demande["Prénom"] || ""} ${demande["Nom"] || ""} (CIN ${demande["CIN"] || "—"}).`;
+  }
+  showPPSection("dossiers");
+}
+
+function openDemandeForm(demande) {
+  const form = document.getElementById("demande_form");
+  form.reset();
+
+  if (demande) {
+    form._row.value = demande._row;
+    Object.keys(demande).forEach((key) => {
+      if (key === "_row" || key === "Coordonnées") return;
+      const field = form.elements[key];
+      if (field) field.value = demande[key] || "";
+    });
+  } else {
+    form._row.value = "";
+  }
+
+  const coord = (demande && demande["Coordonnées"]) || "";
+  document.getElementById("demande_coord_tel").value = getCoordField(coord, "Tél");
+  document.getElementById("demande_coord_tel2").value = getCoordField(coord, "Tél2");
+  document.getElementById("demande_coord_email").value = getCoordField(coord, "Email");
+
+  document.getElementById("demande_modal_titre").textContent = demande ? "Modifier la demande" : "Nouvelle demande";
+  document.getElementById("demande_btn_supprimer").hidden = !demande;
+  openFormModal("demande_modal", "demande_form");
+}
+
+async function onSubmitDemandeForm(e) {
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+  const record = {};
+  fd.forEach((value, key) => { if (key !== "_row") record[key] = value; });
+
+  record["Coordonnées"] = buildCoordText(DEMANDE_COORD_LABELS, {
+    "Tél": document.getElementById("demande_coord_tel").value.trim(),
+    "Tél2": document.getElementById("demande_coord_tel2").value.trim(),
+    "Email": document.getElementById("demande_coord_email").value.trim()
+  });
+
+  const rowId = fd.get("_row");
+  const btn = form.querySelector('button[type="submit"]');
+  setBtnSaving(btn, true);
+  try {
+    if (rowId) {
+      await apiCallDirect("updateDemandePP", { _row: rowId, record });
+    } else {
+      await apiCallDirect("createDemandePP", { record });
+    }
+    closeFormModal("demande_modal");
+    await loadDemandes();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+/* ---------------- Import Excel (mêmes principes que class.html#liste_inscrits) ---------------- */
+
+function normaliserEnTeteDemande(h) {
+  return String(h || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+function detecterColonnesDemandes(headers) {
+  const mapping = {};
+  headers.forEach((h) => {
+    const n = normaliserEnTeteDemande(h);
+    if (!mapping.cin && n.includes("cin")) mapping.cin = h;
+    else if (!mapping.prenom && n.includes("prenom")) mapping.prenom = h;
+    else if (!mapping.nom && (n === "nom" || (n.includes("nom") && !n.includes("prenom")))) mapping.nom = h;
+    else if (!mapping.specialite && n.includes("special")) mapping.specialite = h;
+    else if (!mapping.telephone2 && (n.includes("tel") || n.includes("gsm") || n.includes("phone")) && /2/.test(n)) mapping.telephone2 = h;
+    else if (!mapping.telephone && (n.includes("tel") || n.includes("gsm") || n.includes("phone"))) mapping.telephone = h;
+    else if (!mapping.email && n.includes("mail")) mapping.email = h;
+  });
+  return mapping;
+}
+
+function onFichierExcelDemandesChoisi(e) {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const wb = XLSX.read(evt.target.result, { type: "array" });
+      const feuille = wb.Sheets[wb.SheetNames[0]];
+      const lignes = XLSX.utils.sheet_to_json(feuille, { defval: "" });
+      if (lignes.length === 0) {
+        alert("Ce fichier Excel ne contient aucune ligne exploitable.");
+        return;
+      }
+      const headers = Object.keys(lignes[0]);
+      const mapping = detecterColonnesDemandes(headers);
+      const candidats = lignes.map((ligne) => ({
+        cin: String(mapping.cin ? ligne[mapping.cin] : "").trim(),
+        prenom: String(mapping.prenom ? ligne[mapping.prenom] : "").trim(),
+        nom: String(mapping.nom ? ligne[mapping.nom] : "").trim(),
+        telephone: String(mapping.telephone ? ligne[mapping.telephone] : "").trim(),
+        telephone2: String(mapping.telephone2 ? ligne[mapping.telephone2] : "").trim(),
+        email: String(mapping.email ? ligne[mapping.email] : "").trim(),
+        specialite: String(mapping.specialite ? ligne[mapping.specialite] : "").trim()
+      })).filter((d) => d.nom || d.prenom);
+
+      if (candidats.length === 0) {
+        alert("Aucune colonne Nom/Prénom reconnue dans ce fichier. Vérifiez les en-têtes de colonnes.");
+        return;
+      }
+      ouvrirModaleImportDemandes(candidats);
+    } catch (err) {
+      alert(`Erreur de lecture du fichier : ${err.message}`);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function ouvrirModaleImportDemandes(candidats) {
+  demandeImportCandidats = candidats;
+  document.getElementById("demande_import_hint").textContent = `${candidats.length} ligne(s) détectée(s).`;
+
+  const tbody = document.getElementById("demande_import_body");
+  tbody.innerHTML = candidats.map((d, i) => `
+    <tr>
+      <td><input type="checkbox" data-index="${i}" checked /></td>
+      <td>${escapeHtmlDemande(d.cin)}</td>
+      <td>${escapeHtmlDemande(d.prenom)}</td>
+      <td>${escapeHtmlDemande(d.nom)}</td>
+      <td>${escapeHtmlDemande(d.telephone)}</td>
+      <td>${escapeHtmlDemande(d.specialite)}</td>
+    </tr>`).join("");
+
+  openFormModal("demande_import_modal", "demande_import_form");
+}
+
+function escapeHtmlDemande(str) {
+  return String(str || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+async function onSubmitDemandeImportForm(e) {
+  e.preventDefault();
+  const boxes = document.querySelectorAll('#demande_import_body input[type="checkbox"]:checked');
+  const selection = Array.from(boxes).map((b) => demandeImportCandidats[Number(b.dataset.index)]);
+  if (selection.length === 0) {
+    alert("Aucune demande sélectionnée.");
+    return;
+  }
+  const btn = e.target.querySelector('button[type="submit"]');
+  setBtnSaving(btn, true, "Importation...");
+  try {
+    for (const d of selection) {
+      const record = {
+        "CIN": d.cin,
+        "Prénom": d.prenom,
+        "Nom": d.nom,
+        "Spécialité": d.specialite,
+        "Coordonnées": buildCoordText(DEMANDE_COORD_LABELS, {
+          "Tél": d.telephone,
+          "Tél2": d.telephone2,
+          "Email": d.email
+        })
+      };
+      await apiCallDirect("createDemandePP", { record });
+    }
+    closeFormModal("demande_import_modal");
+    await loadDemandes();
+    alert(`${selection.length} demande(s) importée(s).`);
+  } catch (err) {
+    alert(`Erreur lors de l'import : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+/* ---------------- Modale "Nouvelle classe" ---------------- */
+/* Reprend la logique de la fiche signalétique de class.html : cascade
+   Etablissement -> Classe -> Spécialité/Niveau, visibilité des dates
+   selon l'État, génération du nom de fichier, puis exportClasseToDrive.
+   La classe est créée sans matières/inscrits/regroupements/tutorat/
+   intervenants/examens (listes vides) : le reste se complète ensuite
+   depuis class.html une fois la classe ouverte. */
+
+function wireNouvelleClasseModal() {
+  document.getElementById("pp_btn_nouvelle_classe")?.addEventListener("click", async () => {
+    const form = document.getElementById("classe_fiche_form");
+    form.reset();
+    document.getElementById("classe_specialite").innerHTML = `<option value="">----</option>`;
+    document.getElementById("classe_niveau").innerHTML = `<option value="">----</option>`;
+    editingFileId = null;
+    editingExtraData = null;
+    document.getElementById("classe_fiche_modal_titre").textContent = "Nouvelle classe";
+    updateDateVisibility();
+    updateFacturationVisibility();
+    if (!partenairesCache.length) await loadPartenaireOptions();
+    openFormModal("classe_fiche_modal", "classe_fiche_form");
+  });
+
+  document.getElementById("pp_classe_table_body")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".pp_btn_editer");
+    if (!btn) return;
+    ouvrirEditionClasse(btn.dataset.id);
+  });
+
+  document.getElementById("classe_partenaire")?.addEventListener("change", (e) => {
+    const selectedVal = e.target.value;
+    const partner = partenairesCache.find(p => (p["Sigle"] || p["Etablissement"]) === selectedVal);
+    const classeSelect = document.getElementById("classe_classe");
+    classeSelect.innerHTML = `<option value="">----</option>`;
+    document.getElementById("classe_specialite").innerHTML = `<option value="">----</option>`;
+    document.getElementById("classe_niveau").innerHTML = `<option value="">----</option>`;
+    if (partner) {
+      const domaine = (partner["Domaine"] || "").toString().trim().toUpperCase();
+      if (domaine === "ES") {
+        classeSelect.insertAdjacentHTML("beforeend", `<option value="LA">Licence (LA)</option>`);
+      } else if (domaine === "FP") {
+        classeSelect.insertAdjacentHTML("beforeend", `<option value="CAP">CAP</option>`);
+        classeSelect.insertAdjacentHTML("beforeend", `<option value="BTP">BTP</option>`);
+        classeSelect.insertAdjacentHTML("beforeend", `<option value="BTS">BTS</option>`);
+      } else {
+        classeSelect.insertAdjacentHTML("beforeend", `<option value="LA">Licence (LA)</option>`);
+        classeSelect.insertAdjacentHTML("beforeend", `<option value="CAP">CAP</option>`);
+        classeSelect.insertAdjacentHTML("beforeend", `<option value="BTP">BTP</option>`);
+        classeSelect.insertAdjacentHTML("beforeend", `<option value="BTS">BTS</option>`);
+      }
+      if (partner["Directeur"]) {
+        document.getElementById("classe_responsable_nom").value = partner["Directeur"];
+      }
+    }
+  });
+
+  document.getElementById("classe_classe")?.addEventListener("change", (e) => {
+    updateSpecialiteEtNiveauOptions(e.target.value);
+  });
+
+  document.getElementById("classe_etat")?.addEventListener("change", updateDateVisibility);
+
+  document.getElementById("classe_facturation_statut")?.addEventListener("change", (e) => {
+    const statut = e.target.value;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const dateReception = document.getElementById("classe_facturation_date_reception");
+    const dateTransfert = document.getElementById("classe_facturation_date_transfert");
+    // Le jour de réception est enregistré automatiquement dès le passage à
+    // "Reçue" (une seule fois — on ne l'écrase pas s'il est déjà rempli),
+    // puis le jour de transfert de la même façon dès le passage à
+    // "Transférée".
+    if ((statut === "recue" || statut === "transfere") && dateReception && !dateReception.value) {
+      dateReception.value = todayStr;
+    }
+    if (statut === "transfere" && dateTransfert && !dateTransfert.value) {
+      dateTransfert.value = todayStr;
+    }
+    updateFacturationVisibility();
+  });
+
+  document.getElementById("classe_fiche_form")?.addEventListener("submit", onSubmitNouvelleClasse);
+}
+
+async function loadPartenaireOptions(valeurActuelle) {
+  const select = document.getElementById("classe_partenaire");
+  try {
+    partenairesCache = await apiCallDirect("listPartPP", {});
+    select.innerHTML = `<option value="">----</option>` + partenairesCache
+      .map((p) => {
+        const sigle = p["Sigle"] || "";
+        const etab = p["Etablissement"] || "";
+        const display = sigle || etab;
+        const value = sigle || etab;
+        return `<option value="${value}">${display}</option>`;
+      })
+      .join("");
+    if (valeurActuelle) select.value = valeurActuelle;
+  } catch (err) {
+    select.innerHTML = `<option value="">Erreur de chargement</option>`;
+  }
+}
+
+function updateSpecialiteEtNiveauOptions(classe, specialiteActuelle, niveauActuel) {
+  const specialiteSelect = document.getElementById("classe_specialite");
+  const niveauSelect = document.getElementById("classe_niveau");
+  specialiteSelect.innerHTML = `<option value="">----</option>`;
+  niveauSelect.innerHTML = `<option value="">----</option>`;
+  if (!classe) return;
+  let specialites = [];
+  let niveauDenom = 0;
+  if (classe === "LA") { specialites = ["TI", "MAF"]; niveauDenom = 6; }
+  else if (classe === "CAP") { specialites = ["Aucune"]; niveauDenom = 0; }
+  else if (classe === "BTP") { specialites = ["TMI", "TSIG"]; niveauDenom = 4; }
+  else if (classe === "BTS") { specialites = ["AD"]; niveauDenom = 5; }
+  specialites.forEach((s) => {
+    specialiteSelect.insertAdjacentHTML("beforeend", `<option value="${s}">${s}</option>`);
+  });
+  if (niveauDenom > 0) {
+    for (let i = 1; i <= niveauDenom; i++) {
+      const val = `${i}/${niveauDenom}`;
+      niveauSelect.insertAdjacentHTML("beforeend", `<option value="${val}">${val}</option>`);
+    }
+  } else {
+    niveauSelect.insertAdjacentHTML("beforeend", `<option value="Aucun">Aucun</option>`);
+  }
+  if (specialiteActuelle) specialiteSelect.value = specialiteActuelle;
+  if (niveauActuel) niveauSelect.value = niveauActuel;
+}
+
+function updateDateVisibility() {
+  const etat = document.getElementById("classe_etat").value;
+  const labelDebut = document.getElementById("label_date_debut");
+  const labelFin = document.getElementById("label_date_fin");
+  if (!labelDebut || !labelFin) return;
+  if (etat === "Prévue") { labelDebut.hidden = true; labelFin.hidden = true; }
+  else if (etat === "En cours") { labelDebut.hidden = false; labelFin.hidden = true; }
+  else if (etat === "Close") { labelDebut.hidden = false; labelFin.hidden = false; }
+}
+
+// Affiche la date de réception dès que le statut n'est plus "Non reçue",
+// et la date de transfert seulement une fois le statut "Transférée".
+function updateFacturationVisibility() {
+  const statut = document.getElementById("classe_facturation_statut")?.value;
+  const labelReception = document.getElementById("label_facturation_date_reception");
+  const labelTransfert = document.getElementById("label_facturation_date_transfert");
+  if (!labelReception || !labelTransfert) return;
+  labelReception.hidden = !statut;
+  labelTransfert.hidden = statut !== "transfere";
+}
+
+function lireFicheDepuisFormulaire() {
+  const semNum = document.getElementById("classe_semestre_num").value;
+  const semAnnee = document.getElementById("classe_semestre_annee").value;
+  return {
+    partenairePP: document.getElementById("classe_partenaire").value,
+    classe: document.getElementById("classe_classe").value,
+    specialite: document.getElementById("classe_specialite").value,
+    promotion: document.getElementById("classe_promotion").value,
+    niveau: document.getElementById("classe_niveau").value,
+    semestre: (semNum && semAnnee) ? `${semNum}-${semAnnee}` : "",
+    etat: document.getElementById("classe_etat").value,
+    dateDebut: document.getElementById("classe_date_debut").value,
+    dateFin: document.getElementById("classe_date_fin").value,
+    responsableNom: document.getElementById("classe_responsable_nom").value,
+    responsableFonction: document.getElementById("classe_responsable_fonction").value,
+    facturationStatut: document.getElementById("classe_facturation_statut").value,
+    facturationDateReception: document.getElementById("classe_facturation_date_reception").value,
+    facturationDateTransfert: document.getElementById("classe_facturation_date_transfert").value
+  };
+}
+
+// Ouvre la modale fiche en mode édition pour une classe existante : va
+// chercher le fichier Drive complet (chargerClasse, comme class.html),
+// pré-remplit la fiche signalétique + facturation, et conserve les
+// listes (matières, inscrits, regroupements, tutorat, intervenants,
+// examens, encadrements, soutenances) déjà présentes dans le fichier pour
+// les renvoyer inchangées à l'enregistrement (cette modale ne modifie que
+// la fiche et la facturation, pas le contenu pédagogique de la classe).
+async function ouvrirEditionClasse(fileId) {
+  const form = document.getElementById("classe_fiche_form");
+  form.reset();
+  document.getElementById("classe_specialite").innerHTML = `<option value="">----</option>`;
+  document.getElementById("classe_niveau").innerHTML = `<option value="">----</option>`;
+  updateDateVisibility();
+  updateFacturationVisibility();
+  document.getElementById("classe_fiche_modal_titre").textContent = "Modifier la classe";
+
+  if (!partenairesCache.length) await loadPartenaireOptions();
+
+  try {
+    const data = await apiCallDirect("chargerClasse", { fileId });
+    const c = data.classe || {};
+
+    editingFileId = fileId;
+    editingExtraData = {
+      matieres: data.matieres || [],
+      regroupements: data.regroupements || [],
+      tutorat: data.tutorat || [],
+      etudiants: data.etudiants || [],
+      intervenants: data.intervenants || [],
+      examens: data.examens || [],
+      encadrements: data.encadrements || [],
+      soutenances: data.soutenances || []
+    };
+
+    await loadPartenaireOptions(c.partenairePP);
+
+    // Le listener "change" de classe_partenaire (re)construit la liste
+    // d'options de classe_classe selon le domaine du partenaire ; sans ce
+    // dispatch, classe_classe reste avec sa seule option "----" et
+    // l'affectation de .value juste après échoue silencieusement (aucune
+    // option ne correspond), laissant le champ vide.
+    document.getElementById("classe_partenaire").dispatchEvent(new Event('change'));
+
+    document.getElementById("classe_classe").value = c.classe || "";
+    updateSpecialiteEtNiveauOptions(c.classe || "", c.specialite || "", c.niveau || "");
+
+    document.getElementById("classe_promotion").value = c.promotion || "";
+    const [sem, annee] = String(c.semestre || "").split("-");
+    document.getElementById("classe_semestre_num").value = sem || "";
+    document.getElementById("classe_semestre_annee").value = annee || "";
+
+    const etatSelect = document.getElementById("classe_etat");
+    etatSelect.value = c.etat || "Prévue";
+    updateDateVisibility();
+    document.getElementById("classe_date_debut").value = c.dateDebut || "";
+    document.getElementById("classe_date_fin").value = c.dateFin || "";
+
+    document.getElementById("classe_responsable_nom").value = c.responsableNom || "";
+    document.getElementById("classe_responsable_fonction").value = c.responsableFonction || "Directeur";
+
+    document.getElementById("classe_facturation_statut").value = c.facturationStatut || "";
+    document.getElementById("classe_facturation_date_reception").value = c.facturationDateReception || "";
+    document.getElementById("classe_facturation_date_transfert").value = c.facturationDateTransfert || "";
+    updateFacturationVisibility();
+
+    openFormModal("classe_fiche_modal", "classe_fiche_form");
+  } catch (err) {
+    alert(`Erreur de chargement : ${err.message}`);
+  }
+}
+
+async function onSubmitNouvelleClasse(e) {
+  e.preventDefault();
+  const classe = lireFicheDepuisFormulaire();
+  if (!classe.partenairePP || !classe.classe || !classe.specialite || !classe.promotion || !classe.niveau) {
+    alert("Merci de compléter la fiche signalétique.");
+    return;
+  }
+  if (classe.dateDebut && classe.dateFin && classe.dateDebut >= classe.dateFin) {
+    alert("La date de début doit être antérieure à la date de fin.");
+    return;
+  }
+  const btn = document.getElementById("classe_fiche_btn_enregistrer");
+  setBtnSaving(btn, true);
+  try {
+    // Le nom du fichier Drive est calculé côté Code.gs (nomFichierClasse) —
+    // seule source de vérité, plus besoin de le regénérer ici. En création,
+    // la classe est enregistrée sans matières/inscrits/regroupements/
+    // tutorat/intervenants/examens (listes vides) : le reste se complète
+    // ensuite depuis class.html ou pfe.html une fois la classe ouverte via
+    // "Afficher". En édition (editingFileId défini), on renvoie les listes
+    // déjà présentes dans le fichier (editingExtraData), récupérées lors de
+    // l'ouverture de la modale, pour ne rien perdre.
+    const extra = editingExtraData || {
+      matieres: [], regroupements: [], tutorat: [], etudiants: [],
+      intervenants: [], examens: [], encadrements: [], soutenances: []
+    };
+    await apiCallDirect("exportClasseToDrive", {
+      classe,
+      ...extra,
+      fileId: editingFileId
+    });
+    closeFormModal("classe_fiche_modal");
+    editingFileId = null;
+    editingExtraData = null;
+    await loadPPClasses();
+  } catch (err) {
+    alert(`Erreur : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+// Affiche/masque un spinner sur le bouton "Enregistrer" pendant l'appel serveur.
+function setBtnSaving(btn, saving, savingLabel = "Enregistrement...") {
+  if (!btn) return;
+  if (saving) {
+    if (btn.dataset.originalHtml === undefined) btn.dataset.originalHtml = btn.innerHTML;
+    btn.innerHTML = `<span class="btn_saving_spinner"></span> ${savingLabel}`;
+    btn.classList.add("btn_saving");
+    btn.disabled = true;
+  } else {
+    if (btn.dataset.originalHtml !== undefined) btn.innerHTML = btn.dataset.originalHtml;
+    btn.classList.remove("btn_saving");
+    btn.disabled = false;
+  }
+}
+
+function wireSearchClear(inputId) {
+  const input = document.getElementById(inputId);
+  const wrap = input?.closest(".search_wrap");
+  const clearBtn = wrap?.querySelector(".search_clear");
+  if (!input || !clearBtn) return;
+
+  const majVisibilite = () => { clearBtn.hidden = input.value.length === 0; };
+  input.addEventListener("input", majVisibilite);
+  majVisibilite();
+
+  clearBtn.addEventListener("click", () => {
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+  });
+}
+
+/* ---------------- Tableau des classes ---------------- */
+
+async function loadPPClasses() {
+  const tbody = document.getElementById("pp_classe_table_body");
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="5"><span class="loading_state">Chargement...</span></td></tr>`;
+
+  try {
+    ppClasseListCache = await apiCallDirect("listClassesPP", {});
+    renderPPClasseTable("");
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="5"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+  }
+}
+
+function renderPPClasseTable(query) {
+  const tbody = document.getElementById("pp_classe_table_body");
+  const emptyEl = document.getElementById("pp_classe_empty");
+  const q = (query || "").trim().toLowerCase();
+
+  // Nomenclature Drive : "<Sigle>_<Classe>_Pr<promotion>_<niveau>_<semestre>"
+  // (voir nomFichierClasse() côté Code.gs, seule source de vérité pour le
+  // nom du fichier). On affiche directement ce nom, underscores remplacés
+  // par des espaces, plutôt que de recomposer la ligne à partir des
+  // colonnes du récap.
+  const nomClasse = (c) => {
+    let name = (c.name || "").replace(/\.html?$/i, "").replace(/_/g, " ");
+    // Afficher le niveau avec "/" : X-Y -> X/Y (ex. 4-6 -> 4/6)
+    name = name.replace(/(\d)-(\d)(?=\s|$)/, "$1/$2");
+    return name;
+  };
+
+  // Une classe de niveau "6/6" (dernière année de licence, mémoire de fin
+  // d'études) s'ouvre dans pfe.html au lieu de class.html. On se base sur
+  // le champ "Niveau" du récap (voir listClassesPP() côté Code.gs), avec
+  // repli sur le nom de fichier (…_6-6_…, "/" y étant remplacé par "-",
+  // cf. nomFichierClasse() côté Code.gs) si ce champ n'est pas renvoyé par
+  // le backend.
+  const estNiveau6sur6 = (c) => (c["Niveau"] || "").trim() === "6/6" || /_6-6_/.test(c.name || "");
+  const urlClasse = (c) => estNiveau6sur6(c) ? `pfe.html?classe=${c.id}` : `class.html?classe=${c.id}`;
+
+  const filtered = (!q ? ppClasseListCache : ppClasseListCache.filter((c) =>
+    nomClasse(c).toLowerCase().includes(q)
+  )).sort((a, b) => nomClasse(a).localeCompare(nomClasse(b), "fr", { numeric: true, sensitivity: "base" }));
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+  if (emptyEl) emptyEl.hidden = true;
+
+  const labelFacturation = (c) => {
+    const statut = c.facturationStatut || c["Facturation"] || "";
+    if (statut === "transfere" || statut === "Transférée") return "Transférée";
+    if (statut === "recue" || statut === "Reçue") return "Reçue";
+    return "—";
+  };
+
+  tbody.innerHTML = filtered.map((c) => `
+    <tr>
+      <td>${nomClasse(c)}</td>
+      <td>${c["Début"] || ""}</td>
+      <td>${c["Fin"] || ""}</td>
+      <td>${labelFacturation(c)}</td>
+      <td>
+        <button type="button" class="btn_primary pp_btn_editer" data-id="${c.id}">
+          <i class="bi bi-pencil-square"></i> Editer
+        </button>
+        <a class="btn_info" href="${urlClasse(c)}">
+          <i class="bi bi-eye"></i> Afficher
+        </a>
+      </td>
+    </tr>`).join("");
+}
+
+async function apiCallDirect(action, payload = {}) {
+  const res = await fetch(GAS_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action, ...payload })
+  });
+  if (!res.ok) throw new Error(`Erreur réseau (${res.status})`);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "Erreur backend inconnue");
+  return data.result;
+}
+
+  </script>
+</body>
+</html>

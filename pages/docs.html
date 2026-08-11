@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Documents — URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="../css/variables.css" />
+  <link rel="stylesheet" href="../css/layout.css" />
+  <link rel="stylesheet" href="../css/sidebar.css" />
+  <link rel="stylesheet" href="../css/navbar.css" />
+  <style>
+    /* ============================================================
+      Styles propres à pages/docs.html
+      ============================================================ */
+    .docs_placeholder {
+      color: var(--text_secondary);
+      font-style: italic;
+    }
+
+    /* ---------- Manuels de procédures (liste + modale de lecture) ---------- */
+    .docs_manuel_list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_2);
+    }
+
+    .docs_manuel_item {
+      display: flex;
+      align-items: center;
+      gap: var(--space_3);
+      padding: var(--space_3) var(--space_4);
+      background: var(--color_paper);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      cursor: pointer;
+      transition: border-color var(--ease_std), background var(--ease_std);
+    }
+    .docs_manuel_item:hover {
+      border-color: var(--color_seal);
+      background: var(--color_seal_light);
+    }
+
+    .docs_manuel_icon {
+      font-size: var(--fs_lg);
+      color: var(--color_seal);
+      flex-shrink: 0;
+    }
+
+    .docs_manuel_info { min-width: 0; flex: 1; }
+    .docs_manuel_name {
+      font-weight: 600;
+      color: var(--text_primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .docs_manuel_meta {
+      font-size: var(--fs_xs);
+      color: var(--text_secondary);
+      font-family: var(--font_mono);
+    }
+
+    .docs_manuel_item i.bi-chevron-right {
+      color: var(--text_secondary);
+      flex-shrink: 0;
+    }
+
+    .docs_manuel_dialog { max-width: 900px; }
+
+    .docs_manuel_body {
+      padding: 0;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .docs_manuel_frame {
+      width: 100%;
+      min-height: 60vh;
+      border: none;
+      display: block;
+    }
+  </style>
+  <script src="../js/session.js"></script>
+</head>
+<body data-nav-mode="toggle">
+
+  <div class="sidebar_overlay" id="sidebar_overlay"></div>
+
+  <header class="navbar">
+    <button type="button" class="hamburger_btn"><i class="bi bi-list"></i></button>
+    <div class="page_title_group">
+      <span class="page_eyebrow">DOCS · Documents</span>
+      <h1 class="page_title">Documents</h1>
+    </div>
+    <div class="navbar_actions">
+      <span class="navbar_breadcrumb">
+        <a href="../index.html">Accueil</a> <i class="bi bi-chevron-right"></i> Documents
+      </span>
+    </div>
+  </header>
+
+  <div class="app_shell">
+    <aside class="sidebar" id="sidebar_root">
+      <button type="button" class="sidebar_close_btn" aria-label="Fermer le menu">
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <nav class="sidebar_nav">
+        <a class="sidebar_module_link" href="../index.html"><i class="bi bi-house"></i> Accueil</a>
+        <div class="sidebar_divider"></div>
+        <div class="sidebar_group_label">Sur cette page</div>
+        <a class="sidebar_section_link is_active" href="#convpp">Convention PP</a>
+        <a class="sidebar_section_link" href="#notes">Notes de service</a>
+        <a class="sidebar_section_link" href="#manuels">Manuels de procédures</a>
+
+        <div class="sidebar_divider"></div>
+
+        <div class="sidebar_group_label">Autres modules</div>
+        <a class="sidebar_module_link" href="ci.html"><i class="bi bi-percent"></i> Crédit d'impôt</a>
+        <a class="sidebar_module_link" href="dti.html"><i class="bi bi-building"></i> Droits de tirage individuels</a>
+        <a class="sidebar_module_link" href="dtc.html"><i class="bi bi-buildings"></i> Droits de tirage collectifs</a>
+        <a class="sidebar_module_link" href="pp.html"><i class="bi bi-mortarboard"></i> Promotion professionnelle</a>
+        <a class="sidebar_module_link" href="part.html"><i class="bi bi-diagram-3"></i> Partenaires</a>
+      </nav>
+
+      <div class="sidebar_footer">
+        <span class="sidebar_footer_user"><span class="user_badge" id="sidebar_user_badge" title="Non connecté">--</span></span>
+        <span>CNFCPP © 2026</span>
+      </div>
+    </aside>
+
+    <main class="app_content">
+
+      <section id="convpp" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-file-earmark-richtext"></i> Conventions PP</h2>
+        </div>
+        <p class="docs_placeholder">À construire.</p>
+      </section>
+
+      <section id="notes" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-sticky"></i> Notes de service</h2>
+        </div>
+        <p class="docs_placeholder">À construire.</p>
+      </section>
+
+      <section id="manuels" class="panel" hidden>
+        <div class="panel_header">
+          <h2><i class="bi bi-journal-text"></i> Manuels de procédures</h2>
+        </div>
+        <ul class="docs_manuel_list" id="docs_manuels_list">
+          <li class="list_state"><span class="loading_state">Chargement...</span></li>
+        </ul>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modale de lecture d'un manuel (contenu HTML importé depuis Google Drive) -->
+  <div class="modal_overlay" id="docs_manuel_modal">
+    <div class="modal_dialog docs_manuel_dialog">
+      <div class="modal_header">
+        <h3 id="docs_manuel_title"><i class="bi bi-journal-text"></i> Manuel</h3>
+        <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body docs_manuel_body" id="docs_manuel_body">
+        <div class="loading_state_block"><span class="loading_state">Chargement...</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/sidebar_toggle.js"></script>
+  <script src="../js/navbar_breadcrumb.js"></script>
+  <script src="../js/modal_forms.js"></script>
+  <script>
+    /* ============================================================
+      DOCS.JS
+      Section : Notes de service (#notes).
+      ============================================================ */
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initSectionToggle();
+      renderUserBadge(document.getElementById("sidebar_user_badge"));
+      injecterBoutonDeconnexion(document.getElementById("sidebar_user_badge"));
+      chargerManuels();
+    });
+
+    function initSectionToggle() {
+      const links = document.querySelectorAll(".sidebar_section_link[href^='#']");
+      const sections = document.querySelectorAll("main.app_content > section.panel");
+
+      function showSection(id) {
+        sections.forEach((s) => { s.hidden = s.id !== id; });
+        links.forEach((l) => l.classList.toggle("is_active", l.getAttribute("href") === `#${id}`));
+      }
+
+      links.forEach((link) => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          const id = link.getAttribute("href").slice(1);
+          showSection(id);
+          history.replaceState(null, "", `#${id}`);
+        });
+      });
+
+      const initial = window.location.hash ? window.location.hash.slice(1) : "notes";
+      showSection(initial);
+    }
+
+    /* ---------------- Manuels de procédures (fichiers HTML du dossier Drive
+       MANUELS_FOLDER_ID, voir listManuels()/getManuelHtml() dans Code.gs) ---------------- */
+
+    async function chargerManuels() {
+      const list = document.getElementById("docs_manuels_list");
+      try {
+        const manuels = await apiCall("listManuels");
+        renderManuelsList(manuels);
+      } catch (err) {
+        list.innerHTML = `<li class="list_state"><span class="error_state">Erreur de chargement : ${err.message}</span></li>`;
+      }
+    }
+
+    function renderManuelsList(manuels) {
+      const list = document.getElementById("docs_manuels_list");
+
+      if (!manuels || manuels.length === 0) {
+        list.innerHTML = `<li class="empty_state"><i class="bi bi-journal-x"></i>Aucun manuel disponible.</li>`;
+        return;
+      }
+
+      list.innerHTML = "";
+      manuels.forEach((m) => {
+        const li = document.createElement("li");
+        li.className = "docs_manuel_item";
+        const maj = m.updated ? new Date(m.updated).toLocaleDateString("fr-FR") : "";
+        li.innerHTML = `
+          <i class="bi bi-file-earmark-richtext docs_manuel_icon"></i>
+          <span class="docs_manuel_info">
+            <span class="docs_manuel_name">${m.name}</span>
+            ${maj ? `<span class="docs_manuel_meta">Mis à jour le ${maj}</span>` : ""}
+          </span>
+          <i class="bi bi-chevron-right"></i>`;
+        li.addEventListener("click", () => ouvrirManuel(m.id, m.name));
+        list.appendChild(li);
+      });
+    }
+
+    async function ouvrirManuel(fileId, nom) {
+      const body = document.getElementById("docs_manuel_body");
+      document.getElementById("docs_manuel_title").innerHTML = `<i class="bi bi-journal-text"></i> ${nom}`;
+      body.innerHTML = `<div class="loading_state_block"><span class="loading_state">Chargement...</span></div>`;
+      document.getElementById("docs_manuel_modal").classList.add("is_visible");
+
+      try {
+        const html = await apiCall("getManuelHtml", { id: fileId });
+        const iframe = document.createElement("iframe");
+        iframe.className = "docs_manuel_frame";
+        iframe.setAttribute("sandbox", "allow-same-origin allow-popups");
+        iframe.srcdoc = html;
+        iframe.addEventListener("load", () => {
+          try {
+            const doc = iframe.contentDocument;
+            iframe.style.height = `${doc.documentElement.scrollHeight}px`;
+          } catch (e) { /* ignore : ajustement de hauteur best-effort */ }
+        });
+        body.innerHTML = "";
+        body.appendChild(iframe);
+      } catch (err) {
+        body.innerHTML = `<div class="loading_state_block"><span class="error_state">Erreur de chargement : ${err.message}</span></div>`;
+      }
+    }
+  </script>
+</body>
+</html>
