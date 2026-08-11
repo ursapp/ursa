@@ -1,0 +1,178 @@
+/* ============================================================
+   NAVBAR.CSS
+   Navbar sticky en haut de chaque page. Chaque page ajoute ses
+   propres actions dans .navbar_actions (voir pages/*.css).
+   ============================================================ */
+
+.navbar {
+  position: sticky;
+  top: 0;
+  /* Doit toujours rester au-dessus des en-têtes de bloc (.block_metiers_header,
+     z-index: 30 dans layout.css) : à z-index égal, l'ordre du DOM aurait fait
+     passer ces en-têtes par-dessus la navbar au scroll, la masquant par
+     endroits. */
+  z-index: 40;
+  height: var(--navbar_height);
+  background: var(--color_paper_raised);
+  border-bottom: 1px solid var(--border_soft);
+  display: flex;
+  align-items: center;
+  gap: var(--space_4);
+  padding: 0 var(--space_6);
+
+  @media (max-width: 1080px) {
+    padding: 0 var(--space_4);
+  }
+}
+
+/* Version sombre optionnelle, utilisée par l'index par ex. via data-navbar="dark" */
+.navbar[data-tone="dark"] {
+  background: var(--color_ink_soft);
+  border-bottom-color: var(--border_ink);
+  color: var(--text_inverse);
+
+  & .page_title { color: var(--text_inverse); }
+}
+
+.navbar_actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space_3);
+}
+
+/* ---------- Bouton de déconnexion dans la navbar ----------
+   Pour les pages sans sidebar (prosp, fi, bilan, class) : icône seule,
+   placée dans .navbar_actions à côté du fil d'ariane. Voir aussi
+   .btn_logout_mini (css/sidebar.css) pour l'équivalent en sidebar. */
+.btn_logout_navbar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--color_danger);
+  background: var(--color_danger);
+  color: var(--text_inverse);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.btn_logout_navbar:hover {
+  background: #b95951;
+  border-color: #b95951;
+  color: var(--text_inverse);
+}
+.navbar[data-tone="dark"] .btn_logout_navbar {
+  border-color: var(--color_danger);
+  color: var(--text_inverse);
+}
+.btn_logout_navbar[hidden] { display: none !important; }
+
+/* ---------- En-tête "métier" : statut centré (fi.html, bilan.html, class.html) ----------
+   Zone de statut centrée dans la navbar (indépendante de la largeur du titre
+   ou des actions à droite) : spinner de chargement et alerte "Données à
+   sauvegarder !" côte à côte. Ajouter .navbar_metier sur <header class="navbar">
+   pour activer ce centrage ; .navbar (déjà en position:sticky) sert de bloc de
+   positionnement pour la zone absolue ci-dessous, pas besoin d'ajouter
+   position:relative. Auparavant dupliqué (ou manquant) par page sous le nom
+   ".fi_header_status" / ".fi_alert_save" — unifié ici pour les 3 pages. */
+.navbar_metier .navbar_status {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space_4);
+}
+
+.navbar_alert {
+  font-size: var(--fs_sm);
+  font-weight: 700;
+  color: var(--color_danger);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space_2);
+}
+
+/* Sans ces règles, [hidden] est écrasé par le display:inline-flex ci-dessus
+   (.navbar_alert) et par le display:inline-flex de .loading_state
+   (voir layout.css) : le spinner ou le label restaient visibles au
+   chargement malgré l'attribut "hidden". Piège identique à celui déjà
+   documenté pour .empty_state ailleurs dans le projet. */
+.navbar_load[hidden],
+.navbar_alert[hidden] {
+  display: none !important;
+}
+
+@media print {
+  .navbar { display: none !important; }
+}
+
+.navbar_breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space_1);
+  font-size: var(--fs_xs);
+  color: var(--text_secondary);
+  font-family: var(--font_mono);
+
+  & i { font-size: 0.6rem; }
+
+  @media (max-width: 1080px) {
+    display: none;
+  }
+}
+
+/* Bouton icône remplaçant le fil d'ariane texte sur mobile (voir js/navbar_breadcrumb.js) */
+.navbar_breadcrumb_toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border_soft);
+  background: var(--color_paper);
+  color: var(--text_secondary);
+  border-radius: var(--radius_sm);
+  font-size: var(--fs_base);
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: var(--color_seal);
+    color: var(--color_seal);
+  }
+
+  @media (max-width: 1080px) {
+    display: inline-flex;
+  }
+}
+
+/* Pop-in du fil d'ariane, ancrée en haut à droite de l'écran (mobile) */
+.navbar_breadcrumb_popover {
+  display: none;
+  position: fixed;
+  top: calc(var(--navbar_height) + var(--space_2));
+  right: var(--space_3);
+  z-index: 90;
+  max-width: 84vw;
+  background: var(--color_paper_raised);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_md);
+  box-shadow: var(--shadow_panel);
+  padding: var(--space_3) var(--space_4);
+  font-size: var(--fs_xs);
+  font-family: var(--font_mono);
+  color: var(--text_secondary);
+
+  &:not([hidden]) {
+    display: flex;
+    align-items: center;
+    gap: var(--space_1);
+    flex-wrap: wrap;
+  }
+
+  & i { font-size: 0.6rem; }
+}

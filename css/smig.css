@@ -1,0 +1,134 @@
+/* ============================================================
+   SMIG SHARED STYLES
+   Styles réutilisables pour le bouton et la modale Smig
+   sur FI et DTI.
+   ============================================================ */
+
+.fi_smig_chip {
+  background: var(--color_paper_raised);
+  border: 1px solid #e8c49a;
+  padding: var(--space_1) var(--space_2);
+  border-radius: var(--radius_sm);
+  font-size: var(--fs_sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text_primary);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fi_smig_chip:hover {
+  border-color: var(--color_seal);
+  color: var(--color_seal);
+}
+
+.fi_smig_chip:focus-visible {
+  outline: 2px solid var(--color_seal);
+  outline-offset: 2px;
+}
+
+.fi_smig_table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs_sm);
+  margin-bottom: var(--space_4);
+}
+
+.fi_smig_table th,
+.fi_smig_table td {
+  padding: var(--space_2);
+  border-bottom: 1px solid var(--border_soft);
+  text-align: left;
+}
+
+.fi_smig_table input {
+  width: 100%;
+  font-family: inherit;
+  font-size: var(--fs_sm);
+  padding: var(--space_2);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper_raised);
+  color: var(--text_primary);
+}
+
+.fi_smig_note {
+  font-size: var(--fs_sm);
+  color: var(--text_secondary);
+  margin-top: var(--space_2);
+}
+
+.fi_smig_modal {
+  background: var(--color_paper_raised);
+  border-radius: var(--radius_md);
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--shadow_panel);
+}
+
+.fi_smig_modal .modal_header,
+.fi_smig_modal .modal_body {
+  padding: var(--space_4);
+}
+
+.fi_smig_modal .modal_header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border_soft);
+}
+
+.fi_smig_modal .modal_header h3 {
+  margin: 0;
+  font-family: var(--font_display);
+  font-size: var(--fs_md);
+}
+
+.fi_smig_modal .modal_close {
+  background: transparent;
+  border: none;
+  font-size: var(--fs_lg);
+  color: var(--text_secondary);
+}
+
+.fi_smig_modal .modal_close:hover {
+  color: var(--color_danger);
+}
+
+.fi_smig_modal .modal_body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* ---------- Bouton d'ouverture en alerte (donnée de l'année en cours vide) ---------- */
+.smig_btn_alerte,
+.smig_btn_alerte:hover {
+  background: #6d0f21 !important;
+  border-color: #6d0f21 !important;
+  color: #f5e9e9 !important;
+}
+.smig_btn_alerte i { color: #f5e9e9 !important; }
+
+/* ---------- Pied de la modale Smig (Copier SMIG / Enregistrer / Annuler) ---------- */
+.fi_smig_footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space_3);
+  padding: var(--space_4);
+  border-top: 1px solid var(--border_soft);
+}
+.fi_smig_footer [hidden] {
+  display: none !important;
+}
+.fi_smig_footer [data-smig-save] {
+  background: var(--color_seal);
+  border-color: var(--color_seal);
+  color: #fff;
+}
+.fi_smig_footer [data-smig-save]:hover {
+  background: var(--color_seal_light);
+  border-color: var(--color_seal_light);
+  color: var(--color_ink, #16262a);
+}
