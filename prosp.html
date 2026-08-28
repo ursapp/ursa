@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prospections — URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/navbar.css" />
+
+  <style>
+    /* ============================================================
+       Styles propres à prosp.html (page autonome, sans sidebar —
+       comme fi.html). Suivi de prospection des entreprises : pipeline
+       par Statut (regroupé en 5 étapes), filtrable par Dispositif,
+       avec journal de contacts/actions et relances à venir.
+       ============================================================ */
+
+    /* ---------- Bandeau filtres ---------- */
+    .prosp_toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space_3);
+      margin-bottom: var(--space_5);
+    }
+    .prosp_dispositif_chips { display: flex; gap: var(--space_2); flex-wrap: wrap; }
+    .prosp_chip {
+      border: 1px solid var(--border_soft);
+      background: var(--color_paper_raised);
+      color: var(--text_secondary);
+      padding: var(--space_1) var(--space_3);
+      border-radius: 999px;
+      font-size: var(--fs_sm);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .prosp_chip.is_active { background: var(--color_ink); color: var(--text_inverse); border-color: var(--color_ink); }
+    .prosp_chip_explorer {
+      background: linear-gradient(135deg, var(--color_seal), var(--color_seal_light));
+      color: var(--color_ink);
+      border: none;
+    }
+    .prosp_chip_explorer:hover { box-shadow: 0 4px 14px rgba(176, 141, 87, 0.45); }
+    .prosp_search {
+      flex: 1;
+      min-width: 200px;
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper_raised);
+    }
+    .prosp_count { font-size: var(--fs_sm); color: var(--text_secondary); white-space: nowrap; }
+
+    /* ---------- Relances à venir ---------- */
+    .prosp_relances { margin-bottom: var(--space_5); }
+    .prosp_relances h2 {
+      font-family: var(--font_display);
+      font-size: var(--fs_md);
+      margin: 0 0 var(--space_3) 0;
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+    }
+    .prosp_relances_strip { display: flex; gap: var(--space_3); overflow-x: auto; padding-bottom: var(--space_2); }
+    .prosp_relance_card {
+      flex: 0 0 auto;
+      min-width: 220px;
+      background: var(--color_paper_raised);
+      border: 1px solid var(--border_soft);
+      border-left: 4px solid var(--color_seal);
+      border-radius: var(--radius_sm);
+      padding: var(--space_3);
+      cursor: pointer;
+    }
+    .prosp_relance_card:hover { border-color: var(--color_seal); }
+    .prosp_relance_card.is_late { border-left-color: var(--color_danger); }
+    .prosp_relance_date { font-family: var(--font_mono); font-size: var(--fs_xs); color: var(--text_secondary); }
+    .prosp_relance_ese { font-weight: 600; margin: var(--space_1) 0; font-size: var(--fs_sm); }
+    .prosp_relance_action { font-size: var(--fs_xs); color: var(--text_secondary); }
+
+    /* ---------- Kanban (pipeline par Statut, regroupé en 5 étapes) ---------- */
+    .prosp_board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(220px, 1fr));
+      gap: var(--space_4);
+      align-items: start;
+      overflow-x: auto;
+    }
+    .prosp_board[hidden] { display: none !important; }
+    @media (max-width: 1080px) {
+      .prosp_board { grid-template-columns: 1fr; }
+    }
+    .prosp_col { background: var(--color_paper); border-radius: var(--radius_md); padding: var(--space_3); min-height: 120px; }
+    .prosp_col_header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space_3);
+      padding-bottom: var(--space_2);
+      border-bottom: 2px solid var(--prosp_col_accent, var(--border_soft));
+    }
+    .prosp_col_header h3 {
+      font-size: var(--fs_xs);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-family: var(--font_mono);
+      color: var(--text_secondary);
+      margin: 0;
+    }
+    .prosp_col_count { font-size: var(--fs_xs); font-weight: 700; background: var(--color_paper_raised); border-radius: 999px; padding: 1px 8px; }
+    .prosp_col[data-group="contact"] { --prosp_col_accent: var(--text_secondary); }
+    .prosp_col[data-group="qualif"] { --prosp_col_accent: var(--color_info); }
+    .prosp_col[data-group="formalisation"] { --prosp_col_accent: var(--color_seal); }
+    .prosp_col[data-group="active"] { --prosp_col_accent: var(--color_teal); }
+    .prosp_col[data-group="cloture"] { --prosp_col_accent: var(--color_danger); }
+
+    .prosp_card {
+      background: var(--color_paper_raised);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      padding: var(--space_3);
+      margin-bottom: var(--space_3);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_2);
+    }
+    .prosp_card:hover { border-color: var(--color_seal); }
+    .prosp_card_nom { font-weight: 600; font-size: var(--fs_sm); }
+    .prosp_card_statut { font-size: var(--fs_xs); color: var(--text_secondary); }
+    .prosp_card_badges { display: flex; flex-wrap: wrap; gap: var(--space_1); }
+    .prosp_badge {
+      font-family: var(--font_mono);
+      font-size: 0.65rem;
+      font-weight: 700;
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      padding: 1px 6px;
+      color: var(--text_secondary);
+    }
+    .prosp_card_last { font-size: var(--fs_xs); color: var(--text_secondary); display: flex; align-items: center; gap: var(--space_1); }
+    .prosp_empty_board { text-align: center; padding: var(--space_7); color: var(--text_secondary); grid-column: 1 / -1; }
+
+    /* ---------- Modale fiche entreprise ---------- */
+    .fi_modal_overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(22, 38, 42, 0.55);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space_5);
+    }
+    .fi_modal_overlay.is_visible { display: flex; }
+    .fi_modal {
+      background: var(--color_paper_raised);
+      border-radius: var(--radius_md);
+      width: 100%;
+      max-width: 640px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    .fi_modal_header { padding: var(--space_4); border-bottom: 1px solid var(--border_soft); display: flex; align-items: center; justify-content: space-between; }
+    .fi_modal_header h3 { margin: 0; font-family: var(--font_display); font-size: var(--fs_md); }
+    .fi_modal_close { background: transparent; border: none; font-size: var(--fs_lg); color: var(--text_secondary); }
+    .fi_modal_close:hover { color: var(--color_danger); }
+    .fi_modal_body { padding: var(--space_4); overflow-y: auto; }
+
+    .prosp_fiche_badges { display: flex; flex-wrap: wrap; gap: var(--space_2); margin-bottom: var(--space_3); }
+    .prosp_fiche_info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: var(--space_2) var(--space_4);
+      font-size: var(--fs_sm);
+      margin-bottom: var(--space_4);
+      color: var(--text_secondary);
+    }
+    .prosp_fiche_info strong { color: var(--text_primary); display: block; font-size: var(--fs_xs); text-transform: uppercase; letter-spacing: .04em; }
+
+    .prosp_statut_row {
+      display: flex;
+      align-items: center;
+      gap: var(--space_3);
+      margin-bottom: var(--space_5);
+      padding: var(--space_3);
+      background: var(--color_paper);
+      border-radius: var(--radius_sm);
+    }
+    .prosp_statut_row select {
+      flex: 1;
+      padding: var(--space_2) var(--space_3);
+      border-radius: var(--radius_sm);
+      border: 1px solid var(--border_soft);
+      font-family: inherit;
+      font-size: var(--fs_base);
+    }
+
+    .prosp_hist_title { margin: 0 0 var(--space_3) 0; font-size: var(--fs_sm); text-transform: uppercase; letter-spacing: .04em; color: var(--text_secondary); }
+    .prosp_historique { list-style: none; margin: 0 0 var(--space_5) 0; padding: 0; display: flex; flex-direction: column; gap: var(--space_3); }
+    .prosp_historique_item { border-left: 3px solid var(--color_seal); padding-left: var(--space_3); }
+    .prosp_historique_head { display: flex; justify-content: space-between; gap: var(--space_2); font-size: var(--fs_xs); color: var(--text_secondary); font-family: var(--font_mono); }
+    .prosp_historique_notes { font-size: var(--fs_sm); margin: var(--space_1) 0; white-space: pre-wrap; }
+    .prosp_historique_next { font-size: var(--fs_xs); color: var(--color_seal); font-weight: 600; }
+    .prosp_historique_empty { font-size: var(--fs_sm); color: var(--text_secondary); font-style: italic; }
+
+    .prosp_contact_form { border-top: 1px dashed var(--border_soft); padding-top: var(--space_4); }
+    .prosp_contact_form h4 { margin: 0 0 var(--space_3) 0; font-size: var(--fs_sm); text-transform: uppercase; letter-spacing: .04em; color: var(--text_secondary); }
+    .prosp_contact_grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space_3); margin-bottom: var(--space_3); }
+    .prosp_contact_grid label { display: flex; flex-direction: column; gap: var(--space_1); font-size: var(--fs_sm); color: var(--text_secondary); }
+    .prosp_contact_grid input, .prosp_contact_grid select, .prosp_contact_grid textarea {
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper_raised);
+      color: var(--text_primary);
+    }
+    .prosp_contact_grid .prosp_field_wide { grid-column: 1 / -1; }
+    .prosp_contact_grid textarea { min-height: 60px; resize: vertical; }
+
+    .prosp_fiche_actions { display: flex; justify-content: flex-end; margin-bottom: var(--space_3); }
+
+    /* ---------- Formulaire entreprise (repris de part.html : mêmes
+       classes .ese_form / .ese_form_grid / .ese_dispositif_group /
+       .ese_form_actions, pour rester visuellement identique à la
+       fiche éditable de "Entreprises"). Ouvert dans une modale
+       générique .modal_overlay/.modal_dialog (layout.css +
+       js/modal_forms.js, déjà chargés sur cette page). ---------- */
+    .ese_form {
+      & .ese_form_grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space_3);
+
+        & label, & .ese_form_field_wide {
+          display: flex;
+          flex-direction: column;
+          gap: var(--space_1);
+          font-size: var(--fs_sm);
+          color: var(--text_secondary);
+
+          & input, & select, & textarea {
+            font-family: inherit;
+            font-size: var(--fs_base);
+            padding: var(--space_2) var(--space_3);
+            border: 1px solid var(--border_soft);
+            border-radius: var(--radius_sm);
+            background: var(--color_paper_raised);
+            color: var(--text_primary);
+
+            &:focus {
+              outline: 2px solid var(--color_teal_light);
+              outline-offset: 1px;
+            }
+          }
+
+          & input[id="prosp_ese_delegation_autre"] {
+            margin-top: var(--space_2);
+          }
+
+          & textarea { min-height: 60px; resize: vertical; }
+        }
+
+        & .ese_form_field_wide { grid-column: 1 / -1; }
+      }
+
+      & .ese_form_actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space_3);
+        margin-top: var(--space_4);
+        padding-top: var(--space_4);
+        border-top: 1px solid var(--border_soft);
+      }
+    }
+
+    .ese_dispositif_group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space_3);
+
+      & label {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space_1);
+        font-size: var(--fs_base);
+        color: var(--text_primary);
+      }
+    }
+
+    /* ---------- Modale "Explorer" (entreprises à contacter) ---------- */
+    .prosp_explorer_search { width: 100%; margin-bottom: var(--space_4); }
+    .prosp_explorer_list { display: flex; flex-direction: column; gap: var(--space_3); }
+
+    /* ---------- Carte cliquable des délégations (masquée au chargement,
+       affichée/masquée via le bouton [Carte] de la toolbar) ---------- */
+    .prosp_chip_carte {
+      background: transparent;
+      color: var(--color_seal);
+      border: 1px solid var(--color_seal);
+    }
+    .prosp_chip_carte.is_active {
+      background: linear-gradient(135deg, var(--color_seal), var(--color_seal_light));
+      color: var(--color_ink);
+      border-color: transparent;
+    }
+    .prosp_carte_panel {
+      margin-bottom: var(--space_5);
+      background: var(--color_paper);
+      border-radius: var(--radius_md);
+      padding: var(--space_4);
+    }
+    .prosp_carte_inner {
+      display: grid;
+      grid-template-columns: 200px minmax(0, 1fr);
+      gap: var(--space_4);
+      align-items: start;
+    }
+    @media (max-width: 720px) {
+      .prosp_carte_inner { grid-template-columns: 1fr; }
+    }
+    .prosp_carte_map_wrap {
+      background: var(--color_paper_raised);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      overflow: hidden;
+    }
+    .prosp_carte_map_wrap svg { display: block; width: 100%; height: auto; max-height: 480px; }
+    /* Même couleur que le bouton [Explorer] pour toutes les délégations */
+    .prosp_map_delegation {
+      fill: var(--color_seal);
+      stroke: var(--color_paper_raised);
+      stroke-width: 2px;
+      cursor: pointer;
+      transition: fill 150ms ease, opacity 150ms ease;
+    }
+    .prosp_map_delegation:hover { opacity: 0.8; }
+    /* La délégation cliquée change de couleur */
+    .prosp_map_delegation.is_selected { fill: var(--color_ink); }
+    .prosp_carte_liste { display: flex; flex-direction: column; gap: var(--space_2); }
+    .prosp_carte_liste_title { font-size: var(--fs_xs); text-transform: uppercase; letter-spacing: .04em; color: var(--text_secondary); margin: 0 0 var(--space_1) 0; }
+    #prosp_carte_boutons { display: flex; flex-direction: column; flex-wrap: nowrap; gap: var(--space_2); }
+    .prosp_map_btn {
+      border: 1px solid var(--border_soft);
+      background: var(--color_paper_raised);
+      color: var(--text_secondary);
+      padding: var(--space_1) var(--space_3);
+      border-radius: var(--radius_sm);
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+      font-size: var(--fs_sm);
+      white-space: nowrap;
+    }
+    .prosp_map_btn:hover { border-color: var(--color_seal); }
+    .prosp_map_btn.is_active { background: var(--color_ink); color: var(--text_inverse); border-color: var(--color_ink); }
+  </style>
+  <script src="js/session.js"></script>
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="page_title_group">
+      <span class="page_eyebrow">PROSP · Prospections</span>
+      <h1 class="page_title">Prospections</h1>
+    </div>
+    <div class="navbar_actions">
+      <span class="navbar_breadcrumb">
+        <a href="index.html">Accueil</a> <i class="bi bi-chevron-right"></i>
+        Prospections
+      </span>
+      <button type="button" class="btn_logout_navbar" id="navbar_btn_logout" hidden title="Se déconnecter">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="app_content">
+    <section class="panel">
+
+      <div class="prosp_toolbar">
+        <div class="prosp_dispositif_chips" id="prosp_dispositif_chips">
+          <button type="button" class="prosp_chip prosp_chip_explorer" id="prosp_btn_explorer"><i class="bi bi-binoculars"></i> Explorer</button>
+          <button type="button" class="prosp_chip is_active" data-dispositif="">Tous</button>
+          <button type="button" class="prosp_chip" data-dispositif="CI">CI</button>
+          <button type="button" class="prosp_chip" data-dispositif="DTI">DTI</button>
+          <button type="button" class="prosp_chip" data-dispositif="DTC">DTC</button>
+          <button type="button" class="prosp_chip" data-dispositif="PP">PP</button>
+        </div>
+        <input type="text" class="prosp_search" id="prosp_search" placeholder="Rechercher une entreprise…" />
+        <button type="button" class="prosp_chip prosp_chip_carte" id="prosp_btn_vue"><i class="bi bi-map"></i> Carte</button>
+        <span class="prosp_count" id="prosp_count"></span>
+      </div>
+
+      <!-- Carte cliquable des délégations : masquée au chargement, affichée
+           via le bouton de la toolbar (voir wireToolbar / toggleVue). Kanban
+           et Carte sont mutuellement exclusifs (un seul visible à la fois) ;
+           un seul bouton est affiché, portant le nom de la vue vers laquelle
+           il bascule. -->
+      <div class="prosp_carte_panel" id="prosp_carte_panel" hidden>
+        <div class="prosp_carte_inner">
+          <div class="prosp_carte_liste">
+            <p class="prosp_carte_liste_title">Délégations</p>
+            <div id="prosp_carte_boutons"></div>
+          </div>
+          <div class="prosp_carte_map_wrap" id="prosp_carte_map_wrap"></div>
+        </div>
+      </div>
+
+      <div class="prosp_relances" id="prosp_relances_block" hidden>
+        <h2><i class="bi bi-alarm"></i> Relances à venir</h2>
+        <div class="prosp_relances_strip" id="prosp_relances_strip"></div>
+      </div>
+
+      <div class="prosp_board" id="prosp_board"></div>
+
+    </section>
+  </main>
+
+  <!-- Modale fiche entreprise : infos, statut, historique, nouveau contact -->
+  <div class="fi_modal_overlay" id="prosp_modal_fiche">
+    <div class="fi_modal">
+      <div class="fi_modal_header">
+        <h3 id="prosp_fiche_titre">----</h3>
+        <button type="button" class="fi_modal_close" data-close-modal="prosp_modal_fiche"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space_3);">
+          <div class="prosp_fiche_badges" id="prosp_fiche_badges"></div>
+
+          <div class="prosp_fiche_actions">
+            <button type="button" class="btn_info" id="prosp_btn_afficher_ese">
+              <i class="bi bi-eye"></i> Afficher
+            </button>
+          </div>
+        </div>
+
+        <div class="prosp_fiche_info" id="prosp_fiche_info"></div>
+
+        <div class="prosp_statut_row">
+          <select id="prosp_statut_select"></select>
+          <button type="button" class="btn_success no_mobile" id="prosp_btn_save_statut">
+            <i class="bi bi-check-lg"></i> Mettre à jour
+          </button>
+        </div>
+
+        <h4 class="prosp_hist_title">Historique</h4>
+        <ul class="prosp_historique" id="prosp_historique"></ul>
+
+        <form class="prosp_contact_form no_mobile" id="prosp_contact_form">
+          <h4>+ Nouveau contact / action</h4>
+          <div class="prosp_contact_grid">
+            <label>Date
+              <input type="date" name="date" required />
+            </label>
+            <label>Type
+              <select name="type">
+                <option>Appel</option>
+                <option>Visite</option>
+                <option>Réunion</option>
+                <option>Email</option>
+                <option>Relance</option>
+                <option>Autre</option>
+              </select>
+            </label>
+            <div class="prosp_field_wide">
+              <label>Notes
+                <textarea name="notes" placeholder="Compte-rendu, points échangés…"></textarea>
+              </label>
+            </div>
+            <label>Prochaine action
+              <input type="text" name="prochaine_action" placeholder="Ex : Relancer par téléphone" />
+            </label>
+            <label>Date prévue
+              <input type="date" name="prochaine_date" />
+            </label>
+          </div>
+          <button type="submit" class="btn_success"><i class="bi bi-plus-lg"></i> Ajouter au suivi</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale liste des entreprises à contacter -->
+  <div class="fi_modal_overlay" id="prosp_modal_explorer">
+    <div class="fi_modal">
+      <div class="fi_modal_header">
+        <h3>Recherche entreprises</h3>
+        <button type="button" class="fi_modal_close" data-close-modal="prosp_modal_explorer"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body">
+        <input type="text" class="prosp_search prosp_explorer_search" id="prosp_explorer_search" placeholder="Rechercher une entreprise…" />
+        <div class="prosp_explorer_list" id="prosp_explorer_list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale édition entreprise : mêmes champs / mêmes classes que le
+       formulaire "ese_form" de part.html (Entreprises). Enregistrer
+       envoie updateEse, puis recharge la liste et la fiche en cours. -->
+  <div class="modal_overlay" id="prosp_ese_modal">
+    <div class="modal_dialog">
+      <div class="modal_header">
+        <h3>Entreprise</h3>
+        <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <form class="ese_form" id="prosp_ese_form">
+          <input type="hidden" name="_row" />
+          <div class="ese_form_grid">
+            <label>Raison sociale
+              <input type="text" name="Raison sociale" required />
+            </label>
+            <label>Nom commerciale
+              <input type="text" name="Nom commerciale" />
+            </label>
+            <label>Régime Horaire
+              <select name="Régime Horaire">
+                <option value="40H">40H</option>
+                <option value="48H">48H</option>
+              </select>
+            </label>
+            <label>Responsable
+              <input type="text" name="Responsable" />
+            </label>
+            <label>Mail responsable
+              <input type="email" name="Mail responsable" />
+            </label>
+            <label>Responsable formation
+              <input type="text" name="Responsable formation" />
+            </label>
+            <label>Mail responsable formation
+              <input type="email" name="Mail responsable formation" />
+            </label>
+            <label>Adresse siège
+              <input type="text" name="Adresse siège" />
+            </label>
+            <label>Adresse usine
+              <input type="text" name="Adresse usine" />
+            </label>
+            <label>Délégation
+              <select id="prosp_ese_delegation_select">
+                <option value="Bargou">Bargou</option>
+                <option value="Bouarada">Bouarada</option>
+                <option value="Bourouis">Bourouis</option>
+                <option value="Gaafour">Gaafour</option>
+                <option value="Kesra">Kesra</option>
+                <option value="Laroussa">Laroussa</option>
+                <option value="Le Krib">Le Krib</option>
+                <option value="Makthar">Makthar</option>
+                <option value="Rouhia">Rouhia</option>
+                <option value="Siliana Nord">Siliana Nord</option>
+                <option value="Siliana Sud">Siliana Sud</option>
+                <option value="__autre__">Autre (hors gouvernorat de Siliana)…</option>
+              </select>
+              <input type="text" name="Délégation" id="prosp_ese_delegation_autre" placeholder="Préciser la délégation / gouvernorat" hidden />
+            </label>
+            <label>Téléphone
+              <input type="tel" name="Téléphone" />
+            </label>
+            <label>Fax
+              <input type="text" name="Fax" />
+            </label>
+            <label>Mail
+              <input type="email" name="Mail" />
+            </label>
+            <div class="ese_form_field_wide">
+              <span>Dispositif</span>
+              <div class="ese_dispositif_group" id="prosp_ese_dispositif_group">
+                <label><input type="checkbox" name="Dispositif" value="CI" /> CI</label>
+                <label><input type="checkbox" name="Dispositif" value="DTI" /> DTI</label>
+                <label><input type="checkbox" name="Dispositif" value="DTC" /> DTC</label>
+                <label><input type="checkbox" name="Dispositif" value="PP" /> PP</label>
+              </div>
+            </div>
+            <label>Statut
+              <select name="Statut">
+                <option value="">----</option>
+                <option>À identifier</option>
+                <option>Premier contact</option>
+                <option>RDV programmé</option>
+                <option>Sensibilisée</option>
+                <option>Besoins identifiés</option>
+                <option>Dossier en préparation</option>
+                <option>Dossier déposé</option>
+                <option>Convention en cours</option>
+                <option>Convention signée</option>
+                <option>Formation réalisée</option>
+                <option>Entreprise fidèle</option>
+                <option>Sans suite</option>
+                <option>Refus de collaborer</option>
+                <option>Dossier clôturé</option>
+              </select>
+            </label>
+          </div>
+          <div class="ese_form_actions">
+            <button type="submit" class="btn_success"><i class="bi bi-check-lg"></i> Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/navbar_breadcrumb.js"></script>
+  <script src="js/modal_forms.js"></script>
+
+  <script>
+    /* ============================================================
+       Logique propre à prosp.html.
+       - Source entreprises : listEses() (Sheet "Base", onglet "eses"),
+         champs Dispositif ("CI;DTI;DTC;PP", un ou plusieurs, séparés
+         par ";") et Statut (14 valeurs), regroupé ci-dessous en 5
+         étapes de pipeline pour le Kanban.
+       - Suivi des contacts/actions : Sheet "Base", onglet "prosp_suivi"
+         (entreprise | date | type | notes | prochaine_action |
+         prochaine_date | auteur), lié par nom d'entreprise — même
+         convention que les exports fi.html (pas de clé technique).
+       - Mettre à jour le Statut réécrit la ligne "eses" complète
+         (updateEse remplace toute la ligne) : on fusionne donc avec
+         l'enregistrement existant avant d'envoyer, pour ne pas
+         écraser les autres colonnes.
+       - Le bouton [Afficher] de la fiche ouvre le formulaire complet
+         de l'entreprise (mêmes champs que "Entreprises"), modifiable ;
+         l'enregistrement envoie updateEse puis recharge la liste et
+         la fiche en cours.
+       ============================================================ */
+
+    const STATUT_GROUPES = {
+      "À identifier": "identifier",
+      "Premier contact": "contact",
+      "RDV programmé": "contact",
+      "Sensibilisée": "qualif",
+      "Besoins identifiés": "qualif",
+      "Dossier en préparation": "qualif",
+      "Dossier déposé": "formalisation",
+      "Convention en cours": "formalisation",
+      "Convention signée": "formalisation",
+      "Formation réalisée": "active",
+      "Entreprise fidèle": "active",
+      "Sans suite": "cloture",
+      "Refus de collaborer": "cloture",
+      "Dossier clôturé": "cloture"
+    };
+    const GROUPE_LABELS = {
+      identifier: "À identifier",
+      contact: "À contacter",
+      qualif: "En qualification",
+      formalisation: "En formalisation",
+      active: "Active",
+      cloture: "Clôturée"
+    };
+    const GROUPE_ORDRE = ["identifier", "contact", "qualif", "formalisation", "active", "cloture"];
+    // Le groupe "identifier" (À identifier) n'a pas de colonne dans le Kanban :
+    // il reste accessible uniquement via le bouton [Explorer] de la toolbar
+    // (modale de recherche). Le groupe "contact" (À contacter, Premier contact
+    // + RDV programmé) a sa colonne dans le Kanban.
+    const BOARD_GROUPE_ORDRE = GROUPE_ORDRE.filter((g) => g !== "identifier");
+
+    let eseListCache = [];
+    let suiviListCache = [];
+    let dispositifFiltre = "";
+    let ficheEnCours = null; // entreprise actuellement ouverte dans la modale
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      wireToolbar();
+      wireFiche();
+      wireEseForm();
+      await Promise.all([chargerEses(), chargerSuivi()]);
+      rafraichirTout();
+    });
+
+    function wireToolbar() {
+      document.querySelectorAll("#prosp_dispositif_chips [data-dispositif]").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          dispositifFiltre = chip.dataset.dispositif;
+          document.querySelectorAll("#prosp_dispositif_chips .prosp_chip").forEach((c) => c.classList.remove("is_active"));
+          chip.classList.add("is_active");
+          rafraichirTout();
+        });
+      });
+      document.getElementById("prosp_search")?.addEventListener("input", rafraichirTout);
+      document.getElementById("prosp_btn_explorer")?.addEventListener("click", ouvrirExplorer);
+      document.getElementById("prosp_btn_vue")?.addEventListener("click", toggleVue);
+    }
+
+    function wireFiche() {
+      document.querySelectorAll("[data-close-modal]").forEach((btn) => {
+        btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
+      });
+      document.querySelectorAll(".fi_modal_overlay").forEach((overlay) => {
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) closeModal(overlay.id);
+        });
+      });
+      document.getElementById("prosp_btn_save_statut")?.addEventListener("click", enregistrerStatut);
+      document.getElementById("prosp_contact_form")?.addEventListener("submit", ajouterContact);
+      document.getElementById("prosp_btn_afficher_ese")?.addEventListener("click", () => {
+        if (ficheEnCours) ouvrirEseForm(ficheEnCours);
+      });
+    }
+
+    function openModal(id) { document.getElementById(id)?.classList.add("is_visible"); }
+    function closeModal(id) { document.getElementById(id)?.classList.remove("is_visible"); }
+
+    async function chargerEses() {
+      try {
+        eseListCache = await apiCall("listEses", {});
+      } catch (err) {
+        console.error("Chargement entreprises impossible :", err.message);
+        eseListCache = [];
+      }
+    }
+
+    async function chargerSuivi() {
+      try {
+        suiviListCache = await apiCall("listProspSuivi", {});
+      } catch (err) {
+        console.error("Chargement suivi impossible :", err.message);
+        suiviListCache = [];
+      }
+    }
+
+    function dispositifsDe(ese) {
+      return String(ese["Dispositif"] || "").split(";").map((s) => s.trim()).filter(Boolean);
+    }
+
+    function suiviDe(nomEntreprise) {
+      return suiviListCache
+        .filter((s) => (s.entreprise || "").trim().toLowerCase() === nomEntreprise.trim().toLowerCase())
+        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+    }
+
+    function esesFiltrees() {
+      const q = (document.getElementById("prosp_search")?.value || "").trim().toLowerCase();
+      return eseListCache.filter((e) => {
+        if (dispositifFiltre && !dispositifsDe(e).includes(dispositifFiltre)) return false;
+        if (q) {
+          const texte = `${e["Raison sociale"] || ""} ${e["Nom commerciale"] || ""}`.toLowerCase();
+          if (!texte.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function rafraichirTout() {
+      renderCompteur();
+      renderRelances();
+      renderBoard();
+    }
+
+    function renderCompteur() {
+      const el = document.getElementById("prosp_count");
+      if (el) el.textContent = `${esesFiltrees().length} entreprise(s)`;
+    }
+
+    /* ---------------- Relances à venir ---------------- */
+
+    function renderRelances() {
+      const bloc = document.getElementById("prosp_relances_block");
+      const strip = document.getElementById("prosp_relances_strip");
+      const noms = new Set(esesFiltrees().map((e) => (e["Raison sociale"] || "").trim().toLowerCase()));
+
+      const aujourdHui = new Date();
+      aujourdHui.setHours(0, 0, 0, 0);
+
+      const relances = suiviListCache
+        .filter((s) => s.prochaine_date && noms.has((s.entreprise || "").trim().toLowerCase()))
+        .sort((a, b) => String(a.prochaine_date).localeCompare(String(b.prochaine_date)))
+        .slice(0, 12);
+
+      if (relances.length === 0) {
+        bloc.hidden = true;
+        return;
+      }
+      bloc.hidden = false;
+
+      strip.innerHTML = relances.map((r) => {
+        const date = new Date(r.prochaine_date);
+        const late = !isNaN(date) && date < aujourdHui;
+        return `
+          <div class="prosp_relance_card ${late ? "is_late" : ""}" data-entreprise="${r.entreprise}">
+            <div class="prosp_relance_date">${r.prochaine_date}</div>
+            <div class="prosp_relance_ese">${r.entreprise}</div>
+            <div class="prosp_relance_action">${r.prochaine_action || "Relance à faire"}</div>
+          </div>`;
+      }).join("");
+
+      strip.querySelectorAll("[data-entreprise]").forEach((card) => {
+        card.addEventListener("click", () => {
+          const ese = eseListCache.find((e) => (e["Raison sociale"] || "").trim() === card.dataset.entreprise.trim());
+          if (ese) ouvrirFiche(ese);
+        });
+      });
+    }
+
+    /* ---------------- Kanban ---------------- */
+
+    function renderBoard() {
+      const board = document.getElementById("prosp_board");
+      const filtered = esesFiltrees();
+
+      if (filtered.length === 0) {
+        board.innerHTML = `<div class="prosp_empty_board"><i class="bi bi-inbox"></i><br>Aucune entreprise ne correspond aux filtres.</div>`;
+        return;
+      }
+
+      const parGroupe = {};
+      GROUPE_ORDRE.forEach((g) => (parGroupe[g] = []));
+      filtered.forEach((e) => {
+        const groupe = STATUT_GROUPES[e["Statut"]] || "identifier";
+        parGroupe[groupe].push(e);
+      });
+
+      board.innerHTML = BOARD_GROUPE_ORDRE.map((groupe) => {
+        const items = parGroupe[groupe];
+        const cartes = items.map((e) => {
+          const nom = e["Raison sociale"] || e["Nom commerciale"] || "----";
+          const historique = suiviDe(nom);
+          const dernier = historique[0];
+          const badges = dispositifsDe(e).map((d) => `<span class="prosp_badge">${d}</span>`).join("");
+
+          return `
+            <div class="prosp_card" data-row="${e._row}">
+              <div class="prosp_card_nom">${nom}</div>
+              <div class="prosp_card_statut">${e["Statut"] || "----"}</div>
+              <div class="prosp_card_badges">${badges}</div>
+              ${dernier ? `<div class="prosp_card_last"><i class="bi bi-clock-history"></i> ${dernier.date} — ${dernier.type || ""}</div>` : ""}
+            </div>`;
+        }).join("");
+
+        return `
+          <div class="prosp_col" data-group="${groupe}">
+            <div class="prosp_col_header">
+              <h3>${GROUPE_LABELS[groupe]}</h3>
+              <span class="prosp_col_count">${items.length}</span>
+            </div>
+            ${cartes || `<p class="prosp_historique_empty">Aucune entreprise</p>`}
+          </div>`;
+      }).join("");
+
+      board.querySelectorAll(".prosp_card").forEach((card) => {
+        card.addEventListener("click", () => {
+          const ese = eseListCache.find((e) => String(e._row) === card.dataset.row);
+          if (ese) ouvrirFiche(ese);
+        });
+      });
+    }
+
+    /* ---------------- Explorer (entreprises à contacter) ---------------- */
+
+    function ouvrirExplorer() {
+      const input = document.getElementById("prosp_explorer_search");
+      input.value = "";
+      input.oninput = renderExplorerList;
+      renderExplorerList();
+      openModal("prosp_modal_explorer");
+    }
+
+    function renderExplorerList() {
+      const list = document.getElementById("prosp_explorer_list");
+      const q = (document.getElementById("prosp_explorer_search")?.value || "").trim().toLowerCase();
+
+      const aContacter = esesFiltrees()
+        .filter((e) => (STATUT_GROUPES[e["Statut"]] || "identifier") === "identifier")
+        .filter((e) => {
+          if (!q) return true;
+          const texte = `${e["Raison sociale"] || ""} ${e["Nom commerciale"] || ""}`.toLowerCase();
+          return texte.includes(q);
+        });
+
+      if (aContacter.length === 0) {
+        list.innerHTML = `<p class="prosp_historique_empty">Aucune entreprise à contacter pour le moment.</p>`;
+      } else {
+        list.innerHTML = aContacter.map((e) => {
+          const nom = e["Raison sociale"] || e["Nom commerciale"] || "----";
+          const historique = suiviDe(nom);
+          const dernier = historique[0];
+          const badges = dispositifsDe(e).map((d) => `<span class="prosp_badge">${d}</span>`).join("");
+
+          return `
+            <div class="prosp_card" data-row="${e._row}">
+              <div class="prosp_card_nom">${nom}</div>
+              <div class="prosp_card_statut">${e["Statut"] || "----"}</div>
+              <div class="prosp_card_badges">${badges}</div>
+              ${dernier ? `<div class="prosp_card_last"><i class="bi bi-clock-history"></i> ${dernier.date} — ${dernier.type || ""}</div>` : ""}
+            </div>`;
+        }).join("");
+      }
+
+      list.querySelectorAll("[data-row]").forEach((card) => {
+        card.addEventListener("click", () => {
+          const ese = eseListCache.find((e) => String(e._row) === card.dataset.row);
+          closeModal("prosp_modal_explorer");
+          if (ese) ouvrirFiche(ese);
+        });
+      });
+    }
+
+    /* ---------------- Carte cliquable des délégations ---------------- */
+
+    const PROSP_MAP_SVG = `<svg id="prosp_map_svg" viewBox="0 0 900 1000" role="img" aria-labelledby="map-title map-desc"><desc id="map-desc">Carte cliquable des delegations de Siliana.</desc><rect width="100%" height="100%" fill="#fbfaf6"/><g stroke-linejoin="round" stroke-linecap="round"><path class="prosp_map_delegation" id="map_bargou" data-name="Bargou" data-gid="TUN.19.1_1" d="M812.31,401.42 L766.83,433.43 L731.90,463.09 L714.30,465.63 L693.77,489.83 L675.13,507.34 L630.97,494.73 L616.94,483.24 L603.00,474.11 L595.19,465.82 L591.42,454.81 L590.86,428.91 L597.64,416.30 L599.05,400.76 L602.25,388.99 L602.34,380.23 L594.15,360.56 L581.54,341.25 L595.09,326.66 L602.16,323.46 L610.72,321.95 L619.39,323.08 L630.12,326.85 L651.78,340.03 L661.10,343.51 L677.86,343.04 L699.98,337.11 L706.67,332.97 L709.21,328.73 L707.61,308.96 L711.47,299.07 L721.26,290.79 L743.20,277.89 L736.99,267.34 L742.17,264.33 L749.70,262.63 L775.40,273.37 L792.16,300.11 L834.16,310.46 L842.72,316.21 L844.80,326.09 L840.18,340.31 L835.29,347.94 L827.47,366.11 L815.98,382.49 L812.59,389.56 L808.92,400.48 L812.31,401.42 Z" fill="#d9ed92" stroke="#ffffff" stroke-width="2.2" tabindex="0" role="button" aria-label="Bargou"><title>Bargou</title></path><path class="prosp_map_delegation" id="map_bouarada" data-name="Bouarada" data-gid="TUN.19.2_1" d="M665.81,69.52 L670.23,73.38 L691.51,76.68 L709.21,74.51 L723.81,74.89 L733.60,80.91 L747.72,77.24 L747.44,70.56 L751.39,63.78 L756.48,59.07 L796.31,62.93 L813.25,60.57 L819.09,52.19 L823.05,62.08 L824.55,74.70 L815.89,130.63 L810.62,140.42 L808.45,148.52 L798.47,161.89 L792.82,173.47 L785.67,179.12 L765.89,188.63 L743.39,206.52 L715.24,211.88 L692.92,209.15 L683.22,212.54 L700.36,232.88 L720.51,237.68 L722.68,243.80 L722.49,260.28 L726.35,269.98 L733.69,269.22 L736.99,267.34 L743.20,277.89 L721.26,290.79 L711.47,299.07 L707.61,308.96 L709.78,324.31 L709.21,328.73 L706.67,332.97 L691.98,339.84 L666.65,344.08 L656.11,342.01 L630.12,326.85 L619.39,323.08 L607.81,322.14 L599.14,324.87 L597.26,308.02 L592.93,292.48 L593.96,277.51 L585.96,252.28 L587.00,242.11 L604.70,238.34 L621.36,231.37 L629.37,221.20 L628.80,207.83 L622.40,196.06 L625.13,148.33 L633.13,141.93 L643.87,141.36 L653.47,135.99 L659.97,128.46 L659.97,123.09 L651.40,116.69 L635.30,115.66 L622.96,110.76 L623.53,102.19 L639.06,94.19 L656.20,82.89 L665.81,69.52 Z" fill="#b5e48c" stroke="#ffffff" stroke-width="2.2" tabindex="0" role="button" aria-label="Bouarada"><title>Bouarada</title></path><path class="prosp_map_delegation" id="map_bourouis" data-name="Bourouis" data-gid="TUN.19.3_1" d="M265.08,394.26 L230.99,384.94 L225.91,372.70 L204.91,374.58 L196.72,360.56 L191.82,355.94 L181.28,353.49 L167.63,353.31 L157.74,322.14 L152.56,312.25 L166.21,295.40 L167.06,286.45 L162.45,274.50 L165.27,263.48 L156.61,254.63 L169.60,251.52 L189.56,241.26 L206.14,230.15 L245.21,206.70 L249.73,205.29 L260.84,207.93 L275.06,219.79 L295.40,232.60 L301.05,237.96 L306.69,246.81 L338.05,268.09 L343.42,273.84 L345.58,280.62 L343.23,296.15 L344.17,303.21 L355.00,329.39 L370.72,352.46 L349.54,371.48 L330.14,383.25 L312.72,388.33 L270.16,395.30 L265.08,394.26 Z" fill="#99d98c" stroke="#ffffff" stroke-width="2.2" tabindex="0" role="button" aria-label="Bourouis"><title>Bourouis</title></path><path class="prosp_map_delegation" id="map_elkrib" data-name="Le Krib" data-gid="TUN.19.4_1" d="M247.00,119.33 L272.80,112.08 L301.80,95.98 L361.78,100.31 L383.81,106.62 L393.51,117.44 L404.33,125.64 L415.07,129.97 L424.11,138.44 L411.02,151.15 L392.75,174.79 L362.15,204.54 L354.71,214.80 L306.69,246.81 L301.05,237.96 L295.40,232.60 L275.06,219.79 L260.84,207.93 L249.73,205.29 L245.21,206.70 L206.14,230.15 L189.56,241.26 L169.60,251.52 L156.61,254.63 L121.96,242.30 L115.65,234.29 L106.52,216.21 L88.44,192.86 L81.19,180.81 L81.10,170.93 L105.67,149.46 L109.53,141.08 L107.37,132.70 L100.02,119.99 L96.35,108.22 L72.91,86.84 L63.40,72.06 L56.90,53.80 L55.20,52.29 L67.16,45.70 L128.36,39.95 L131.66,44.57 L141.17,52.38 L171.49,53.61 L179.87,58.60 L186.55,73.29 L202.65,82.32 L207.27,88.54 L204.16,101.25 L206.42,106.90 L216.21,107.09 L230.15,118.01 L239.94,121.12 L247.00,119.33 Z" fill="#76c893" stroke="#ffffff" stroke-width="2.2" tabindex="0" role="button" aria-label="Le Krib"><title>Le Krib</title></path><path class="prosp_map_delegation" id="map_gaafour" data-name="Gaafour" data-gid="TUN.19.5_1" d="M415.07,129.97 L429.47,126.67 L443.03,120.65 L482.48,136.56 L499.15,150.96 L509.88,166.50 L522.69,181.00 L535.59,199.74 L541.52,212.07 L550.09,221.20 L564.31,231.28 L576.36,243.24 L586.24,250.02 L593.96,277.51 L592.93,292.48 L597.26,308.02 L599.14,324.87 L591.52,329.95 L581.54,341.25 L567.13,346.34 L548.68,347.47 L538.13,344.36 L529.75,338.90 L515.53,332.78 L494.44,335.51 L477.87,333.06 L468.27,333.44 L462.71,335.23 L452.73,341.63 L444.44,344.45 L400.66,350.95 L370.72,352.46 L355.00,329.39 L344.17,303.21 L343.23,296.15 L345.58,280.62 L343.42,273.84 L338.05,268.09 L306.69,246.81 L354.71,214.80 L362.15,204.54 L392.75,174.79 L411.02,151.15 L424.11,138.44 L415.07,129.97 Z" fill="#52b69a" stroke="#ffffff" stroke-width="2.2" tabindex="0" role="button" aria-label="Gaafour"><title>Gaafour</title></path><path class="prosp_map_delegation" id="map_kesra" data-name="Kesra" data-gid="TUN.19.6_1" d="M633.04,710.34 L616.28,723.43 L600.56,725.60 L579.46,725.97 L565.44,730.96 L554.89,738.69 L513.46,750.64 L499.53,760.53 L486.63,754.88 L459.79,756.39 L445.01,752.24 L405.46,734.73 L393.41,736.24 L378.72,752.71 L379.85,759.02 L370.44,758.55 L361.49,755.54 L347.18,747.44 L331.36,735.86 L320.25,724.00 L309.90,708.46 L359.14,695.37 L377.88,687.46 L385.88,679.27 L394.82,660.72 L414.79,643.49 L424.77,630.31 L445.86,616.75 L455.08,613.74 L462.52,613.27 L486.91,617.60 L496.70,615.62 L500.19,612.33 L502.63,606.77 L501.88,593.12 L504.52,585.68 L509.51,582.86 L518.92,581.73 L529.19,582.57 L556.49,589.45 L567.69,590.86 L578.99,590.30 L596.32,586.06 L610.16,603.10 L607.33,615.44 L601.69,624.00 L607.33,636.62 L579.46,664.96 L580.97,675.51 L587.00,685.49 L596.60,694.90 L612.32,706.86 L633.04,710.34 Z" fill="#34a0a4" stroke="#ffffff" stroke-width="2.2" tabindex="0" role="button" aria-label="Kesra"><title>Kesra</title></path><path class="prosp_map_delegation" id="map_laroussa" data-name="Laroussa" data-gid="TUN.19.7_1" d="M639.54,45.32 L651.49,53.80 L665.81,69.52 L656.20,82.89 L639.06,94.19 L623.53,102.19 L622.96,110.76 L635.30,115.66 L651.40,116.69 L659.97,123.09 L659.97,128.46 L653.47,135.99 L643.87,141.36 L633.13,141.93 L625.13,148.33 L622.40,196.06 L628.80,207.83 L629.37,221.20 L621.36,231.37 L604.70,238.34 L587.00,242.11 L586.24,250.02 L576.36,243.24 L564.31,231.28 L550.09,221.20 L541.52,212.07 L535.59,199.74 L522.69,181.00 L509.88,166.50 L499.15,150.96 L482.48,136.56 L443.03,120.65 L450.19,117.54 L460.26,108.78 L462.05,99.65 L458.57,89.76 L458.94,75.45 L461.96,64.62 L472.22,55.40 L506.59,45.42 L534.36,41.74 L582.57,41.37 L597.35,44.19 L605.55,40.52 L623.15,36.00 L639.54,45.32 Z" fill="#168aad" stroke="#ffffff" stroke-width="2.2" tabindex="0" role="button" aria-label="Laroussa"><title>Laroussa</title></path><path class="prosp_map_delegation" id="map_makthar" data-name="Makthar" data-gid="TUN.19.8_1" d="M211.13,529.85 L210.37,523.35 L214.61,514.03 L242.20,492.75 L258.30,486.25 L267.62,478.91 L273.27,491.15 L279.86,515.72 L284.57,527.87 L287.96,533.99 L300.48,548.40 L313.38,555.74 L346.52,564.31 L361.31,573.54 L397.56,592.08 L408.19,603.67 L416.10,619.48 L424.77,630.31 L414.79,643.49 L394.82,660.72 L385.88,679.27 L377.88,687.46 L359.14,695.37 L309.90,708.46 L300.95,707.14 L293.61,703.75 L265.27,676.26 L248.41,657.52 L236.36,652.16 L222.61,653.10 L215.74,656.39 L212.44,659.78 L202.65,674.66 L196.63,680.87 L159.06,708.84 L147.57,729.65 L136.46,715.33 L130.53,703.38 L148.51,681.72 L151.43,667.22 L149.36,648.58 L143.90,632.38 L156.80,623.06 L159.62,615.25 L146.35,613.65 L153.22,593.21 L167.91,580.69 L179.49,575.51 L194.08,573.72 L208.77,565.53 L212.73,554.99 L213.10,544.44 L211.13,529.85 Z" fill="#1a759f" stroke="#ffffff" stroke-width="2.2" tabindex="0" role="button" aria-label="Makthar"><title>Makthar</title></path><path class="prosp_map_delegation" id="map_rouhia" data-name="Rouhia" data-gid="TUN.19.9_1" d="M379.85,759.02 L381.08,765.33 L386.54,774.37 L395.11,784.16 L421.47,806.10 L449.91,820.51 L461.68,834.25 L474.29,844.33 L488.04,847.53 L510.17,881.43 L525.98,894.98 L531.35,930.20 L537.94,946.11 L544.25,953.45 L528.90,959.67 L491.99,953.45 L473.63,959.67 L432.39,964.00 L420.34,961.93 L424.39,954.21 L422.13,946.30 L413.94,929.63 L401.42,918.15 L392.47,913.44 L378.72,911.56 L377.41,905.25 L373.17,897.53 L354.34,902.42 L332.40,900.63 L317.81,895.36 L303.49,886.89 L299.35,877.00 L303.12,864.76 L303.59,856.47 L291.25,849.32 L281.65,840.09 L269.31,836.23 L260.37,840.00 L243.80,839.81 L232.88,837.36 L221.48,837.74 L200.96,845.18 L189.94,839.81 L178.08,821.45 L170.17,812.69 L147.67,820.32 L133.82,819.56 L122.71,813.44 L120.36,804.22 L115.46,793.39 L108.69,783.50 L83.83,771.92 L94.28,767.78 L111.51,763.73 L123.47,756.01 L143.15,765.61 L153.41,766.84 L154.63,756.76 L151.81,746.03 L151.62,735.01 L147.57,729.65 L159.06,708.84 L196.63,680.87 L215.74,656.39 L222.61,653.10 L230.81,651.59 L239.19,652.91 L248.41,657.52 L265.27,676.26 L293.61,703.75 L300.95,707.14 L309.90,708.46 L325.06,730.02 L347.18,747.44 L361.49,755.54 L370.44,758.55 L379.85,759.02 Z" fill="#1e6091" stroke="#ffffff" stroke-width="2.2" tabindex="0" role="button" aria-label="Rouhia"><title>Rouhia</title></path><path class="prosp_map_delegation" id="map_siliananord" data-name="Siliana Nord" data-gid="TUN.19.10_1" d="M267.62,478.91 L269.41,477.40 L270.54,471.19 L264.89,452.17 L261.50,429.95 L262.06,414.32 L265.08,394.26 L270.16,395.30 L312.72,388.33 L330.14,383.25 L349.54,371.48 L370.72,352.46 L400.66,350.95 L444.44,344.45 L452.73,341.63 L462.71,335.23 L468.27,333.44 L477.87,333.06 L494.44,335.51 L515.53,332.78 L529.75,338.90 L538.13,344.36 L548.68,347.47 L567.13,346.34 L581.54,341.25 L594.15,360.56 L600.84,374.77 L602.25,388.99 L599.05,400.76 L597.64,416.30 L590.86,428.91 L552.06,419.12 L509.98,415.64 L501.22,416.30 L487.19,421.10 L457.72,441.72 L435.41,451.32 L417.80,455.65 L375.71,459.89 L364.69,462.81 L357.54,466.95 L353.49,473.73 L353.87,478.63 L356.50,483.24 L362.72,488.70 L380.14,498.59 L391.91,508.38 L399.25,517.51 L404.33,529.66 L408.85,551.79 L409.14,561.20 L397.56,592.08 L361.31,573.54 L346.52,564.31 L313.38,555.74 L300.48,548.40 L287.96,533.99 L284.57,527.87 L279.86,515.72 L273.27,491.15 L267.62,478.91 Z" fill="#184e77" stroke="#ffffff" stroke-width="2.2" tabindex="0" role="button" aria-label="Siliana Nord"><title>Siliana Nord</title></path><path class="prosp_map_delegation" id="map_silianasud" data-name="Siliana Sud" data-gid="TUN.19.11_1" d="M675.13,507.34 L617.60,548.30 L585.49,562.33 L585.68,570.62 L596.32,586.06 L578.99,590.30 L567.69,590.86 L556.49,589.45 L529.19,582.57 L518.92,581.73 L509.51,582.86 L504.52,585.68 L502.26,589.26 L502.63,606.77 L500.19,612.33 L496.70,615.62 L486.91,617.60 L469.96,613.74 L455.08,613.74 L445.86,616.75 L424.77,630.31 L416.10,619.48 L408.19,603.67 L397.56,592.08 L409.14,561.20 L408.85,551.79 L404.33,529.66 L399.25,517.51 L391.91,508.38 L380.14,498.59 L362.72,488.70 L356.50,483.24 L353.87,478.63 L353.49,473.73 L357.54,466.95 L364.69,462.81 L393.88,457.06 L417.80,455.65 L435.41,451.32 L451.88,444.82 L493.03,418.37 L509.98,415.64 L552.06,419.12 L590.86,428.91 L591.42,454.81 L595.19,465.82 L603.00,474.11 L616.94,483.24 L630.97,494.73 L675.13,507.34 Z" fill="#6d597a" stroke="#ffffff" stroke-width="2.2" tabindex="0" role="button" aria-label="Siliana Sud"><title>Siliana Sud</title></path></g><g fill="none" stroke="#1b1b1b" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round" pointer-events="none"><path d="M812.31,401.42 L766.83,433.43 L731.90,463.09 L714.30,465.63 L693.77,489.83 L675.13,507.34 L630.97,494.73 L616.94,483.24 L603.00,474.11 L595.19,465.82 L591.42,454.81 L590.86,428.91 L597.64,416.30 L599.05,400.76 L602.25,388.99 L602.34,380.23 L594.15,360.56 L581.54,341.25 L595.09,326.66 L602.16,323.46 L610.72,321.95 L619.39,323.08 L630.12,326.85 L651.78,340.03 L661.10,343.51 L677.86,343.04 L699.98,337.11 L706.67,332.97 L709.21,328.73 L707.61,308.96 L711.47,299.07 L721.26,290.79 L743.20,277.89 L736.99,267.34 L742.17,264.33 L749.70,262.63 L775.40,273.37 L792.16,300.11 L834.16,310.46 L842.72,316.21 L844.80,326.09 L840.18,340.31 L835.29,347.94 L827.47,366.11 L815.98,382.49 L812.59,389.56 L808.92,400.48 L812.31,401.42 Z"/><path d="M665.81,69.52 L670.23,73.38 L691.51,76.68 L709.21,74.51 L723.81,74.89 L733.60,80.91 L747.72,77.24 L747.44,70.56 L751.39,63.78 L756.48,59.07 L796.31,62.93 L813.25,60.57 L819.09,52.19 L823.05,62.08 L824.55,74.70 L815.89,130.63 L810.62,140.42 L808.45,148.52 L798.47,161.89 L792.82,173.47 L785.67,179.12 L765.89,188.63 L743.39,206.52 L715.24,211.88 L692.92,209.15 L683.22,212.54 L700.36,232.88 L720.51,237.68 L722.68,243.80 L722.49,260.28 L726.35,269.98 L733.69,269.22 L736.99,267.34 L743.20,277.89 L721.26,290.79 L711.47,299.07 L707.61,308.96 L709.78,324.31 L709.21,328.73 L706.67,332.97 L691.98,339.84 L666.65,344.08 L656.11,342.01 L630.12,326.85 L619.39,323.08 L607.81,322.14 L599.14,324.87 L597.26,308.02 L592.93,292.48 L593.96,277.51 L585.96,252.28 L587.00,242.11 L604.70,238.34 L621.36,231.37 L629.37,221.20 L628.80,207.83 L622.40,196.06 L625.13,148.33 L633.13,141.93 L643.87,141.36 L653.47,135.99 L659.97,128.46 L659.97,123.09 L651.40,116.69 L635.30,115.66 L622.96,110.76 L623.53,102.19 L639.06,94.19 L656.20,82.89 L665.81,69.52 Z"/><path d="M265.08,394.26 L230.99,384.94 L225.91,372.70 L204.91,374.58 L196.72,360.56 L191.82,355.94 L181.28,353.49 L167.63,353.31 L157.74,322.14 L152.56,312.25 L166.21,295.40 L167.06,286.45 L162.45,274.50 L165.27,263.48 L156.61,254.63 L169.60,251.52 L189.56,241.26 L206.14,230.15 L245.21,206.70 L249.73,205.29 L260.84,207.93 L275.06,219.79 L295.40,232.60 L301.05,237.96 L306.69,246.81 L338.05,268.09 L343.42,273.84 L345.58,280.62 L343.23,296.15 L344.17,303.21 L355.00,329.39 L370.72,352.46 L349.54,371.48 L330.14,383.25 L312.72,388.33 L270.16,395.30 L265.08,394.26 Z"/><path d="M247.00,119.33 L272.80,112.08 L301.80,95.98 L361.78,100.31 L383.81,106.62 L393.51,117.44 L404.33,125.64 L415.07,129.97 L424.11,138.44 L411.02,151.15 L392.75,174.79 L362.15,204.54 L354.71,214.80 L306.69,246.81 L301.05,237.96 L295.40,232.60 L275.06,219.79 L260.84,207.93 L249.73,205.29 L245.21,206.70 L206.14,230.15 L189.56,241.26 L169.60,251.52 L156.61,254.63 L121.96,242.30 L115.65,234.29 L106.52,216.21 L88.44,192.86 L81.19,180.81 L81.10,170.93 L105.67,149.46 L109.53,141.08 L107.37,132.70 L100.02,119.99 L96.35,108.22 L72.91,86.84 L63.40,72.06 L56.90,53.80 L55.20,52.29 L67.16,45.70 L128.36,39.95 L131.66,44.57 L141.17,52.38 L171.49,53.61 L179.87,58.60 L186.55,73.29 L202.65,82.32 L207.27,88.54 L204.16,101.25 L206.42,106.90 L216.21,107.09 L230.15,118.01 L239.94,121.12 L247.00,119.33 Z"/><path d="M415.07,129.97 L429.47,126.67 L443.03,120.65 L482.48,136.56 L499.15,150.96 L509.88,166.50 L522.69,181.00 L535.59,199.74 L541.52,212.07 L550.09,221.20 L564.31,231.28 L576.36,243.24 L586.24,250.02 L593.96,277.51 L592.93,292.48 L597.26,308.02 L599.14,324.87 L591.52,329.95 L581.54,341.25 L567.13,346.34 L548.68,347.47 L538.13,344.36 L529.75,338.90 L515.53,332.78 L494.44,335.51 L477.87,333.06 L468.27,333.44 L462.71,335.23 L452.73,341.63 L444.44,344.45 L400.66,350.95 L370.72,352.46 L355.00,329.39 L344.17,303.21 L343.23,296.15 L345.58,280.62 L343.42,273.84 L338.05,268.09 L306.69,246.81 L354.71,214.80 L362.15,204.54 L392.75,174.79 L411.02,151.15 L424.11,138.44 L415.07,129.97 Z"/><path d="M633.04,710.34 L616.28,723.43 L600.56,725.60 L579.46,725.97 L565.44,730.96 L554.89,738.69 L513.46,750.64 L499.53,760.53 L486.63,754.88 L459.79,756.39 L445.01,752.24 L405.46,734.73 L393.41,736.24 L378.72,752.71 L379.85,759.02 L370.44,758.55 L361.49,755.54 L347.18,747.44 L331.36,735.86 L320.25,724.00 L309.90,708.46 L359.14,695.37 L377.88,687.46 L385.88,679.27 L394.82,660.72 L414.79,643.49 L424.77,630.31 L445.86,616.75 L455.08,613.74 L462.52,613.27 L486.91,617.60 L496.70,615.62 L500.19,612.33 L502.63,606.77 L501.88,593.12 L504.52,585.68 L509.51,582.86 L518.92,581.73 L529.19,582.57 L556.49,589.45 L567.69,590.86 L578.99,590.30 L596.32,586.06 L610.16,603.10 L607.33,615.44 L601.69,624.00 L607.33,636.62 L579.46,664.96 L580.97,675.51 L587.00,685.49 L596.60,694.90 L612.32,706.86 L633.04,710.34 Z"/><path d="M639.54,45.32 L651.49,53.80 L665.81,69.52 L656.20,82.89 L639.06,94.19 L623.53,102.19 L622.96,110.76 L635.30,115.66 L651.40,116.69 L659.97,123.09 L659.97,128.46 L653.47,135.99 L643.87,141.36 L633.13,141.93 L625.13,148.33 L622.40,196.06 L628.80,207.83 L629.37,221.20 L621.36,231.37 L604.70,238.34 L587.00,242.11 L586.24,250.02 L576.36,243.24 L564.31,231.28 L550.09,221.20 L541.52,212.07 L535.59,199.74 L522.69,181.00 L509.88,166.50 L499.15,150.96 L482.48,136.56 L443.03,120.65 L450.19,117.54 L460.26,108.78 L462.05,99.65 L458.57,89.76 L458.94,75.45 L461.96,64.62 L472.22,55.40 L506.59,45.42 L534.36,41.74 L582.57,41.37 L597.35,44.19 L605.55,40.52 L623.15,36.00 L639.54,45.32 Z"/><path d="M211.13,529.85 L210.37,523.35 L214.61,514.03 L242.20,492.75 L258.30,486.25 L267.62,478.91 L273.27,491.15 L279.86,515.72 L284.57,527.87 L287.96,533.99 L300.48,548.40 L313.38,555.74 L346.52,564.31 L361.31,573.54 L397.56,592.08 L408.19,603.67 L416.10,619.48 L424.77,630.31 L414.79,643.49 L394.82,660.72 L385.88,679.27 L377.88,687.46 L359.14,695.37 L309.90,708.46 L300.95,707.14 L293.61,703.75 L265.27,676.26 L248.41,657.52 L236.36,652.16 L222.61,653.10 L215.74,656.39 L212.44,659.78 L202.65,674.66 L196.63,680.87 L159.06,708.84 L147.57,729.65 L136.46,715.33 L130.53,703.38 L148.51,681.72 L151.43,667.22 L149.36,648.58 L143.90,632.38 L156.80,623.06 L159.62,615.25 L146.35,613.65 L153.22,593.21 L167.91,580.69 L179.49,575.51 L194.08,573.72 L208.77,565.53 L212.73,554.99 L213.10,544.44 L211.13,529.85 Z"/><path d="M379.85,759.02 L381.08,765.33 L386.54,774.37 L395.11,784.16 L421.47,806.10 L449.91,820.51 L461.68,834.25 L474.29,844.33 L488.04,847.53 L510.17,881.43 L525.98,894.98 L531.35,930.20 L537.94,946.11 L544.25,953.45 L528.90,959.67 L491.99,953.45 L473.63,959.67 L432.39,964.00 L420.34,961.93 L424.39,954.21 L422.13,946.30 L413.94,929.63 L401.42,918.15 L392.47,913.44 L378.72,911.56 L377.41,905.25 L373.17,897.53 L354.34,902.42 L332.40,900.63 L317.81,895.36 L303.49,886.89 L299.35,877.00 L303.12,864.76 L303.59,856.47 L291.25,849.32 L281.65,840.09 L269.31,836.23 L260.37,840.00 L243.80,839.81 L232.88,837.36 L221.48,837.74 L200.96,845.18 L189.94,839.81 L178.08,821.45 L170.17,812.69 L147.67,820.32 L133.82,819.56 L122.71,813.44 L120.36,804.22 L115.46,793.39 L108.69,783.50 L83.83,771.92 L94.28,767.78 L111.51,763.73 L123.47,756.01 L143.15,765.61 L153.41,766.84 L154.63,756.76 L151.81,746.03 L151.62,735.01 L147.57,729.65 L159.06,708.84 L196.63,680.87 L215.74,656.39 L222.61,653.10 L230.81,651.59 L239.19,652.91 L248.41,657.52 L265.27,676.26 L293.61,703.75 L300.95,707.14 L309.90,708.46 L325.06,730.02 L347.18,747.44 L361.49,755.54 L370.44,758.55 L379.85,759.02 Z"/><path d="M267.62,478.91 L269.41,477.40 L270.54,471.19 L264.89,452.17 L261.50,429.95 L262.06,414.32 L265.08,394.26 L270.16,395.30 L312.72,388.33 L330.14,383.25 L349.54,371.48 L370.72,352.46 L400.66,350.95 L444.44,344.45 L452.73,341.63 L462.71,335.23 L468.27,333.44 L477.87,333.06 L494.44,335.51 L515.53,332.78 L529.75,338.90 L538.13,344.36 L548.68,347.47 L567.13,346.34 L581.54,341.25 L594.15,360.56 L600.84,374.77 L602.25,388.99 L599.05,400.76 L597.64,416.30 L590.86,428.91 L552.06,419.12 L509.98,415.64 L501.22,416.30 L487.19,421.10 L457.72,441.72 L435.41,451.32 L417.80,455.65 L375.71,459.89 L364.69,462.81 L357.54,466.95 L353.49,473.73 L353.87,478.63 L356.50,483.24 L362.72,488.70 L380.14,498.59 L391.91,508.38 L399.25,517.51 L404.33,529.66 L408.85,551.79 L409.14,561.20 L397.56,592.08 L361.31,573.54 L346.52,564.31 L313.38,555.74 L300.48,548.40 L287.96,533.99 L284.57,527.87 L279.86,515.72 L273.27,491.15 L267.62,478.91 Z"/><path d="M675.13,507.34 L617.60,548.30 L585.49,562.33 L585.68,570.62 L596.32,586.06 L578.99,590.30 L567.69,590.86 L556.49,589.45 L529.19,582.57 L518.92,581.73 L509.51,582.86 L504.52,585.68 L502.26,589.26 L502.63,606.77 L500.19,612.33 L496.70,615.62 L486.91,617.60 L469.96,613.74 L455.08,613.74 L445.86,616.75 L424.77,630.31 L416.10,619.48 L408.19,603.67 L397.56,592.08 L409.14,561.20 L408.85,551.79 L404.33,529.66 L399.25,517.51 L391.91,508.38 L380.14,498.59 L362.72,488.70 L356.50,483.24 L353.87,478.63 L353.49,473.73 L357.54,466.95 L364.69,462.81 L393.88,457.06 L417.80,455.65 L435.41,451.32 L451.88,444.82 L493.03,418.37 L509.98,415.64 L552.06,419.12 L590.86,428.91 L591.42,454.81 L595.19,465.82 L603.00,474.11 L616.94,483.24 L630.97,494.73 L675.13,507.34 Z"/></g></svg>`;
+
+    const PROSP_DELEGATIONS = [
+      { id: "map_bouarada", label: "Bouarada" },
+      { id: "map_laroussa", label: "Laroussa" },
+      { id: "map_gaafour", label: "Gaafour" },
+      { id: "map_elkrib", label: "Le Krib" },
+      { id: "map_bourouis", label: "Bourouis" },
+      { id: "map_bargou", label: "Bargou" },
+      { id: "map_siliananord", label: "Siliana Nord" },
+      { id: "map_silianasud", label: "Siliana Sud" },
+      { id: "map_kesra", label: "Kesra" },
+      { id: "map_makthar", label: "Makthar" },
+      { id: "map_rouhia", label: "Rouhia" }      
+    ];
+
+    let carteInitialisee = false;
+
+    let vueActuelle = "kanban";
+
+    function toggleVue() {
+      vueActuelle = vueActuelle === "kanban" ? "carte" : "kanban";
+
+      const panel = document.getElementById("prosp_carte_panel");
+      const board = document.getElementById("prosp_board");
+      const btn = document.getElementById("prosp_btn_vue");
+      const afficherCarte = vueActuelle === "carte";
+
+      panel.hidden = !afficherCarte;
+      board.hidden = afficherCarte;
+
+      // Le bouton n'affiche que la vue vers laquelle il permet de basculer
+      // (donc l'inverse de la vue actuellement affichée).
+      btn.innerHTML = afficherCarte
+        ? `<i class="bi bi-kanban"></i> Kanban`
+        : `<i class="bi bi-map"></i> Carte`;
+
+      if (afficherCarte && !carteInitialisee) {
+        initCarte();
+        carteInitialisee = true;
+      }
+    }
+
+    function initCarte() {
+      document.getElementById("prosp_carte_map_wrap").innerHTML = PROSP_MAP_SVG;
+      document.getElementById("prosp_carte_boutons").innerHTML = PROSP_DELEGATIONS
+        .map((d) => `<button type="button" class="prosp_map_btn" data-target="${d.id}">${d.label}</button>`)
+        .join("");
+
+      const shapes = Array.from(document.querySelectorAll(".prosp_map_delegation"));
+      const boutons = Array.from(document.querySelectorAll(".prosp_map_btn"));
+
+      function selectionnerDelegation(id) {
+        shapes.forEach((s) => s.classList.toggle("is_selected", s.id === id));
+        boutons.forEach((b) => b.classList.toggle("is_active", b.dataset.target === id));
+      }
+
+      shapes.forEach((shape) => {
+        shape.addEventListener("click", () => selectionnerDelegation(shape.id));
+      });
+      boutons.forEach((bouton) => {
+        bouton.addEventListener("click", () => selectionnerDelegation(bouton.dataset.target));
+      });
+    }
+
+    /* ---------------- Fiche entreprise (modale) ---------------- */
+
+    function ouvrirFiche(ese) {
+      ficheEnCours = ese;
+      const nom = ese["Raison sociale"] || ese["Nom commerciale"] || "----";
+
+      document.getElementById("prosp_fiche_titre").textContent = nom;
+
+      document.getElementById("prosp_fiche_badges").innerHTML = dispositifsDe(ese)
+        .map((d) => `<span class="prosp_badge">${d}</span>`).join("") || `<span class="prosp_historique_empty">Aucun dispositif renseigné</span>`;
+
+      document.getElementById("prosp_fiche_info").innerHTML = `
+        <div><strong>Nom commerciale</strong>${ese["Nom commerciale"] || "----"}</div>
+        <div><strong>Régime</strong>${ese["Régime Horaire"] || "----"}</div>
+        <div><strong>Délégation</strong>${ese["Délégation"] || "----"}</div>
+        <div><strong>Téléphone</strong>${ese["Téléphone"] || "----"}</div>
+        <div><strong>Mail</strong>${ese["Mail"] || "----"}</div>`;
+
+      const select = document.getElementById("prosp_statut_select");
+      select.innerHTML = Object.keys(STATUT_GROUPES).map((s) =>
+        `<option value="${s}" ${s === ese["Statut"] ? "selected" : ""}>${s}</option>`
+      ).join("");
+
+      renderHistorique(nom);
+
+      const form = document.getElementById("prosp_contact_form");
+      form.reset();
+      form.date.value = new Date().toISOString().slice(0, 10);
+
+      openModal("prosp_modal_fiche");
+    }
+
+    /* ---------------- Formulaire complet entreprise (édition) ----------------
+       Repris de openEseForm() / onSubmitEseForm() dans part.html : mêmes
+       champs, même logique de délégation ("Autre" hors gouvernorat) et
+       de cases à cocher Dispositif. Contrairement à part.html, ce
+       formulaire ne sert ici qu'à MODIFIER une entreprise existante
+       (pas de création, pas de suppression) — toujours ouvert depuis
+       la fiche de prospection. ---------------------------------------- */
+
+    function wireEseForm() {
+      document.getElementById("prosp_ese_form")?.addEventListener("submit", onSubmitEseFormProsp);
+      const delegationSelect = document.getElementById("prosp_ese_delegation_select");
+      const delegationAutre = document.getElementById("prosp_ese_delegation_autre");
+      delegationSelect?.addEventListener("change", () => {
+        const isAutre = delegationSelect.value === "__autre__";
+        delegationAutre.hidden = !isAutre;
+        if (!isAutre) delegationAutre.value = delegationSelect.value;
+      });
+    }
+
+    function ouvrirEseForm(ese) {
+      const form = document.getElementById("prosp_ese_form");
+      form.reset();
+
+      const delegationSelect = document.getElementById("prosp_ese_delegation_select");
+      const delegationAutre = document.getElementById("prosp_ese_delegation_autre");
+      delegationAutre.hidden = true;
+      delegationAutre.value = "";
+
+      const dispositifCoches = String(ese["Dispositif"] || "").split(";").map((s) => s.trim()).filter(Boolean);
+      document.querySelectorAll('#prosp_ese_dispositif_group input[type="checkbox"]').forEach((cb) => {
+        cb.checked = dispositifCoches.includes(cb.value);
+      });
+
+      form._row.value = ese._row;
+      Object.keys(ese).forEach((key) => {
+        if (key === "_row" || key === "Dispositif") return;
+        const field = form.elements[key];
+        if (field) field.value = ese[key] || "";
+      });
+
+      const delegation = ese["Délégation"] || "";
+      const options = Array.from(delegationSelect.options).map((o) => o.value);
+      if (options.includes(delegation)) {
+        delegationSelect.value = delegation;
+      } else if (delegation) {
+        delegationSelect.value = "__autre__";
+        delegationAutre.hidden = false;
+        delegationAutre.value = delegation;
+      }
+
+      openFormModal("prosp_ese_modal", "prosp_ese_form");
+    }
+
+    async function onSubmitEseFormProsp(e) {
+      e.preventDefault();
+      const form = e.target;
+      const fd = new FormData(form);
+      const record = {};
+      fd.forEach((value, key) => {
+        if (key !== "_row" && key !== "Dispositif") record[key] = value;
+      });
+      record["Dispositif"] = Array.from(
+        document.querySelectorAll('#prosp_ese_dispositif_group input[type="checkbox"]:checked')
+      ).map((cb) => cb.value).join(";");
+
+      const rowId = fd.get("_row");
+      if (!rowId) return;
+
+      try {
+        await apiCall("updateEse", { _row: rowId, record });
+        closeFormModal("prosp_ese_modal");
+
+        // Recharge la liste des entreprises et rafraîchit la fiche
+        // (toujours ouverte derrière) avec les données à jour.
+        await chargerEses();
+        ficheEnCours = eseListCache.find((e) => String(e._row) === String(rowId)) || ficheEnCours;
+        if (ficheEnCours) ouvrirFiche(ficheEnCours);
+        rafraichirTout();
+      } catch (err) {
+        alert(`Erreur lors de l'enregistrement : ${err.message}`);
+      }
+    }
+
+    function renderHistorique(nom) {
+      const list = document.getElementById("prosp_historique");
+      const historique = suiviDe(nom);
+
+      if (historique.length === 0) {
+        list.innerHTML = `<li class="prosp_historique_empty">Aucun contact enregistré pour le moment.</li>`;
+        return;
+      }
+
+      list.innerHTML = historique.map((s) => `
+        <li class="prosp_historique_item">
+          <div class="prosp_historique_head">
+            <span>${s.date || ""} — ${s.type || ""}</span>
+            <span>${s.auteur || ""}</span>
+          </div>
+          ${s.notes ? `<p class="prosp_historique_notes">${s.notes}</p>` : ""}
+          ${s.prochaine_action ? `<div class="prosp_historique_next"><i class="bi bi-arrow-right-short"></i> ${s.prochaine_action}${s.prochaine_date ? ` — ${s.prochaine_date}` : ""}</div>` : ""}
+        </li>`).join("");
+    }
+
+    async function enregistrerStatut() {
+      if (!ficheEnCours) return;
+      const nouveauStatut = document.getElementById("prosp_statut_select").value;
+
+      // updateEse réécrit la ligne entière : on fusionne avec l'existant
+      // pour ne pas effacer les autres colonnes.
+      const record = { ...ficheEnCours };
+      delete record._row;
+      record["Statut"] = nouveauStatut;
+
+      try {
+        await apiCall("updateEse", { _row: ficheEnCours._row, record });
+        ficheEnCours["Statut"] = nouveauStatut;
+        await chargerEses();
+        ficheEnCours = eseListCache.find((e) => String(e._row) === String(ficheEnCours._row)) || ficheEnCours;
+        rafraichirTout();
+      } catch (err) {
+        alert(`Erreur lors de la mise à jour du statut : ${err.message}`);
+      }
+    }
+
+    async function ajouterContact(e) {
+      e.preventDefault();
+      if (!ficheEnCours) return;
+
+      const form = e.target;
+      const fd = new FormData(form);
+      const utilisateur = getCurrentUser();
+
+      const record = {
+        entreprise: ficheEnCours["Raison sociale"] || ficheEnCours["Nom commerciale"] || "",
+        date: fd.get("date") || "",
+        type: fd.get("type") || "",
+        notes: fd.get("notes") || "",
+        prochaine_action: fd.get("prochaine_action") || "",
+        prochaine_date: fd.get("prochaine_date") || "",
+        auteur: utilisateur ? initialesUtilisateur(utilisateur) : ""
+      };
+
+      try {
+        await apiCall("createProspSuivi", { record });
+        await chargerSuivi();
+        renderHistorique(record.entreprise);
+        form.reset();
+        form.date.value = new Date().toISOString().slice(0, 10);
+        rafraichirTout();
+      } catch (err) {
+        alert(`Erreur lors de l'enregistrement : ${err.message}`);
+      }
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Partenaires — URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/sidebar.css" />
+  <link rel="stylesheet" href="css/navbar.css" />
+  <style>
+    /* ============================================================
+       Styles propres à part.html (fusionnés depuis part.css)
+       ============================================================ */
+
+    /* Garde-fou : garantit que tout élément avec l'attribut "hidden"
+       reste bien masqué, même si une classe (ex: .btn_seal, .no_mobile)
+       définit un display ailleurs (layout.css, etc.) qui pourrait
+       sinon prendre le pas sur l'attribut natif [hidden]. */
+    [hidden] { display: none !important; }
+
+    .part_placeholder {
+      color: var(--text_secondary);
+      font-style: italic;
+    }
+
+    .ese_search {
+      width: 100%;
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: 0 var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      height: 34px;
+      min-height: 34px;
+      margin-bottom: 0;
+    }
+
+    /* ---------- Barre de recherche : icône + bouton d'effacement ----------
+       L'icône loupe est toujours affichée ; le bouton d'effacement (×)
+       n'apparaît que lorsque l'utilisateur a tapé quelque chose (voir
+       wireSearchClear()), et vide/réaffiche la liste complète au clic. */
+    .search_wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      flex: 1 1 220px;
+      min-width: 160px;
+    }
+    .search_icon {
+      position: absolute;
+      left: var(--space_3);
+      color: var(--text_secondary);
+      font-size: var(--fs_sm);
+      pointer-events: none;
+    }
+    .search_wrap .ese_search {
+      padding-left: calc(var(--space_3) * 2 + 12px);
+      padding-right: calc(var(--space_3) * 2 + 12px);
+    }
+    .search_clear {
+      position: absolute;
+      right: var(--space_2);
+      display: flex;
+      align-items: center;
+      background: transparent;
+      border: none;
+      color: var(--text_secondary);
+      font-size: var(--fs_base);
+      cursor: pointer;
+      padding: 4px;
+    }
+    .search_clear:hover { color: var(--color_danger); }
+
+    /* Variante RTL (liste des cabinets pour Sanctionnés) : icône et
+       bouton d'effacement inversés pour suivre le sens de lecture arabe. */
+    .search_wrap.is_rtl .search_icon { left: auto; right: var(--space_3); }
+    .search_wrap.is_rtl .search_clear { right: auto; left: var(--space_2); }
+    .search_wrap.is_rtl .ese_search { text-align: right; }
+
+    .ese_form,
+    .cabsan_form {
+      & .ese_form_grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--space_3);
+
+        & label, & .ese_form_field_wide {
+          display: flex;
+          flex-direction: column;
+          gap: var(--space_1);
+          font-size: var(--fs_sm);
+          color: var(--text_secondary);
+
+          & input, & select, & textarea {
+            font-family: inherit;
+            font-size: var(--fs_base);
+            padding: var(--space_2) var(--space_3);
+            border: 1px solid var(--border_soft);
+            border-radius: var(--radius_sm);
+            background: var(--color_paper_raised);
+            color: var(--text_primary);
+
+            &:focus {
+              outline: 2px solid var(--color_teal_light);
+              outline-offset: 1px;
+            }
+          }
+
+          & input[id="ese_delegation_autre"] {
+            margin-top: var(--space_2);
+          }
+
+          & textarea { min-height: 60px; resize: vertical; }
+        }
+
+        & .ese_form_field_wide { grid-column: 1 / -1; }
+      }
+
+      /* Pied de formulaire : Supprimer toujours collé à gauche, Enregistrer
+         toujours collé à droite, tout autre bouton (navigation Précédente/
+         Suivante, etc.) au milieu — indépendamment de l'ordre des boutons
+         dans le HTML, grâce à `order` + marges auto. */
+      & .ese_form_actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: var(--space_3);
+        margin-top: var(--space_4);
+        padding-top: var(--space_4);
+        border-top: 1px solid var(--border_soft);
+
+        & .btn_danger {
+          order: -1;
+          margin-right: auto;
+        }
+        & button[type="submit"] {
+          order: 1;
+          margin-left: auto;
+        }
+      }
+    }
+
+    .ese_dispositif_group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space_3);
+
+      & label {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space_1);
+        font-size: var(--fs_base);
+        color: var(--text_primary);
+      }
+    }
+
+    /* Sous-champs Tél/Tél2/Email/Fax d'une cellule "Coordonnées"
+       (voir section Partenaires PP) */
+    .coord_group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: var(--space_3);
+
+      & label {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space_1);
+        font-size: var(--fs_sm);
+        color: var(--text_secondary);
+
+        & input {
+          font-family: inherit;
+          font-size: var(--fs_base);
+          padding: var(--space_2) var(--space_3);
+          border: 1px solid var(--border_soft);
+          border-radius: var(--radius_sm);
+          background: var(--color_paper_raised);
+          color: var(--text_primary);
+
+          &:focus {
+            outline: 2px solid var(--color_teal_light);
+            outline-offset: 1px;
+          }
+        }
+      }
+    }
+
+    /* ---------- En-tête à plusieurs actions (ex: Cabinets de formation) ---------- */
+    .panel_header_actions {
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      align-items: center;
+      gap: var(--space_3);
+      flex-wrap: nowrap;
+    }
+
+    .btn_sanctionnes.is_active {
+      background: var(--color_danger);
+      color: var(--text_inverse);
+    }
+
+    /* ---------- Tableaux compacts (Entreprises, Cabinets, Sanctionnés) ----------
+       Padding réduit, alignement à gauche/haut par défaut ; le tableau
+       Sanctionnés reste aligné à droite (RTL, arabe). Toutes les colonnes,
+       y compris la colonne actions ("Afficher"), suivent l'alignement
+       du tableau (gauche pour Entreprises, droite pour Sanctionnés). */
+    .ese_table td, .ese_table th,
+    .cabsan_table td, .cabsan_table th {
+      padding: var(--space_1) var(--space_2);
+      vertical-align: top;
+    }
+    .ese_table td, .ese_table th { text-align: left; }
+
+    .cabsan_table, .cabsan_table th, .cabsan_table td {
+      direction: rtl;
+      text-align: right;
+    }
+
+    .ese_table td:last-child, .ese_table th:last-child {
+      text-align: left;
+      vertical-align: middle;
+    }
+    .cabsan_table td:last-child, .cabsan_table th:last-child {
+      text-align: right;
+      vertical-align: middle;
+    }
+  </style>
+  <script src="js/session.js"></script>
+</head>
+<body data-nav-mode="toggle">
+
+  <div class="sidebar_overlay" id="sidebar_overlay"></div>
+
+  <header class="navbar">
+    <button type="button" class="hamburger_btn"><i class="bi bi-list"></i></button>
+    <div class="page_title_group">
+      <span class="page_eyebrow">PART · Partenaires</span>
+      <h1 class="page_title">Partenaires</h1>
+    </div>
+    <div class="navbar_actions">
+      <span class="navbar_breadcrumb">
+        <a href="index.html">Accueil</a> <i class="bi bi-chevron-right"></i> Partenaires
+      </span>
+    </div>
+  </header>
+
+  <div class="app_shell">
+    <aside class="sidebar" id="sidebar_root">
+      <button type="button" class="sidebar_close_btn" aria-label="Fermer le menu">
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <nav class="sidebar_nav">
+        <a class="sidebar_module_link" href="index.html"><i class="bi bi-house"></i> Accueil</a>
+        <div class="sidebar_divider"></div>
+        <div class="sidebar_group_label">Sur cette page</div>
+        <a class="sidebar_section_link is_active" href="#entreprises">Entreprises</a>
+        <a class="sidebar_section_link" href="#cabinets_formation">Cabinets de formation</a>
+        <a class="sidebar_section_link" href="#organismes">Organismes</a>
+        <a class="sidebar_section_link" href="#partenaires_pp">Partenaires PP</a>
+
+        <div class="sidebar_divider"></div>
+
+        <div class="sidebar_group_label">Autres modules</div>
+        <a class="sidebar_module_link" href="ci.html"><i class="bi bi-percent"></i> Crédit d'impôt</a>
+        <a class="sidebar_module_link" href="dti.html"><i class="bi bi-building"></i> Droits de tirage individuels</a>
+        <a class="sidebar_module_link" href="dtc.html"><i class="bi bi-buildings"></i> Droits de tirage collectifs</a>
+        <a class="sidebar_module_link" href="pp.html"><i class="bi bi-mortarboard"></i> Promotion professionnelle</a>
+        <a class="sidebar_module_link" href="docs.html"><i class="bi bi-file-earmark-text"></i> Documents</a>
+      </nav>
+
+      <div class="sidebar_footer">
+        <span class="sidebar_footer_user"><span class="user_badge" id="sidebar_user_badge" title="Non connecté">--</span></span>
+        <span>CNFCPP © 2026</span>
+      </div>
+    </aside>
+
+    <main class="app_content">
+
+      <section id="entreprises" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-building"></i> Entreprises</h2>
+          <div class="panel_header_actions">
+            <div class="search_wrap">
+              <i class="bi bi-search search_icon"></i>
+              <input type="text" class="ese_search" id="ese_search" placeholder="Rechercher (raison sociale, nom commercial, délégation)…" />
+              <button type="button" class="search_clear" data-clear="ese_search" hidden aria-label="Effacer la recherche">
+                <i class="bi bi-x-circle-fill"></i>
+              </button>
+            </div>
+            <button type="button" class="btn_seal no_mobile" id="ese_btn_nouveau">
+              <i class="bi bi-plus-lg"></i> Nouvelle entreprise
+            </button>
+          </div>
+        </div>
+
+        <div class="modal_overlay" id="ese_modal">
+          <div class="modal_dialog">
+            <div class="modal_header">
+              <h3>Entreprise</h3>
+              <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal_body">
+        <form class="ese_form" id="ese_form">
+          <input type="hidden" name="_row" />
+          <div class="ese_form_grid">
+            <label>Raison sociale
+              <input type="text" name="Raison sociale" required />
+            </label>
+            <label>Nom commerciale
+              <input type="text" name="Nom commerciale" />
+            </label>
+            <label>Régime Horaire
+              <select name="Régime Horaire">
+                <option value="40H">40H</option>
+                <option value="48H">48H</option>
+              </select>
+            </label>
+            <div class="ese_form_field_wide">
+              <span>Coordonnées</span>
+              <div class="coord_group" id="ese_coord_group">
+                <label>Tél <input type="tel" id="ese_coord_tel" /></label>
+                <label>Tél2 <input type="tel" id="ese_coord_tel2" /></label>
+                <label>Email <input type="email" id="ese_coord_email" /></label>
+                <label>Fax <input type="text" id="ese_coord_fax" /></label>
+              </div>
+            </div>
+            <label>Adresse siège
+              <input type="text" name="Adresse siège" />
+            </label>
+            <label>Adresse usine
+              <input type="text" name="Adresse usine" />
+            </label>
+            <label>Délégation
+              <select id="ese_delegation_select">
+                <option value="Bargou">Bargou</option>
+                <option value="Bouarada">Bouarada</option>
+                <option value="Bourouis">Bourouis</option>
+                <option value="Gaafour">Gaafour</option>
+                <option value="Kesra">Kesra</option>
+                <option value="Laroussa">Laroussa</option>
+                <option value="Le Krib">Le Krib</option>
+                <option value="Makthar">Makthar</option>
+                <option value="Rouhia">Rouhia</option>
+                <option value="Siliana Nord">Siliana Nord</option>
+                <option value="Siliana Sud">Siliana Sud</option>
+                <option value="__autre__">Autre (hors gouvernorat de Siliana)…</option>
+              </select>
+              <input type="text" name="Délégation" id="ese_delegation_autre" placeholder="Préciser la délégation / gouvernorat" hidden />
+            </label>
+            <label>Responsable
+              <input type="text" name="Responsable" />
+            </label>
+            <div class="ese_form_field_wide">
+              <span>Coordonnées Resp</span>
+              <div class="coord_group" id="ese_coordresp_group">
+                <label>Tél <input type="tel" id="ese_coordresp_tel" /></label>
+                <label>Tél2 <input type="tel" id="ese_coordresp_tel2" /></label>
+                <label>Email <input type="email" id="ese_coordresp_email" /></label>
+              </div>
+            </div>
+            <label>Responsable formation
+              <input type="text" name="Responsable formation" />
+            </label>
+            <div class="ese_form_field_wide">
+              <span>Coordonnées Resp Form</span>
+              <div class="coord_group" id="ese_coordrespform_group">
+                <label>Tél <input type="tel" id="ese_coordrespform_tel" /></label>
+                <label>Tél2 <input type="tel" id="ese_coordrespform_tel2" /></label>
+                <label>Email <input type="email" id="ese_coordrespform_email" /></label>
+              </div>
+            </div>
+            <div class="ese_form_field_wide">
+              <span>Dispositif</span>
+              <div class="ese_dispositif_group" id="ese_dispositif_group">
+                <label><input type="checkbox" name="Dispositif" value="CI" /> CI</label>
+                <label><input type="checkbox" name="Dispositif" value="DTI" /> DTI</label>
+                <label><input type="checkbox" name="Dispositif" value="DTC" /> DTC</label>
+                <label><input type="checkbox" name="Dispositif" value="PP" /> PP</label>
+              </div>
+            </div>
+            <label>Statut
+              <select name="Statut">
+                <option value="">----</option>
+                <option>À identifier</option>
+                <option>Premier contact</option>
+                <option>RDV programmé</option>
+                <option>Sensibilisée</option>
+                <option>Besoins identifiés</option>
+                <option>Dossier en préparation</option>
+                <option>Dossier déposé</option>
+                <option>Convention en cours</option>
+                <option>Convention signée</option>
+                <option>Formation réalisée</option>
+                <option>Entreprise fidèle</option>
+                <option>Sans suite</option>
+                <option>Refus de collaborer</option>
+                <option>Dossier clôturé</option>
+              </select>
+            </label>
+          </div>
+          <div class="ese_form_actions">
+            <button type="button" class="btn_danger no_mobile" id="ese_btn_supprimer" hidden>
+              <i class="bi bi-trash3"></i> Supprimer
+            </button>
+            <button type="button" class="btn_ghost" id="ese_btn_precedente">Précédente</button>
+            <button type="button" class="btn_ghost" id="ese_btn_suivante">Suivante</button>
+            <button type="submit" class="btn_success no_mobile"><i class="bi bi-check-lg"></i> Enregistrer</button>
+          </div>
+        </form>
+            </div>
+          </div>
+        </div>
+
+        <table class="data_table ese_table">
+          <thead>
+            <tr>
+              <th>Raison sociale</th>
+              <th>Nom commerciale</th>
+              <th>Régime</th>
+              <th>Délégation</th>
+              <th>Téléphone</th>
+              <th>Dispositif</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ese_table_body"></tbody>
+        </table>
+        <div class="empty_state" id="ese_empty" hidden>
+          <i class="bi bi-inbox"></i>Aucune entreprise enregistrée.
+        </div>
+      </section>
+
+      <section id="cabinets_formation" class="panel">
+        <div class="panel_header">
+          <h2 id="section_cab"><i class="bi bi-easel2"></i> Cabinets de formation</h2>
+          <div class="panel_header_actions">
+            <div class="search_wrap">
+              <i class="bi bi-search search_icon"></i>
+              <input type="text" class="ese_search" id="cab_search" placeholder="Rechercher (n° d'enregistrement, nom, responsable)…" />
+              <button type="button" class="search_clear" data-clear="cab_search" hidden aria-label="Effacer la recherche">
+                <i class="bi bi-x-circle-fill"></i>
+              </button>
+            </div>
+            <button type="button" class="btn_seal no_mobile" id="cab_btn_nouveau">
+              <i class="bi bi-plus-lg"></i> Nouveau cabinet
+            </button>
+            <button type="button" class="btn_seal no_mobile" id="cabsan_btn_nouveau" hidden>
+              <i class="bi bi-plus-lg"></i> Nouvelle sanction
+            </button>
+            <button type="button" class="btn_ghost btn_sanctionnes" id="cab_btn_sanctionnes">
+              <i class="bi bi-exclamation-octagon"></i> Sanctionnés
+            </button>
+          </div>
+        </div>
+
+        <!-- Vue normale : liste des cabinets (Sheet "Base", onglet "cabinets") -->
+        <div id="cab_vue_normale">
+
+          <div class="modal_overlay" id="cab_modal">
+            <div class="modal_dialog">
+              <div class="modal_header">
+                <h3>Cabinet de formation</h3>
+                <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+              </div>
+              <div class="modal_body">
+          <form class="ese_form" id="cab_form">
+            <input type="hidden" name="_row" />
+            <div class="ese_form_grid">
+              <label>N° d'enregistrement
+                <input type="text" name="N° d'enregistrement" required />
+              </label>
+              <label>Nom
+                <input type="text" name="Nom" required />
+              </label>
+              <label>Responsable
+                <input type="text" name="Responsable" />
+              </label>
+              <label>Téléphone
+                <input type="tel" name="Téléphone" />
+              </label>
+              <label>Mail
+                <input type="email" name="Mail" />
+              </label>
+              <label>Adresse
+                <input type="text" name="Adresse" />
+              </label>
+            </div>
+            <div class="ese_form_actions">
+              <button type="submit" class="btn_success no_mobile"><i class="bi bi-check-lg"></i> Enregistrer</button>
+              <button type="button" class="btn_danger no_mobile" id="cab_btn_supprimer" hidden>
+                <i class="bi bi-trash3"></i> Supprimer
+              </button>
+            </div>
+          </form>
+              </div>
+            </div>
+          </div>
+
+          <table class="data_table ese_table">
+            <thead>
+              <tr>
+                <th>N° d'enregistrement</th>
+                <th>Nom</th>
+                <th>Responsable</th>
+                <th>Téléphone</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cab_table_body"></tbody>
+          </table>
+          <div class="empty_state" id="cab_empty" hidden>
+            <i class="bi bi-inbox"></i>Aucun cabinet enregistré.
+          </div>
+        </div>
+
+        <!-- Vue "Sanctionnés" : Sheet "Base", onglet "cabsan" (colonnes arabes).
+             Liste des cabinets déjà sanctionnés par le ministère (DPNC), avec
+             recherche de vérification au-dessus du tableau. رقم التسجيل et
+             المؤسسة sont saisis directement dans le formulaire. -->
+        <div id="cab_vue_sanctionnes" hidden>
+          <div class="search_wrap is_rtl">
+            <i class="bi bi-search search_icon"></i>
+            <input type="text" class="ese_search" id="cabsan_picker_search" dir="rtl" placeholder="بحث (رقم التسجيل، المؤسسة)…" />
+            <button type="button" class="search_clear" data-clear="cabsan_picker_search" hidden aria-label="مسح البحث">
+              <i class="bi bi-x-circle-fill"></i>
+            </button>
+          </div>
+
+          <div class="modal_overlay" id="cabsan_modal">
+            <div class="modal_dialog" dir="rtl">
+              <div class="modal_header">
+                <h3>قرار عقوبة</h3>
+                <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+              </div>
+              <div class="modal_body">
+          <form class="cabsan_form" id="cabsan_form" dir="rtl">
+            <input type="hidden" name="_row" />
+
+            <div class="ese_form_grid">
+              <label>رقم التسجيل
+                <input type="text" name="رقم التسجيل" dir="rtl" required />
+              </label>
+              <label>المؤسسة
+                <input type="text" name="المؤسسة" dir="rtl" required />
+              </label>
+              <label>الولاية
+                <input type="text" name="الولاية" dir="rtl" />
+              </label>
+              <label>القرار التأديبي
+                <input type="text" name="القرار التأديبي" dir="rtl" />
+              </label>
+              <label>عدد القرار
+                <input type="text" name="عدد القرار" />
+              </label>
+              <label>تاريخ القرار
+                <input type="text" name="تاريخ القرار" placeholder="jj/mm/aaaa" />
+              </label>
+              <label>تاريخ القرار 2
+                <input type="text" name="تاريخ القرار 2" placeholder="jj/mm/aaaa" />
+              </label>
+              <div class="ese_form_field_wide">
+                <label>الملاحظات
+                  <textarea name="الملاحظات" dir="rtl"></textarea>
+                </label>
+              </div>
+            </div>
+
+            <div class="ese_form_actions">
+              <button type="submit" class="btn_success no_mobile"><i class="bi bi-check-lg"></i> Enregistrer</button>
+              <button type="button" class="btn_danger no_mobile" id="cabsan_btn_supprimer" hidden>
+                <i class="bi bi-trash3"></i> Supprimer
+              </button>
+            </div>
+          </form>
+              </div>
+            </div>
+          </div>
+
+          <table class="data_table cabsan_table">
+            <thead>
+              <tr>
+                <th>رقم التسجيل</th>
+                <th>المؤسسة</th>
+                <th>الولاية</th>
+                <th>القرار التأديبي</th>
+                <th>عدد القرار</th>
+                <th>تاريخ القرار</th>
+                <th>تاريخ القرار 2</th>
+                <th>الملاحظات</th>
+                <th>خيارات</th>
+              </tr>
+            </thead>
+            <tbody id="cabsan_table_body"></tbody>
+          </table>
+          <div class="empty_state" id="cabsan_empty" hidden>
+            <i class="bi bi-inbox"></i>Aucun cabinet sanctionné.
+          </div>
+        </div>
+      </section>
+
+      <section id="organismes" class="panel">
+        <div class="panel_header"><h2><i class="bi bi-bank"></i> Organismes</h2></div>
+        <p class="part_placeholder">À construire.</p>
+      </section>
+
+      <section id="partenaires_pp" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-mortarboard"></i> Partenaires PP</h2>
+          <div class="panel_header_actions">
+            <div class="search_wrap">
+              <i class="bi bi-search search_icon"></i>
+              <input type="text" class="ese_search" id="partpp_search" placeholder="Rechercher (établissement, arabe, sigle)…" />
+              <button type="button" class="search_clear" data-clear="partpp_search" hidden aria-label="Effacer la recherche">
+                <i class="bi bi-x-circle-fill"></i>
+              </button>
+            </div>
+            <button type="button" class="btn_seal no_mobile" id="partpp_btn_nouveau">
+              <i class="bi bi-plus-lg"></i> Nouveau partenaire
+            </button>
+          </div>
+        </div>
+
+        <div class="modal_overlay" id="partpp_modal">
+          <div class="modal_dialog">
+            <div class="modal_header">
+              <h3>Partenaire PP</h3>
+              <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal_body">
+        <form class="ese_form" id="partpp_form">
+          <input type="hidden" name="_row" />
+          <div class="ese_form_grid">
+            <label>Etablissement
+              <input type="text" name="Etablissement" required />
+            </label>
+            <label>Arabe
+              <input type="text" name="Arabe" dir="rtl" />
+            </label>
+            <label>Sigle
+              <input type="text" name="Sigle" />
+            </label>
+            <label>Domaine
+              <select name="Domaine">
+                <option value="">----</option>
+                <option value="Formation Professionnelle">Formation Professionnelle</option>
+                <option value="Enseignement supérieur">Enseignement supérieur</option>
+              </select>
+            </label>
+            <div class="ese_form_field_wide">
+              <span>Convention</span>
+              <div class="ese_dispositif_group" id="partpp_convention_group">
+                <label><input type="checkbox" name="Convention" value="FAD" /> FAD</label>
+                <label><input type="checkbox" name="Convention" value="MOD" /> MOD</label>
+              </div>
+            </div>
+            <label>Adresse
+              <input type="text" name="Adresse" />
+            </label>
+            <div class="ese_form_field_wide">
+              <span>Coordonnées</span>
+              <div class="coord_group" id="partpp_coord_group">
+                <label>Tél <input type="tel" id="partpp_coord_tel" /></label>
+                <label>Tél2 <input type="tel" id="partpp_coord_tel2" /></label>
+                <label>Email <input type="email" id="partpp_coord_email" /></label>
+                <label>Fax <input type="text" id="partpp_coord_fax" /></label>
+              </div>
+            </div>
+            <label>Directeur
+              <input type="text" name="Directeur" />
+            </label>
+            <div class="ese_form_field_wide">
+              <span>Coordonnées DIR</span>
+              <div class="coord_group" id="partpp_coorddir_group">
+                <label>Tél <input type="tel" id="partpp_coorddir_tel" /></label>
+                <label>Tél2 <input type="tel" id="partpp_coorddir_tel2" /></label>
+                <label>Email <input type="email" id="partpp_coorddir_email" /></label>
+              </div>
+            </div>
+            <label>Coordinateur
+              <input type="text" name="Coordinateur" />
+            </label>
+            <div class="ese_form_field_wide">
+              <span>Coordonnées CORD</span>
+              <div class="coord_group" id="partpp_coordcord_group">
+                <label>Tél <input type="tel" id="partpp_coordcord_tel" /></label>
+                <label>Tél2 <input type="tel" id="partpp_coordcord_tel2" /></label>
+                <label>Email <input type="email" id="partpp_coordcord_email" /></label>
+              </div>
+            </div>
+          </div>
+          <div class="ese_form_actions">
+            <button type="submit" class="btn_success no_mobile"><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <button type="button" class="btn_danger no_mobile" id="partpp_btn_supprimer" hidden>
+              <i class="bi bi-trash3"></i> Supprimer
+            </button>
+          </div>
+        </form>
+            </div>
+          </div>
+        </div>
+
+        <table class="data_table ese_table">
+          <thead>
+            <tr>
+              <th>Etablissement</th>
+              <th>Sigle</th>
+              <th>Domaine</th>
+              <th>Convention</th>
+              <th>Téléphone</th>
+              <th>Directeur</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="partpp_table_body"></tbody>
+        </table>
+        <div class="empty_state" id="partpp_empty" hidden>
+          <i class="bi bi-inbox"></i>Aucun partenaire enregistré.
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sidebar_toggle.js"></script>
+  <script src="js/sticky_panels.js"></script>
+  <script src="js/navbar_breadcrumb.js"></script>
+  <script src="js/modal_forms.js"></script>
+  <script>
+/* ============================================================
+   PART.JS — section "Entreprises"
+   Source de données : Sheet externe "eses"
+   (1_Xeo5zwB3fEpIkYUWRzfIw1ESSu95zIQ7KJk0S55qKU), onglet "eses".
+   En-têtes : Raison sociale | Nom commerciale | Régime Horaire |
+   Coordonnées (Tél, Tél2, Email, Fax) | Adresse siège | Adresse usine |
+   Délégation | Responsable | Coordonnées Resp (Tél, Tél2, Email) |
+   Responsable formation | Coordonnées Resp Form (Tél, Tél2, Email) |
+   Dispositif | Statut
+   Les cellules "Coordonnées"/"Coordonnées Resp"/"Coordonnées Resp Form"
+   stockent plusieurs sous-champs dans une seule cellule, une ligne par
+   sous-champ ("Label : valeur"), sur le même principe que la section
+   "Partenaires PP" plus bas (voir getCoordField()/buildCoordText()).
+   Chaque ligne est identifiée par son numéro de ligne réel dans la
+   Sheet (_row), renvoyé par listEses / utilisé pour update/delete.
+   ============================================================ */
+
+let eseListCache = [];
+
+document.addEventListener("DOMContentLoaded", () => {
+  initSectionToggle();
+  wireEseUi();
+  loadEses();
+  wireCabinetUi();
+  loadCabinets();
+  wirePartPPUi();
+  loadPartPP();
+  renderUserBadge(document.getElementById("sidebar_user_badge"));
+  injecterBoutonDeconnexion(document.getElementById("sidebar_user_badge"));
+
+  ["ese_search", "cab_search", "cabsan_picker_search", "partpp_search"].forEach(wireSearchClear);
+});
+
+/* ---------------- Barre de recherche : icône + bouton d'effacement ----------------
+   Affiche/masque le bouton "×" selon que le champ contient du texte, et
+   vide le champ (en redéclenchant son "input" pour réafficher la liste
+   complète) au clic. Réutilisé par les 4 recherches de la page. */
+function wireSearchClear(inputId) {
+  const input = document.getElementById(inputId);
+  const wrap = input?.closest(".search_wrap");
+  const clearBtn = wrap?.querySelector(".search_clear");
+  if (!input || !clearBtn) return;
+
+  const majVisibilite = () => { clearBtn.hidden = input.value.length === 0; };
+  input.addEventListener("input", majVisibilite);
+  majVisibilite();
+
+  clearBtn.addEventListener("click", () => {
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+  });
+}
+
+// Vide un champ de recherche (utilisé quand "Afficher" a permis de
+// retrouver l'entreprise/le cabinet/le partenaire recherché).
+function clearSearchInput(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input || input.value === "") return;
+  input.value = "";
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+/* ---------------- Une seule section visible à la fois ---------------- */
+/* Ordre : Entreprises (active par défaut) - Cabinets - Organismes -
+   Centres de formation - Établissements d'enseignement supérieur. */
+
+function initSectionToggle() {
+  const links = document.querySelectorAll(".sidebar_section_link[href^='#']");
+  const sections = document.querySelectorAll("main.app_content > section.panel");
+
+  function showSection(id) {
+    sections.forEach((s) => { s.hidden = s.id !== id; });
+    links.forEach((l) => l.classList.toggle("is_active", l.getAttribute("href") === `#${id}`));
+  }
+
+  links.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const id = link.getAttribute("href").slice(1);
+      showSection(id);
+      history.replaceState(null, "", `#${id}`);
+    });
+  });
+
+  const initial = window.location.hash ? window.location.hash.slice(1) : "entreprises";
+  showSection(initial);
+}
+
+function wireEseUi() {
+  document.getElementById("ese_btn_nouveau")?.addEventListener("click", () => openEseForm(null));
+    document.getElementById("ese_form")?.addEventListener("submit", onSubmitEseForm);
+  document.getElementById("ese_search")?.addEventListener("input", (e) => renderEseTable(e.target.value));
+
+  document.getElementById("ese_btn_precedente")?.addEventListener("click", () => navigateEseRecord(-1));
+  document.getElementById("ese_btn_suivante")?.addEventListener("click", () => navigateEseRecord(1));
+
+  document.getElementById("ese_btn_supprimer")?.addEventListener("click", async () => {
+    const rowId = document.getElementById("ese_form")._row.value;
+    if (!rowId) return;
+    if (!confirm("Supprimer cette entreprise ?")) return;
+    try {
+      await apiCallDirect("deleteEse", { _row: rowId });
+      closeFormModal("ese_modal");
+      await loadEses();
+    } catch (err) {
+      alert(`Erreur lors de la suppression : ${err.message}`);
+    }
+  });
+
+  const delegationSelect = document.getElementById("ese_delegation_select");
+  const delegationAutre = document.getElementById("ese_delegation_autre");
+  delegationSelect?.addEventListener("change", () => {
+    const isAutre = delegationSelect.value === "__autre__";
+    delegationAutre.hidden = !isAutre;
+    if (!isAutre) delegationAutre.value = delegationSelect.value;
+  });
+}
+
+async function loadEses() {
+  const tbody = document.getElementById("ese_table_body");
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="8"><span class="loading_state">Chargement...</span></td></tr>`;
+
+  try {
+    eseListCache = await apiCallDirect("listEses", {});
+    renderEseTable("");
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="8"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+  }
+}
+
+function renderEseTable(query) {
+  const tbody = document.getElementById("ese_table_body");
+  const emptyEl = document.getElementById("ese_empty");
+  const q = query.trim().toLowerCase();
+
+  const filtered = !q ? eseListCache : eseListCache.filter((e) =>
+    `${e["Raison sociale"] || ""} ${e["Nom commerciale"] || ""} ${e["Délégation"] || ""}`
+      .toLowerCase().includes(q)
+  );
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+  if (emptyEl) emptyEl.hidden = true;
+
+  tbody.innerHTML = filtered.map((e) => `
+    <tr>
+      <td>${e["Raison sociale"] || ""}</td>
+      <td>${e["Nom commerciale"] || ""}</td>
+      <td>${e["Régime Horaire"] || ""}</td>
+      <td>${e["Délégation"] || ""}</td>
+      <td>${getCoordField(e["Coordonnées"], "Tél")}</td>
+      <td>${e["Dispositif"] || ""}</td>
+      <td>${e["Statut"] || ""}</td>
+      <td>
+        <button type="button" class="btn_info ese_row_afficher" data-row="${e._row}">
+          <i class="bi bi-eye"></i> Afficher
+        </button>
+      </td>
+    </tr>`).join("");
+
+  tbody.querySelectorAll(".ese_row_afficher").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const ese = eseListCache.find((e) => String(e._row) === btn.dataset.row);
+      if (ese) {
+        openEseForm(ese);
+        clearSearchInput("ese_search");
+      }
+    });
+  });
+}
+
+function openEseForm(ese) {
+  const form = document.getElementById("ese_form");
+  form.reset();
+
+  const delegationSelect = document.getElementById("ese_delegation_select");
+  const delegationAutre = document.getElementById("ese_delegation_autre");
+  delegationAutre.hidden = true;
+  delegationAutre.value = "";
+
+  const dispositifCoches = String((ese && ese["Dispositif"]) || "").split(";").map((s) => s.trim()).filter(Boolean);
+  document.querySelectorAll('#ese_dispositif_group input[type="checkbox"]').forEach((cb) => {
+    cb.checked = dispositifCoches.includes(cb.value);
+  });
+
+  if (ese) {
+    form._row.value = ese._row;
+    Object.keys(ese).forEach((key) => {
+      if (key === "_row" || key === "Dispositif") return;
+      const field = form.elements[key];
+      if (field) field.value = ese[key] || "";
+    });
+
+    const delegation = ese["Délégation"] || "";
+    const options = Array.from(delegationSelect.options).map((o) => o.value);
+    if (options.includes(delegation)) {
+      delegationSelect.value = delegation;
+    } else if (delegation) {
+      delegationSelect.value = "__autre__";
+      delegationAutre.hidden = false;
+      delegationAutre.value = delegation;
+    }
+  } else {
+    form._row.value = "";
+    delegationSelect.value = "Siliana Nord";
+  }
+
+  const coord = (ese && ese["Coordonnées"]) || "";
+  document.getElementById("ese_coord_tel").value = getCoordField(coord, "Tél");
+  document.getElementById("ese_coord_tel2").value = getCoordField(coord, "Tél2");
+  document.getElementById("ese_coord_email").value = getCoordField(coord, "Email");
+  document.getElementById("ese_coord_fax").value = getCoordField(coord, "Fax");
+
+  const coordResp = (ese && ese["Coordonnées Resp"]) || "";
+  document.getElementById("ese_coordresp_tel").value = getCoordField(coordResp, "Tél");
+  document.getElementById("ese_coordresp_tel2").value = getCoordField(coordResp, "Tél2");
+  document.getElementById("ese_coordresp_email").value = getCoordField(coordResp, "Email");
+
+  const coordRespForm = (ese && ese["Coordonnées Resp Form"]) || "";
+  document.getElementById("ese_coordrespform_tel").value = getCoordField(coordRespForm, "Tél");
+  document.getElementById("ese_coordrespform_tel2").value = getCoordField(coordRespForm, "Tél2");
+  document.getElementById("ese_coordrespform_email").value = getCoordField(coordRespForm, "Email");
+
+  document.getElementById("ese_btn_supprimer").hidden = !ese;
+  updateEseNavigationButtons(ese ? ese._row : null);
+  openFormModal("ese_modal", "ese_form");
+}
+
+function updateEseNavigationButtons(rowId) {
+  const prev = document.getElementById("ese_btn_precedente");
+  const next = document.getElementById("ese_btn_suivante");
+  const currentIndex = rowId ? eseListCache.findIndex((e) => String(e._row) === String(rowId)) : -1;
+
+  if (prev) prev.disabled = currentIndex <= 0;
+  if (next) next.disabled = currentIndex < 0 || currentIndex >= eseListCache.length - 1;
+}
+
+function navigateEseRecord(direction) {
+  const rowId = document.getElementById("ese_form")._row.value;
+  if (!rowId) return;
+
+  const currentIndex = eseListCache.findIndex((e) => String(e._row) === String(rowId));
+  if (currentIndex === -1) return;
+
+  const nextIndex = currentIndex + direction;
+  if (nextIndex < 0 || nextIndex >= eseListCache.length) return;
+
+  const nextEse = eseListCache[nextIndex];
+  if (nextEse) openEseForm(nextEse);
+}
+
+async function onSubmitEseForm(e) {
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+  const record = {};
+  fd.forEach((value, key) => {
+    if (key !== "_row" && key !== "Dispositif") record[key] = value;
+  });
+  record["Dispositif"] = Array.from(
+    document.querySelectorAll('#ese_dispositif_group input[type="checkbox"]:checked')
+  ).map((cb) => cb.value).join(";");
+
+  record["Coordonnées"] = buildCoordText(PARTPP_COORD_LABELS, {
+    "Tél": document.getElementById("ese_coord_tel").value.trim(),
+    "Tél2": document.getElementById("ese_coord_tel2").value.trim(),
+    "Email": document.getElementById("ese_coord_email").value.trim(),
+    "Fax": document.getElementById("ese_coord_fax").value.trim(),
+  });
+  record["Coordonnées Resp"] = buildCoordText(PARTPP_COORD_LABELS_SIMPLE, {
+    "Tél": document.getElementById("ese_coordresp_tel").value.trim(),
+    "Tél2": document.getElementById("ese_coordresp_tel2").value.trim(),
+    "Email": document.getElementById("ese_coordresp_email").value.trim(),
+  });
+  record["Coordonnées Resp Form"] = buildCoordText(PARTPP_COORD_LABELS_SIMPLE, {
+    "Tél": document.getElementById("ese_coordrespform_tel").value.trim(),
+    "Tél2": document.getElementById("ese_coordrespform_tel2").value.trim(),
+    "Email": document.getElementById("ese_coordrespform_email").value.trim(),
+  });
+
+  const rowId = fd.get("_row");
+
+  try {
+    if (rowId) {
+      await apiCallDirect("updateEse", { _row: rowId, record });
+    } else {
+      await apiCallDirect("createEse", { record });
+    }
+    closeFormModal("ese_modal");
+    await loadEses();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  }
+}
+
+/* ============================================================
+   Section "Cabinets de formation"
+   Source : Sheet "Base" (même Sheet que "eses"), onglets "cabinets"
+   et "cabsan" (cabinets sanctionnés, colonnes en arabe).
+   ============================================================ */
+
+let cabListCache = [];
+let cabsanListCache = [];
+
+function wireCabinetUi() {
+  document.getElementById("cab_btn_nouveau")?.addEventListener("click", () => openCabForm(null));
+    document.getElementById("cab_form")?.addEventListener("submit", onSubmitCabForm);
+  document.getElementById("cab_search")?.addEventListener("input", (e) => renderCabTable(e.target.value));
+
+  document.getElementById("cab_btn_supprimer")?.addEventListener("click", async () => {
+    const rowId = document.getElementById("cab_form")._row.value;
+    if (!rowId) return;
+    if (!confirm("Supprimer ce cabinet ?")) return;
+    try {
+      await apiCallDirect("deleteCabinet", { _row: rowId });
+      closeFormModal("cab_modal");
+      await loadCabinets();
+    } catch (err) {
+      alert(`Erreur lors de la suppression : ${err.message}`);
+    }
+  });
+
+  document.getElementById("cab_btn_sanctionnes")?.addEventListener("click", toggleVueSanctionnes);
+
+  document.getElementById("cabsan_btn_nouveau")?.addEventListener("click", () => openCabsanForm(null));
+    document.getElementById("cabsan_form")?.addEventListener("submit", onSubmitCabsanForm);
+  document.getElementById("cabsan_picker_search")?.addEventListener("input", (e) => renderCabsanTable(e.target.value));
+
+  document.getElementById("cabsan_btn_supprimer")?.addEventListener("click", async () => {
+    const rowId = document.getElementById("cabsan_form")._row.value;
+    if (!rowId) return;
+    if (!confirm("حذف هذه العقوبة؟")) return;
+    try {
+      await apiCallDirect("deleteCabsan", { _row: rowId });
+      closeFormModal("cabsan_modal");
+      await loadCabsan();
+    } catch (err) {
+      alert(`خطأ : ${err.message}`);
+    }
+  });
+}
+
+/* ---------------- Cabinets (vue normale) ---------------- */
+
+async function loadCabinets() {
+  const tbody = document.getElementById("cab_table_body");
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="5"><span class="loading_state">Chargement...</span></td></tr>`;
+
+  try {
+    cabListCache = await apiCallDirect("listCabinets", {});
+    renderCabTable("");
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="5"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+  }
+}
+
+function renderCabTable(query) {
+  const tbody = document.getElementById("cab_table_body");
+  const emptyEl = document.getElementById("cab_empty");
+  const q = query.trim().toLowerCase();
+
+  const filtered = !q ? cabListCache : cabListCache.filter((c) =>
+    `${c["N° d'enregistrement"] || ""} ${c["Nom"] || ""} ${c["Responsable"] || ""}`.toLowerCase().includes(q)
+  );
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+  if (emptyEl) emptyEl.hidden = true;
+
+  tbody.innerHTML = filtered.map((c) => `
+    <tr>
+      <td>${c["N° d'enregistrement"] || ""}</td>
+      <td>${c["Nom"] || ""}</td>
+      <td>${c["Responsable"] || ""}</td>
+      <td>${c["Téléphone"] || ""}</td>
+      <td>
+        <button type="button" class="btn_info cab_row_afficher" data-row="${c._row}">
+          <i class="bi bi-eye"></i> Afficher
+        </button>
+      </td>
+    </tr>`).join("");
+
+  tbody.querySelectorAll(".cab_row_afficher").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const cab = cabListCache.find((c) => String(c._row) === btn.dataset.row);
+      if (cab) {
+        openCabForm(cab);
+        clearSearchInput("cab_search");
+      }
+    });
+  });
+}
+
+function openCabForm(cab) {
+  const form = document.getElementById("cab_form");
+  form.reset();
+
+  if (cab) {
+    form._row.value = cab._row;
+    Object.keys(cab).forEach((key) => {
+      if (key === "_row") return;
+      const field = form.elements[key];
+      if (field) field.value = cab[key] || "";
+    });
+  } else {
+    form._row.value = "";
+  }
+
+  document.getElementById("cab_btn_supprimer").hidden = !cab;
+  openFormModal("cab_modal", "cab_form");
+}
+
+async function onSubmitCabForm(e) {
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+  const record = {};
+  fd.forEach((value, key) => {
+    if (key !== "_row") record[key] = value;
+  });
+
+  const rowId = fd.get("_row");
+
+  try {
+    if (rowId) {
+      await apiCallDirect("updateCabinet", { _row: rowId, record });
+    } else {
+      await apiCallDirect("createCabinet", { record });
+    }
+    closeFormModal("cab_modal");
+    await loadCabinets();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  }
+}
+
+/* ---------------- Bascule vue normale <-> Sanctionnés ---------------- */
+
+function toggleVueSanctionnes() {
+  const normale = document.getElementById("cab_vue_normale");
+  const sanction = document.getElementById("cab_vue_sanctionnes");
+  const btn = document.getElementById("cab_btn_sanctionnes");
+  const btnNouveauCab = document.getElementById("cab_btn_nouveau");
+  const btnNouveauSanction = document.getElementById("cabsan_btn_nouveau");
+  const titre = document.getElementById("section_cab");
+  const versSanction = sanction.hidden; // état cible
+
+  normale.hidden = versSanction;
+  sanction.hidden = !versSanction;
+  btn.classList.toggle("is_active", versSanction);
+  btn.innerHTML = versSanction
+    ? `<i class="bi bi-arrow-return-left"></i> Retour`
+    : `<i class="bi bi-exclamation-octagon"></i> Sanctionnés`;
+
+  if (btnNouveauCab) btnNouveauCab.hidden = versSanction;
+  if (btnNouveauSanction) btnNouveauSanction.hidden = !versSanction;
+  if (titre) {
+    titre.innerHTML = versSanction
+      ? `<i class="bi bi-easel2"></i> Cabinets de formation sanctionnés`
+      : `<i class="bi bi-easel2"></i> Cabinets de formation`;
+  }
+
+  if (versSanction) {
+    const searchInput = document.getElementById("cabsan_picker_search");
+    if (searchInput) searchInput.value = "";
+    loadCabsan();
+  }
+}
+
+/* ---------------- Sanctionnés (Sheet "Base", onglet "cabsan") ----------------
+   En-têtes (arabe) : رقم التسجيل | الولاية | المؤسسة | القرار التأديبي |
+   عدد القرار | تاريخ القرار | تاريخ القرار 2 | الملاحظات.
+   Cette liste recense les cabinets déjà sanctionnés par le ministère (DPNC) ;
+   la recherche au-dessus du tableau ne sert qu'à vérifier/filtrer cette
+   liste. رقم التسجيل et المؤسسة sont saisis directement dans le formulaire. */
+
+async function loadCabsan() {
+  const tbody = document.getElementById("cabsan_table_body");
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="9"><span class="loading_state">جار التحميل...</span></td></tr>`;
+
+  try {
+    cabsanListCache = await apiCallDirect("listCabsan", {});
+    renderCabsanTable("");
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="9"><span class="error_state">خطأ : ${err.message}</span></td></tr>`;
+  }
+}
+
+function renderCabsanTable(query) {
+  const tbody = document.getElementById("cabsan_table_body");
+  const emptyEl = document.getElementById("cabsan_empty");
+  const q = (query || "").trim().toLowerCase();
+
+  const filtered = !q ? cabsanListCache : cabsanListCache.filter((s) =>
+    `${s["رقم التسجيل"] || ""} ${s["المؤسسة"] || ""}`.toLowerCase().includes(q)
+  );
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+  if (emptyEl) emptyEl.hidden = true;
+
+  tbody.innerHTML = filtered.map((s) => `
+    <tr>
+      <td>${s["رقم التسجيل"] || ""}</td>
+      <td>${s["المؤسسة"] || ""}</td>
+      <td>${s["الولاية"] || ""}</td>
+      <td>${s["القرار التأديبي"] || ""}</td>
+      <td>${s["عدد القرار"] || ""}</td>
+      <td>${formatDateFr(s["تاريخ القرار"])}</td>
+      <td>${formatDateFr(s["تاريخ القرار 2"])}</td>
+      <td>${s["الملاحظات"] || ""}</td>
+      <td>
+        <button type="button" class="btn_info cabsan_row_afficher" data-row="${s._row}">
+          <i class="bi bi-eye"></i> عرض
+        </button>
+      </td>
+    </tr>`).join("");
+
+  tbody.querySelectorAll(".cabsan_row_afficher").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const s = cabsanListCache.find((x) => String(x._row) === btn.dataset.row);
+      if (s) {
+        openCabsanForm(s);
+        clearSearchInput("cabsan_picker_search");
+      }
+    });
+  });
+}
+
+/* Le backend (Google Sheets) renvoie parfois les cellules de type Date
+   sous forme de chaîne ISO ("2004-08-18T23:00:00.000Z") à cause du fuseau
+   horaire lors de la sérialisation JSON. On n'utilise que la partie
+   calendaire (année-mois-jour) pour éviter tout décalage de fuseau. */
+function formatDateFr(value) {
+  if (!value) return "";
+  const iso = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return value;
+}
+
+function openCabsanForm(sanction) {
+  const form = document.getElementById("cabsan_form");
+  form.reset();
+
+  if (sanction) {
+    form._row.value = sanction._row;
+    Object.keys(sanction).forEach((key) => {
+      if (key === "_row") return;
+      const field = form.elements[key];
+      if (!field) return;
+      const value = sanction[key] || "";
+      field.value = (key === "تاريخ القرار" || key === "تاريخ القرار 2") ? formatDateFr(value) : value;
+    });
+  } else {
+    form._row.value = "";
+  }
+
+  document.getElementById("cabsan_btn_supprimer").hidden = !sanction;
+  openFormModal("cabsan_modal", "cabsan_form");
+}
+
+async function onSubmitCabsanForm(e) {
+  e.preventDefault();
+
+  const form = e.target;
+  const fd = new FormData(form);
+  const record = {};
+  fd.forEach((value, key) => {
+    if (key !== "_row") record[key] = value;
+  });
+
+  const rowId = fd.get("_row");
+
+  try {
+    if (rowId) {
+      await apiCallDirect("updateCabsan", { _row: rowId, record });
+    } else {
+      await apiCallDirect("createCabsan", { record });
+    }
+    closeFormModal("cabsan_modal");
+    await loadCabsan();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  }
+}
+
+/* ============================================================
+   Section "Partenaires PP" (fusion Centres de formation +
+   Établissements d'enseignement supérieur)
+   Source : Sheet "Base" (même Sheet que "eses"/"cabinets"), onglet "partpp".
+   En-têtes : Etablissement | Arabe | Sigle | Domaine (Formation
+   Professionnelle ou Enseignement supérieur) | Convention (1 ou
+   plusieurs, séparés par ";" : FAD, MOD, ou vide) | Adresse |
+   Coordonnées | Directeur | Coordonnées DIR | Coordinateur |
+   Coordonnées CORD.
+   Les cellules "Coordonnées"/"Coordonnées DIR"/"Coordonnées CORD"
+   stockent plusieurs sous-champs dans une seule cellule, une ligne
+   par sous-champ ("Label : valeur") :
+     - Coordonnées      : Tél / Tél2 / Email / Fax
+     - Coordonnées DIR  : Tél / Tél2 / Email
+     - Coordonnées CORD : Tél / Tél2 / Email
+   Le formulaire édite ces sous-champs séparément (un input par
+   sous-champ, sans attribut "name" pour rester hors du FormData
+   automatique) ; getCoordField()/buildCoordText() font l'aller-retour
+   entre le texte assemblé (import à l'ouverture du formulaire /
+   export à l'enregistrement) et les sous-champs.
+   ============================================================ */
+
+const PARTPP_COORD_LABELS = ["Tél", "Tél2", "Email", "Fax"];
+const PARTPP_COORD_LABELS_SIMPLE = ["Tél", "Tél2", "Email"];
+
+function getCoordField(text, label) {
+  const lines = String(text || "").split("\n");
+  for (const line of lines) {
+    const idx = line.indexOf(":");
+    if (idx === -1) continue;
+    if (line.slice(0, idx).trim() === label) return line.slice(idx + 1).trim();
+  }
+  return "";
+}
+
+function buildCoordText(labels, values) {
+  return labels.map((l) => `${l} : ${values[l] || ""}`).join("\n");
+}
+
+let partppListCache = [];
+
+function wirePartPPUi() {
+  document.getElementById("partpp_btn_nouveau")?.addEventListener("click", () => openPartPPForm(null));
+    document.getElementById("partpp_form")?.addEventListener("submit", onSubmitPartPPForm);
+  document.getElementById("partpp_search")?.addEventListener("input", (e) => renderPartPPTable(e.target.value));
+
+  document.getElementById("partpp_btn_supprimer")?.addEventListener("click", async () => {
+    const rowId = document.getElementById("partpp_form")._row.value;
+    if (!rowId) return;
+    if (!confirm("Supprimer ce partenaire ?")) return;
+    try {
+      await apiCallDirect("deletePartPP", { _row: rowId });
+      closeFormModal("partpp_modal");
+      await loadPartPP();
+    } catch (err) {
+      alert(`Erreur lors de la suppression : ${err.message}`);
+    }
+  });
+}
+
+async function loadPartPP() {
+  const tbody = document.getElementById("partpp_table_body");
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr>`;
+
+  try {
+    partppListCache = await apiCallDirect("listPartPP", {});
+    renderPartPPTable("");
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+  }
+}
+
+function renderPartPPTable(query) {
+  const tbody = document.getElementById("partpp_table_body");
+  const emptyEl = document.getElementById("partpp_empty");
+  const q = (query || "").trim().toLowerCase();
+
+  const filtered = !q ? partppListCache : partppListCache.filter((p) =>
+    `${p["Etablissement"] || ""} ${p["Arabe"] || ""} ${p["Sigle"] || ""}`.toLowerCase().includes(q)
+  );
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+  if (emptyEl) emptyEl.hidden = true;
+
+  tbody.innerHTML = filtered.map((p) => `
+    <tr>
+      <td>${p["Etablissement"] || ""}</td>
+      <td>${p["Sigle"] || ""}</td>
+      <td>${p["Domaine"] || ""}</td>
+      <td>${p["Convention"] || ""}</td>
+      <td>${getCoordField(p["Coordonnées"], "Tél")}</td>
+      <td>${p["Directeur"] || ""}</td>
+      <td>
+        <button type="button" class="btn_info partpp_row_afficher" data-row="${p._row}">
+          <i class="bi bi-eye"></i> Afficher
+        </button>
+      </td>
+    </tr>`).join("");
+
+  tbody.querySelectorAll(".partpp_row_afficher").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const p = partppListCache.find((x) => String(x._row) === btn.dataset.row);
+      if (p) {
+        openPartPPForm(p);
+        clearSearchInput("partpp_search");
+      }
+    });
+  });
+}
+
+function openPartPPForm(partenaire) {
+  const form = document.getElementById("partpp_form");
+  form.reset();
+
+  const conventionCoches = String((partenaire && partenaire["Convention"]) || "").split(";").map((s) => s.trim()).filter(Boolean);
+  document.querySelectorAll('#partpp_convention_group input[type="checkbox"]').forEach((cb) => {
+    cb.checked = conventionCoches.includes(cb.value);
+  });
+
+  if (partenaire) {
+    form._row.value = partenaire._row;
+    Object.keys(partenaire).forEach((key) => {
+      if (key === "_row" || key === "Convention") return;
+      const field = form.elements[key];
+      if (field) field.value = partenaire[key] || "";
+    });
+  } else {
+    form._row.value = "";
+  }
+
+  const coord = (partenaire && partenaire["Coordonnées"]) || "";
+  document.getElementById("partpp_coord_tel").value = getCoordField(coord, "Tél");
+  document.getElementById("partpp_coord_tel2").value = getCoordField(coord, "Tél2");
+  document.getElementById("partpp_coord_email").value = getCoordField(coord, "Email");
+  document.getElementById("partpp_coord_fax").value = getCoordField(coord, "Fax");
+
+  const coordDir = (partenaire && partenaire["Coordonnées DIR"]) || "";
+  document.getElementById("partpp_coorddir_tel").value = getCoordField(coordDir, "Tél");
+  document.getElementById("partpp_coorddir_tel2").value = getCoordField(coordDir, "Tél2");
+  document.getElementById("partpp_coorddir_email").value = getCoordField(coordDir, "Email");
+
+  const coordCord = (partenaire && partenaire["Coordonnées CORD"]) || "";
+  document.getElementById("partpp_coordcord_tel").value = getCoordField(coordCord, "Tél");
+  document.getElementById("partpp_coordcord_tel2").value = getCoordField(coordCord, "Tél2");
+  document.getElementById("partpp_coordcord_email").value = getCoordField(coordCord, "Email");
+
+  document.getElementById("partpp_btn_supprimer").hidden = !partenaire;
+  openFormModal("partpp_modal", "partpp_form");
+}
+
+async function onSubmitPartPPForm(e) {
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+  const record = {};
+  fd.forEach((value, key) => {
+    if (key !== "_row" && key !== "Convention") record[key] = value;
+  });
+  record["Convention"] = Array.from(
+    document.querySelectorAll('#partpp_convention_group input[type="checkbox"]:checked')
+  ).map((cb) => cb.value).join(";");
+
+  record["Coordonnées"] = buildCoordText(PARTPP_COORD_LABELS, {
+    "Tél": document.getElementById("partpp_coord_tel").value.trim(),
+    "Tél2": document.getElementById("partpp_coord_tel2").value.trim(),
+    "Email": document.getElementById("partpp_coord_email").value.trim(),
+    "Fax": document.getElementById("partpp_coord_fax").value.trim(),
+  });
+  record["Coordonnées DIR"] = buildCoordText(PARTPP_COORD_LABELS_SIMPLE, {
+    "Tél": document.getElementById("partpp_coorddir_tel").value.trim(),
+    "Tél2": document.getElementById("partpp_coorddir_tel2").value.trim(),
+    "Email": document.getElementById("partpp_coorddir_email").value.trim(),
+  });
+  record["Coordonnées CORD"] = buildCoordText(PARTPP_COORD_LABELS_SIMPLE, {
+    "Tél": document.getElementById("partpp_coordcord_tel").value.trim(),
+    "Tél2": document.getElementById("partpp_coordcord_tel2").value.trim(),
+    "Email": document.getElementById("partpp_coordcord_email").value.trim(),
+  });
+
+  const rowId = fd.get("_row");
+
+  try {
+    if (rowId) {
+      await apiCallDirect("updatePartPP", { _row: rowId, record });
+    } else {
+      await apiCallDirect("createPartPP", { record });
+    }
+    closeFormModal("partpp_modal");
+    await loadPartPP();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  }
+}
+
+async function apiCallDirect(action, payload = {}) {
+  const res = await fetch(GAS_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action, ...payload })
+  });
+  if (!res.ok) throw new Error(`Erreur réseau (${res.status})`);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "Erreur backend inconnue");
+  return data.result;
+}
+
+  </script>
+</body>
+</html>
