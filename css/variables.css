@@ -1,0 +1,111 @@
+/* ============================================================
+   VARIABLES.CSS
+   Tokens partagés — palette "registre administratif"
+   Ink (encre) / Paper (papier) / Seal (sceau doré)
+   ============================================================ */
+
+:root {
+  /* Couleurs de fond */
+  --color_paper: #eef1ee;
+  --color_paper_raised: #ffffff;
+  --color_ink: #16262a;
+  --color_ink_soft: #22383e;
+  --color_ink_softer: #2f4a51;
+
+  /* Bandeau "dossier métier" (boutons + infos) : fi.html, bilan.html, class.html... */
+  --header_bg_peach: #f7ddc0;
+  --header_border_peach: #e8c49a;
+
+  /* Accents */
+  --color_real: #306844;
+  --color_real_light: #4c8b6e;
+  --color_seal: #b08d57;
+  --color_seal_light: #d4b483;
+  --color_teal: #3c6e68;
+  --color_teal_light: #5c9089;
+  --color_info: #3a7ca5;
+  --color_info_light: #6ba3c4;
+  --color_notify: #c17817;
+  --color_notify_light: #d99a45;
+
+  /* États */
+  --color_success: #3c6e68;
+  --color_warning: #b08d57;
+  --color_danger: #a1473f;
+
+  /* Texte */
+  --text_primary: #16262a;
+  --text_secondary: #55686c;
+  --text_inverse: #eef1ee;
+  --text_inverse_soft: #a9bdbc;
+
+  /* Bordures */
+  --border_soft: #dbe1dc;
+  --border_ink: #33474c;
+
+  /* Typographie */
+  --font_display: "Source Serif Pro", "Georgia", serif;
+  --font_body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font_mono: "IBM Plex Mono", "Consolas", monospace;
+
+  /* Échelle */
+  --fs_xs: 0.75rem;
+  --fs_sm: 0.85rem;
+  --fs_base: 0.95rem;
+  --fs_md: 1.1rem;
+  --fs_lg: 1.4rem;
+  --fs_xl: 1.9rem;
+
+  /* Espacements */
+  --space_0: 2px;
+  --space_1: 4px;
+  --space_2: 8px;
+  --space_3: 12px;
+  --space_4: 16px;
+  --space_5: 24px;
+  --space_6: 32px;
+  --space_7: 48px;
+
+  /* Rayon / ombre */
+  --radius_sm: 4px;
+  --radius_md: 8px;
+  --shadow_card: 0 1px 3px rgba(22, 38, 42, 0.08), 0 1px 2px rgba(22, 38, 42, 0.06);
+  --shadow_panel: 2px 0 12px rgba(22, 38, 42, 0.15);
+
+  /* Layout */
+  --sidebar_width: 272px;
+  --navbar_height: 64px;
+  --breakpoint_mobile: 1080px;
+
+  /* Transitions */
+  --ease_std: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--color_paper);
+  color: var(--text_primary);
+  font-family: var(--font_body);
+  font-size: var(--fs_base);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--color_seal_light);
+  color: var(--color_ink);
+}

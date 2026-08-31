@@ -1,0 +1,733 @@
+/* ============================================================
+   LAYOUT.CSS
+   Squelette commun à toutes les pages :
+   header pleine largeur en haut, puis sidebar + contenu en dessous
+   ============================================================ */
+
+.app_shell {
+  display: grid;
+  grid-template-columns: var(--sidebar_width) 1fr;
+  min-height: calc(100vh - var(--navbar_height));
+
+  & .app_content {
+    /* Ni padding-top ni padding latéral : le premier .panel (et donc son
+       .panel_header sticky) touche la navbar en haut et occupe toute la
+       largeur disponible à côté de la sidebar, sans marge. Le padding bas
+       est conservé pour ne pas coller le dernier panneau au bas de page. */
+    padding: 0 0 var(--space_5);
+    min-width: 0;
+
+    @media (max-width: 1080px) {
+      padding: 0 0 var(--space_3);
+    }
+  }
+}
+
+/* Overlay mobile derrière la sidebar ouverte */
+.sidebar_overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 38, 42, 0.45);
+  z-index: 40;
+
+  &.is_visible {
+    display: block;
+  }
+}
+
+@media (max-width: 1080px) {
+  .app_shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hamburger_btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--color_ink);
+  color: var(--text_inverse);
+  font-size: var(--fs_md);
+  border-radius: var(--radius_sm);
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--color_teal);
+  }
+
+  @media (max-width: 1080px) {
+    display: inline-flex;
+  }
+}
+
+/* Sur navbar sombre (ex: data-tone="dark"), inverser le contraste du hamburger */
+.navbar[data-tone="dark"] .hamburger_btn {
+  background: var(--color_paper_raised);
+  color: var(--color_ink);
+
+  &:hover {
+    background: var(--color_seal_light);
+  }
+}
+
+.page_title_group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.page_eyebrow {
+  font-family: var(--font_mono);
+  font-size: var(--fs_xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color_seal);
+}
+
+.page_title {
+  font-family: var(--font_display);
+  font-size: var(--fs_lg);
+  color: var(--text_primary);
+  margin: 0;
+}
+
+/* Cartes / panneaux génériques réutilisables sur les pages de module */
+.panel,
+.block_metiers {
+  background: var(--color_paper_raised);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_md);
+  box-shadow: var(--shadow_card);
+  padding: var(--space_4);
+  margin-bottom: var(--space_4);
+
+  /* En-tête de panneau : même traitement visuel que .block_metiers_header
+     (collé sous la navbar au défilement) — bord perdu sur les côtés du
+     .panel (via marges négatives égales à son padding) pour occuper toute
+     la largeur de la carte, coins arrondis en haut pour rester dans le
+     cadre du .panel. Hauteur fixée (même formule que .block_metiers_header :
+     34px de bouton + le padding vertical) pour que tous les en-têtes soient
+     identiques, qu'ils contiennent des boutons/une recherche ou juste un
+     titre. */
+  & .panel_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space_3);
+    flex-wrap: wrap;
+    row-gap: var(--space_2);
+    min-height: calc(34px + (var(--space_2) * 2));
+    margin: calc(-1 * var(--space_4)) calc(-1 * var(--space_4)) var(--space_3) calc(-1 * var(--space_4));
+    padding: var(--space_2) var(--space_4);
+    background: var(--header_bg_peach);
+    border-bottom: 1px solid #e8c49a;
+    border-radius: var(--radius_md) var(--radius_md) 0 0;
+    position: -webkit-sticky;
+    position: sticky;
+    top: var(--navbar_height);
+    z-index: 30;
+
+    & h2 {
+      font-family: var(--font_display);
+      font-size: var(--fs_md);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+    }
+
+    & .panel_header_actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space_3);
+      flex-wrap: wrap;
+    }
+  }
+}
+
+/* Pages à sidebar : le .panel occupe toute la largeur sans marge (voir
+   .app_shell .app_content ci-dessus, sans padding latéral) donc plus de
+   coins arrondis, plus de bordure ; fond teinté de la couleur du sidebar
+   (--color_ink) mais très éclairci, pour une continuité visuelle avec la
+   sidebar plutôt que le blanc du papier. Le header du panel reprend la même
+   teinte, un peu plus soutenue pour rester lisible comme en-tête. */
+.app_shell .panel {
+  background: color-mix(in srgb, var(--color_ink) 6%, var(--color_paper_raised));
+  border: none;
+  border-radius: 0;
+
+  & .panel_header {
+    background: color-mix(in srgb, var(--color_ink) 14%, var(--color_paper_raised));
+    border-bottom: 1px solid color-mix(in srgb, var(--color_ink) 24%, var(--color_paper_raised));
+    border-radius: 0;
+  }
+}
+
+/* En-têtes de tableau collés juste sous le .panel_header (dont la hauteur
+   réelle — variable selon le contenu : recherche, boutons... — est mesurée
+   en JS, voir js/sticky_panels.js et --panel-header-h). Portée limitée aux
+   tableaux à l'intérieur d'un .panel : ne concerne pas les pages autonomes
+   (class.html, bilan.html, fi.html...) qui utilisent .block_metiers. */
+.panel .data_table thead th {
+  position: -webkit-sticky;
+  position: sticky;
+  top: calc(var(--navbar_height) + var(--panel-header-h, 51px));
+  background: color-mix(in srgb, var(--color_ink) 6%, var(--color_paper_raised));
+  z-index: 20;
+}
+
+/* Boutons d'action dans les tableaux des pages à sidebar : un peu plus
+   compacts que les boutons standard (34px), pour ne pas alourdir des
+   lignes de tableau déjà denses. */
+.panel .data_table td .btn_primary,
+.panel .data_table td .btn_seal,
+.panel .data_table td .btn_real,
+.panel .data_table td .btn_success,
+.panel .data_table td .btn_info,
+.panel .data_table td .btn_notify,
+.panel .data_table td .btn_danger,
+.panel .data_table td .btn_teal,
+.panel .data_table td .btn_ghost {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 var(--space_2);
+  gap: var(--space_1);
+  font-size: var(--fs_xs);
+}
+
+/* ============================================================
+   BOUTONS
+   Base commune dense (padding réduit) + variantes de couleur.
+   Une seule classe fait foi pour la couleur d'un bouton (plus d'override
+   par id, voir historique) : le rôle d'une action est TOUJOURS porté par
+   sa classe, jamais par son id.
+   .btn_primary  = action de type "édition" (ex : "Editer", encre foncée)
+   .btn_seal     = action de mise en avant (ex : "Nouveau")
+   .btn_real     = action de génération de document officiel (ex : "Générer")
+   .btn_success  = action positive / validation (ex : "Enregistrer")
+   .btn_info     = action secondaire informative (ex : "Imprimer")
+   .btn_notify   = action de notification / envoi (ex : "Notifier", "Check Tutorat")
+   .btn_teal     = action outil secondaire (ex : "Calculette")
+   .btn_danger   = action destructive
+   .btn_ghost    = action secondaire discrète (ex : "Annuler")
+   ============================================================ */
+
+.btn_primary,
+.btn_seal,
+.btn_real,
+.btn_success,
+.btn_info,
+.btn_notify,
+.btn_danger,
+.btn_teal,
+.btn_ghost {
+  border: none;
+  width: auto;
+  padding: 0 var(--space_3);
+  min-height: 34px;
+  height: 34px;
+  border-radius: var(--radius_sm);
+  font-size: var(--fs_sm);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space_2);
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: background var(--ease_std), border-color var(--ease_std), color var(--ease_std);
+}
+
+.btn_primary {
+  background: var(--color_ink);
+  color: var(--text_inverse);
+  &:hover { background: var(--color_ink_soft); }
+}
+
+.btn_seal {
+  background: var(--color_seal);
+  color: var(--color_ink);
+  &:hover { background: var(--color_seal_light); }
+}
+
+.btn_real {
+  background: var(--color_real);
+  color: var(--color_ink);
+  &:hover { background: var(--color_real_light); }
+}
+
+.btn_success {
+  background: var(--color_success);
+  color: var(--text_inverse);
+
+  &:hover { background: var(--color_teal_light); }
+}
+
+.btn_info {
+  background: var(--color_info);
+  color: var(--text_inverse);
+
+  &:hover { background: var(--color_info_light); }
+}
+
+.btn_danger {
+  background: var(--color_danger);
+  color: var(--text_inverse);
+
+  &:hover { background: #b95951; }
+}
+
+/* .btn_notify = action de type "notifier / envoyer" (ex : "Notifier" et
+   "Check Tutorat" dans class.html), distincte des autres rôles de la barre
+   .btns_metiers pour rester repérable au coup d'œil. */
+.btn_notify {
+  background: var(--color_notify);
+  color: var(--text_inverse);
+
+  &:hover { background: var(--color_notify_light); }
+}
+
+/* .btn_teal = action outil secondaire (ex : "Calculette" dans fi.html),
+   distincte de .btn_success (même teinte de base --color_teal, mais plus
+   claire) pour ne pas se confondre avec l'action "Enregistrer". */
+.btn_teal {
+  background: var(--color_teal_light);
+  color: var(--text_inverse);
+
+  &:hover { background: var(--color_teal); }
+}
+
+.btn_ghost {
+  background: transparent;
+  color: var(--text_primary);
+  border: 1px solid var(--border_soft);
+
+  &:hover {
+    border-color: var(--color_seal);
+    color: var(--color_seal);
+  }
+}
+
+/* Bouton "Retour" (fi.html, bilan.html, class.html) : même fond que le
+   bouton "Retour" de part.html (bascule Sanctionnés -> vue normale, voir
+   .btn_sanctionnes.is_active), pour une identité visuelle cohérente entre
+   tous les boutons de retour du projet. À combiner avec .btn_ghost pour le
+   gabarit (padding, hauteur, icône) : class="btn_ghost btn_retour". */
+.btn_retour {
+  background: var(--color_danger);
+  color: var(--text_inverse);
+  border: none;
+
+  &:hover {
+    background: #b95951;
+    color: var(--text_inverse);
+  }
+}
+
+.data_table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs_sm);
+
+  & th {
+    text-align: left;
+    font-family: var(--font_mono);
+    font-size: var(--fs_xs);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text_secondary);
+    padding: var(--space_2) var(--space_3);
+    border-bottom: 2px solid var(--color_ink);
+  }
+
+  & td {
+    padding: var(--space_3);
+    border-bottom: 1px solid var(--border_soft);
+  }
+
+  & tbody tr:hover {
+    background: var(--color_paper);
+  }
+}
+
+.empty_state {
+  text-align: center;
+  padding: var(--space_7) var(--space_4);
+  color: var(--text_secondary);
+
+  & i {
+    font-size: 2rem;
+    color: var(--border_soft);
+    display: block;
+    margin-bottom: var(--space_3);
+  }
+}
+
+/* États de chargement / erreur communs */
+.loading_state,
+.error_state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space_2);
+  color: var(--text_secondary);
+  font-size: var(--fs_sm);
+  line-height: 1.5;
+}
+
+.loading_state::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border_soft);
+  border-top-color: var(--color_seal);
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: loading_spin 780ms linear infinite;
+}
+
+.error_state {
+  color: var(--color_danger);
+}
+
+.error_state::before {
+  content: "!";
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color_danger);
+  color: var(--text_inverse);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs_xs);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.loading_state_block {
+  display: flex;
+  justify-content: center;
+  padding: var(--space_6);
+  text-align: center;
+}
+
+.data_table .table_state_row td,
+.table_state_row td {
+  text-align: center;
+  padding: var(--space_5) var(--space_3);
+}
+
+.list_state {
+  display: flex;
+  justify-content: center;
+  padding: var(--space_4);
+  color: var(--text_secondary);
+  cursor: default;
+}
+
+@keyframes loading_spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Bouton en cours de sauvegarde (ex : .btns_metiers "Enregistrer") :
+   remplace l'icône par un spinner et désactive le bouton pendant l'appel
+   serveur. */
+.btn_saving {
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.btn_saving_spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: var(--space_1);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  vertical-align: -1px;
+  animation: loading_spin 780ms linear infinite;
+}
+
+/* ---------- Badge utilisateur (initiales, en cercle) ---------- */
+.user_badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color_seal);
+  color: var(--color_ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font_mono);
+  font-size: var(--fs_xs);
+  font-weight: 700;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+
+  &:hover {
+    background: var(--color_seal_light);
+  }
+}
+
+/* ============================================================
+   MODALES GÉNÉRIQUES (fiches d'édition : entreprises, cabinets,
+   partenaires PP, etc. — un même formulaire pour créer/éditer).
+   Une fermeture (croix, clic en dehors, Échap, bouton "Annuler")
+   déclenche une confirmation si le formulaire a été modifié
+   depuis son ouverture (voir la fonction JS générique attachée
+   dans chaque page module, ex: initFormModals() dans part.html).
+   ============================================================ */
+.modal_overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 38, 42, 0.55);
+  z-index: 200;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space_7) var(--space_4);
+  overflow-y: auto;
+
+  &.is_visible {
+    display: flex;
+  }
+}
+
+.modal_dialog {
+  background: var(--color_paper_raised);
+  border-radius: var(--radius_md);
+  width: 100%;
+  max-width: 720px;
+  box-shadow: var(--shadow_panel);
+}
+
+.modal_header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space_4);
+  border-bottom: 1px solid var(--border_soft);
+
+  & h3 {
+    margin: 0;
+    font-family: var(--font_display);
+    font-size: var(--fs_md);
+    display: flex;
+    align-items: center;
+    gap: var(--space_2);
+  }
+}
+
+.modal_header h3 i,
+.fi_modal_header h3 i {
+  display: none !important;
+}
+
+.modal_close {
+  background: transparent;
+  border: none;
+  font-size: var(--fs_lg);
+  color: var(--text_secondary);
+
+  &:hover {
+    color: var(--color_danger);
+  }
+}
+
+.modal_body {
+  padding: var(--space_4);
+  max-height: 75vh;
+  overflow-y: auto;
+
+  /* Les formulaires de fiche n'ont plus besoin de leur propre
+     encadré/marge une fois dans la modale (fond, bordure en
+     pointillés, etc. définis par page, voir ese_form / cabsan_form) */
+}
+
+/* ---------- Règle générale : pas de création/modification/suppression
+   sur mobile — l'app reste consultable, mais en lecture seule. ---------- */
+@media (max-width: 1080px) {
+  .no_mobile,
+  .ci_row_delete,
+  .fi_row_edit,
+  .fi_row_delete,
+  .fi_row_reset,
+  .fi_add_btn,
+  .fi_calc_new,
+  #fi_btn_enregistrer,
+  #fi_btn_reprendre_nouveau {
+    display: none !important;
+  }
+}
+
+/* ---------- Sur mobile, les boutons pourvus d'une icône n'affichent plus
+   leur libellé (icône seule) : on garde l'action visible sans surcharger
+   l'écran. Les boutons purement textuels (Annuler, Fermer...) sont inchangés. ---------- */
+@media (max-width: 1080px) {
+  .btn_primary:has(i),
+  .btn_seal:has(i),
+  .btn_real:has(i),
+  .btn_success:has(i),
+  .btn_info:has(i),
+  .btn_danger:has(i),
+  .btn_teal:has(i),
+  .btn_ghost:has(i) {
+    width: 34px;
+    padding: 0;
+    gap: 0;
+    font-size: 0;
+    justify-content: center;
+  }
+
+  .btn_primary:has(i) i,
+  .btn_seal:has(i) i,
+  .btn_real:has(i) i,
+  .btn_success:has(i) i,
+  .btn_info:has(i) i,
+  .btn_danger:has(i) i,
+  .btn_teal:has(i) i,
+  .btn_ghost:has(i) i {
+    font-size: var(--fs_md);
+  }
+}
+
+/* ============================================================
+   Bandeau "dossier métier" : rangée de boutons + ligne(s) d'infos,
+   communes aux pages autonomes de type fiche (fi.html, bilan.html,
+   class.html...). Remplace les anciennes classes locales par page
+   (fi_dossier_row, bl_dossier_row, classe_dossier_row / fi_dossier_info_line,
+   bl_dossier_info_line) qui étaient identiques d'une page à l'autre.
+   ============================================================ */
+
+/* Placé en HTML juste après le <header>, avant <main> (donc en dehors de
+   .app_content_metier, qui limite la largeur à 1600px) : il occupe ainsi
+   nativement toute la largeur de la fenêtre, sans les hacks (100vw / marge
+   négative) qui posaient problème avec la scrollbar et les ancêtres
+   positionnés. */
+.btns_metiers {
+  background: var(--header_bg_peach);
+  padding: var(--space_3) var(--space_4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space_3);
+  flex-wrap: wrap;
+  position: -webkit-sticky;
+  position: sticky;
+  top: var(--navbar_height);
+  z-index: 32;
+  border-bottom: 1px solid var(--border_soft);
+  box-shadow: var(--shadow_card);
+}
+
+.infos_metiers {
+  background: var(--color_paper_raised);
+  padding: var(--space_2) var(--space_4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space_5);
+  flex-wrap: wrap;
+  text-align: center;
+  position: sticky;
+  top: calc(var(--navbar_height) + var(--btns-metiers-height, 0px));
+  z-index: 31;
+  border-bottom: 1px solid var(--border_soft);
+}
+
+.infos_metiers_item {
+  font-size: var(--fs_sm);
+  font-family: var(--font_mono);
+  color: var(--text_secondary);
+}
+.infos_metiers_item span { font-weight: bold; color: var(--text_primary); }
+
+/* Cadre partagé par toutes les sections métier (FI, Bilan et Classe). */
+.app_content_metier {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: var(--space_5);
+}
+
+.app_content_metier > .infos_metiers:not(.bl_info_cloture) {
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_md);
+  margin-bottom: var(--space_5);
+}
+
+.app_content_metier > section { margin-bottom: var(--space_5); }
+
+/* En-tête unique des blocs métier, maintenu sous la navbar au défilement.
+   --btns-metiers-height (mesurée en JS, voir js/sticky_metiers.js) évite
+   que ce header ne passe sous le bandeau .btns_metiers, lui aussi collé en
+   haut de page depuis peu. */
+.block_metiers_header {
+  position: -webkit-sticky;
+  position: sticky;
+  top: calc(var(--navbar_height) + var(--btns-metiers-height, 0px) + var(--infos-metiers-height, 0px));
+  z-index: 30;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space_3);
+  padding: var(--space_2) var(--space_4);
+  /* Même hauteur avec ou sans bouton d'action (ex: bilan.html) : 34px =
+     hauteur des .btn_* (voir plus haut) + le padding vertical du header
+     lui-même (box-sizing: border-box global, voir variables.css), sans quoi
+     min-height ne suffisait pas à compenser l'absence de bouton. */
+  min-height: calc(34px + (var(--space_2) * 2));
+  background: var(--header_bg_peach);
+  border-bottom: 1px solid #e8c49a;
+}
+
+.block_metiers_header h2,
+.block_metiers_header h3 {
+  margin: 0;
+  font-family: var(--font_display);
+  font-size: var(--fs_base);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--space_2);
+}
+
+/* Texte de statut/récap au milieu de l'en-tête de bloc (entre le titre et
+   le bouton), ex: "Aucun stage" (fi.html), totaux du plan d'étude
+   (class.html). Anciennement dupliqué sous le nom module-préfixé
+   ".fi_category_status" — unifié ici pour tous les modules. */
+.block_metiers_status {
+  font-size: var(--fs_sm);
+  color: var(--text_secondary);
+  flex: 1;
+}
+.block_metiers_status strong {
+  color: var(--text_primary);
+  font-weight: 700;
+}
+
+/* Certains en-têtes regroupent plusieurs boutons dans un conteneur (ex:
+   section Compteurs) : on lui applique le même gap que les boutons placés
+   directement dans .block_metiers_header, pour un espacement uniforme. */
+.block_metiers_header_actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space_3);
+}
+
+/* Sections repliables (class.html, fi.html, bilan.html) : un bouton
+   .section_toggle_btn dans le .block_metiers_header bascule la classe
+   .is_collapsed sur le .block_metiers, qui masque tout sauf son en-tête. */
+.block_metiers.is_collapsed > *:not(.block_metiers_header) { display: none; }
+.btn_info.section_toggle_btn { flex: 0 0 auto; }
+
+@media (max-width: 1080px) {
+  .app_content_metier { padding: var(--space_3); }
+}
