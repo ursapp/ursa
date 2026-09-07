@@ -1665,6 +1665,11 @@
     // reste en lecture seule ; une fois la demande faite, l'admin (pp) peut la
     // renseigner et ces heures alimentent les mémoires de règlement.
     let checkTutoratDemande = "";
+    // Vue actuellement ouverte du bloc Compteurs (null | 'tut' | 'reg'),
+    // mémorisée pour pouvoir la ré-appliquer sans la changer depuis
+    // updateCompteurEtatVisibility() (ex. après un changement d'état qui
+    // ne remet pas en cause la vue déjà ouverte).
+    let currentCompteurView = null;
     let matieres = [];
     let regroupements = [];
     let tutorat = [];
@@ -1868,6 +1873,11 @@
       // (affiné ensuite par showTutSousVue).
       // view = 'reg' : idem côté Regroupements.
       const showCompteurView = (view) => {
+        currentCompteurView = view;
+        const compteursOk = compteursVisiblesPourEtat();
+        // État ne permettant pas d'afficher les compteurs (ex. "Prévue") :
+        // la vue reste forcément fermée, quelle que soit la vue demandée.
+        if (!compteursOk) view = null;
         const wasCollapsed = compteurSection?.classList.contains('is_collapsed');
         if (view !== null) {
           // Ferme Inscrits / Frais de coordination quand on ouvre un
@@ -1897,7 +1907,8 @@
           if (tutEnsContainer) tutEnsContainer.hidden = true;
         }
         if (tutCounterBtn) {
-          tutCounterBtn.hidden = view === 'tut';
+          // Se masque en s'ouvrant ; Regroupements reste affiché.
+          tutCounterBtn.hidden = view === 'tut' || !compteursOk;
         }
         // tutCheckBtn ("Check Tutorat" / "Confirmer Tutorat") n'est plus lié
         // à la vue ouverte : il reste visible dans le header du bloc
@@ -1916,7 +1927,8 @@
           showTutSousVue('matiere');
         }
         if (regCounterBtn) {
-          regCounterBtn.hidden = view === 'reg';
+          // Se masque en s'ouvrant ; Tutorat reste affiché.
+          regCounterBtn.hidden = view === 'reg' || !compteursOk;
         }
         if (recapBtn) {
           recapBtn.hidden = view === null;
@@ -2218,6 +2230,7 @@
           updateAjoutButtonsVisibility();
           updateNotifierFacturationVisibility();
           updateFraisActionsVisibility();
+          updateCompteurEtatVisibility();
 
           // Clôturée : pré-remplit la date de fin avec la dernière date
           // planifiée (tutorat, regroupement ou examen), si elle n'est pas
@@ -4232,6 +4245,28 @@
     // éléments déjà planifiés restent permises.
     function estClasseFacturee() {
       return document.getElementById("classe_etat")?.value === "Facturée";
+    }
+
+    // Boutons "Tutorat" / "Regroupements" (et leurs sous-vues par matière /
+    // par enseignant) du bloc Compteurs : affichés à tous les états sauf
+    // "Prévue" (rien à compter), côté admin comme côté invité — y compris
+    // une fois la classe "Facturée" (dossier consultable). Seuls "Tutorat
+    // à vérifier" (admin) et "Check Tutorat" (invité) sont en plus limités
+    // au seul état "Close" (Clôturée), voir updateTutCheckBtnHeader().
+    function compteursVisiblesPourEtat() {
+      const etat = document.getElementById("classe_etat")?.value;
+      return etat === "En cours" || etat === "Close" || etat === "Facturée";
+    }
+
+    // Ré-applique la vue Compteurs actuellement mémorisée (currentCompteurView)
+    // à travers showCompteurView(), qui se charge de masquer les 2 boutons
+    // (et de refermer la vue si besoin) dès que l'état ne permet plus de les
+    // afficher — sans changer la vue ouverte si l'état le permet toujours.
+    // À appeler à chaque changement d'état et après hydratation.
+    function updateCompteurEtatVisibility() {
+      if (typeof window.showCompteurView === "function") {
+        window.showCompteurView(compteursVisiblesPourEtat() ? currentCompteurView : null);
+      }
     }
 
     // Centralise la visibilité des 4 boutons "Ajouter" (Plan d'étude,
@@ -6330,11 +6365,14 @@
     // pour ce statut).
     function updateTutCheckBtnHeader() {
       const { hasMatieres, vides } = calculerEtatTutoratRealise();
+      // "Check Tutorat" (invité) et "Tutorat à vérifier" (admin) ne
+      // s'appliquent qu'à l'état Clôturée (voir tableau des états).
+      const estCloturee = document.getElementById("classe_etat")?.value === "Close";
 
       const btn = document.getElementById("tut_btn_check");
       if (btn) {
         if (CLASS_GUEST_MODE) {
-          btn.hidden = !hasMatieres || !vides;
+          btn.hidden = !estCloturee || !hasMatieres || !vides;
           btn.innerHTML = '<i class="bi bi-send"></i> Check Tutorat';
         } else {
           btn.hidden = true;
@@ -6343,7 +6381,7 @@
 
       const tutCounterBtn = document.getElementById("tut_btn_showcounter");
       if (tutCounterBtn) {
-        const aVerifier = !CLASS_GUEST_MODE && hasMatieres && !!checkTutoratDemande && vides;
+        const aVerifier = !CLASS_GUEST_MODE && estCloturee && hasMatieres && !!checkTutoratDemande && vides;
         tutCounterBtn.classList.toggle('btn_notify', aVerifier);
         tutCounterBtn.classList.toggle('btn_info', !aVerifier);
         tutCounterBtn.innerHTML = aVerifier
@@ -8175,6 +8213,7 @@
         updateTutCheckBtnHeader();
         updateAjoutButtonsVisibility();
         updateNotifierFacturationVisibility();
+        updateCompteurEtatVisibility();
         history.replaceState(null, "", `class.html?${CLASS_GUEST_MODE ? "gclasse" : "classe"}=${fileId}`);
       } catch (err) {
         alert(`Erreur de chargement : ${err.message}`);
