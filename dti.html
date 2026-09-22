@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Droits de tirage individuels — URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/sidebar.css" />
+  <link rel="stylesheet" href="css/navbar.css" />
+  <link rel="stylesheet" href="css/smig.css" />
+  <style>
+/* ============================================================
+   DTI.CSS — propre à dti.html
+   (Le contenu détaillé de "Formation initiale" vit désormais
+   dans fi.html — ici on garde uniquement le récap.)
+   ============================================================ */
+
+.fi_placeholder {
+  color: var(--text_secondary);
+  font-style: italic;
+}
+
+.fi_recap_actions {
+  display: flex;
+  gap: var(--space_2);
+  flex-wrap: wrap;
+}
+
+.dti_realisation_grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space_4);
+}
+
+.dti_realisation_grid label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space_2);
+  font-size: var(--fs_sm);
+  color: var(--text_secondary);
+}
+
+.dti_realisation_grid input,
+.dti_realisation_grid select {
+  font-family: inherit;
+  font-size: var(--fs_base);
+  padding: var(--space_2) var(--space_3);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper_raised);
+  color: var(--text_primary);
+}
+
+.dti_realisation_grid input:disabled {
+  background: var(--color_paper);
+  color: var(--text_secondary);
+  cursor: not-allowed;
+}
+
+.dti_realisation_results {
+  margin-top: var(--space_4);
+  display: grid;
+  gap: var(--space_3);
+}
+
+.dti_realisation_result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space_3);
+  background: var(--color_paper);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+}
+
+.dti_realisation_note {
+  margin-top: var(--space_3);
+  color: var(--text_secondary);
+  font-size: var(--fs_sm);
+}
+
+/* Modale "Nouveau calcul" — choix d'une entreprise (base "eses"), sur le
+   même principe que la modale "Choisir une entreprise" qui vivait
+   auparavant dans fi.html : recherche instantanée, entreprises ayant déjà
+   un calcul grisées (on redirige alors vers "Afficher" dans le tableau
+   plutôt que d'ouvrir un doublon). */
+.dti_modal_search {
+  width: 100%;
+  font-family: inherit;
+  font-size: var(--fs_sm);
+  padding: var(--space_2) var(--space_3);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  margin-bottom: var(--space_3);
+}
+
+.dti_ese_list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space_2); }
+.dti_ese_item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space_3);
+  padding: var(--space_3);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper);
+  cursor: pointer;
+  font-size: var(--fs_sm);
+}
+.dti_ese_item:hover { border-color: var(--color_seal); }
+.dti_ese_item.is_disabled { cursor: not-allowed; opacity: 0.6; }
+.dti_ese_item.is_selected { border-color: var(--color_seal); background: color-mix(in srgb, var(--color_seal) 12%, var(--color_paper)); }
+.dti_ese_item .dti_ese_badge {
+  font-family: var(--font_mono);
+  font-size: var(--fs_xs);
+  color: var(--text_secondary);
+}
+
+/* Champs "Date de la demande" / "N° plan" sous la liste de sélection, dans
+   la modale "Nouveau plan" (voir dti_modal_nouveau_plan). */
+.dti_nouveau_plan_grid { margin-top: var(--space_4); }
+
+/* Modale "Editer" (état/année dti d'un calcul existant) : un seul bouton
+   ("Enregistrer"), collé à droite comme partout ailleurs dans l'app. */
+.dti_editer_footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space_3);
+  padding: var(--space_4);
+  border-top: 1px solid var(--border_soft);
+}
+
+/* ---------------- Section "Plans" ----------------
+   Un plan = un fichier Drive lié à un calcul Formation initiale existant
+   (dtiRealisationCache), sur le même principe que "Formation initiale" :
+   pas de Sheet dti_plans, le dossier Drive est la seule source de vérité.
+   Le montant d'un plan est plafonné par le budget du calcul FI lié. */
+
+.dti_etat_badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space_1);
+  padding: 2px var(--space_2);
+  border-radius: var(--radius_sm);
+  font-family: var(--font_mono);
+  font-weight: 700;
+  font-size: var(--fs_xs);
+  white-space: nowrap;
+}
+.dti_etat_badge.is_demande { background: color-mix(in srgb, var(--color_notify) 18%, var(--color_paper_raised)); color: var(--color_notify); }
+.dti_etat_badge.is_approuve { background: color-mix(in srgb, var(--color_info) 18%, var(--color_paper_raised)); color: var(--color_info); }
+.dti_etat_badge.is_en_cours { background: color-mix(in srgb, var(--color_seal) 18%, var(--color_paper_raised)); color: var(--color_seal); }
+.dti_etat_badge.is_facture { background: color-mix(in srgb, var(--color_real) 18%, var(--color_paper_raised)); color: var(--color_real); }
+
+.dti_plan_montant_note {
+  display: block;
+  margin-top: var(--space_1);
+  font-size: var(--fs_xs);
+  color: var(--text_secondary);
+}
+.dti_plan_montant_note.is_over_budget { color: var(--color_danger); font-weight: 600; }
+
+/* ---------------- Section "Commission" ----------------
+   Une commission référence un sous-ensemble des plans en état "Demandé"
+   (cases à cocher, voir renderCommissionPlansList) ; sa date/ses 2 numéros
+   sont propagés vers ces plans à l'enregistrement (Code.gs), où ils
+   deviennent affichage seul dans plan.html. */
+.dti_commission_plans_field {
+  margin-top: var(--space_4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space_2);
+  font-size: var(--fs_sm);
+  color: var(--text_secondary);
+}
+.dti_commission_plans_list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space_3);
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space_2);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper);
+}
+.dti_commission_plans_list label {
+  display: flex;
+  align-items: center;
+  gap: var(--space_2);
+  font-weight: normal;
+  color: var(--text_primary);
+}
+.dti_commission_plans_empty { font-style: italic; }
+  </style>
+  <script src="js/session.js"></script>
+</head>
+<body data-nav-mode="toggle">
+
+  <div class="sidebar_overlay" id="sidebar_overlay"></div>
+
+  <header class="navbar">
+    <button type="button" class="hamburger_btn"><i class="bi bi-list"></i></button>
+    <div class="page_title_group">
+      <span class="page_eyebrow">DTI · Droits de tirage individuels</span>
+      <h1 class="page_title">Droits de tirage individuels</h1>
+    </div>
+    <div class="navbar_actions">
+      <span class="navbar_breadcrumb">
+        <a href="index.html">Accueil</a> <i class="bi bi-chevron-right"></i> Droits de tirage individuels
+      </span>
+    </div>
+  </header>
+
+  <div class="app_shell">
+    <aside class="sidebar" id="sidebar_root">
+      <button type="button" class="sidebar_close_btn" aria-label="Fermer le menu">
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <nav class="sidebar_nav">
+        <a class="sidebar_module_link" href="index.html"><i class="bi bi-house"></i> Accueil</a>
+        <div class="sidebar_divider"></div>
+        <div class="sidebar_group_label">Sur cette page</div>
+        <a class="sidebar_section_link is_active" href="#formation_initiale">Formation initiale</a>
+        <a class="sidebar_section_link" href="#plans">Plans</a>
+        <a class="sidebar_section_link" href="#commission">Commission</a>
+
+        <div class="sidebar_divider"></div>
+
+        <div class="sidebar_group_label">Autres modules</div>
+        <a class="sidebar_module_link" href="ci.html"><i class="bi bi-percent"></i> Crédit d'impôt</a>
+        <a class="sidebar_module_link" href="dtc.html"><i class="bi bi-buildings"></i> Droits de tirage collectifs</a>
+        <a class="sidebar_module_link" href="pp.html"><i class="bi bi-mortarboard"></i> Promotion professionnelle</a>
+        <a class="sidebar_module_link" href="part.html"><i class="bi bi-diagram-3"></i> Partenaires</a>
+        <a class="sidebar_module_link" href="docs.html"><i class="bi bi-file-earmark-text"></i> Documents</a>
+      </nav>
+
+      <div class="sidebar_footer">
+        <span class="sidebar_footer_user"><span class="user_badge" id="sidebar_user_badge" title="Non connecté">--</span></span>
+        <span>CNFCPP © 2026</span>
+      </div>
+    </aside>
+
+    <main class="app_content">
+
+      <section id="formation_initiale" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-mortarboard"></i> Formation initiale<span id="fi_recap_annee"></span></h2>
+          <button type="button" id="dti_btn_nouveau_calcul" class="btn_seal no_mobile"><i class="bi bi-plus-lg"></i> Nouveau calcul</button>
+        </div>
+
+        <table class="data_table" id="fi_recap_table">
+          <thead>
+            <tr>
+              <th>Entreprise</th>
+              <th>Matricule</th>
+              <th>
+                <button type="button" class="fi_smig_chip" id="fi_btn_smig_settings" title="Réglages Smig">
+                  <i class="bi bi-gear-fill"></i>
+                </button>
+                Smig DTI
+              </th>
+              <th>Budget</th>
+              <th>État</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty_state" id="fi_recap_empty" hidden>
+          <i class="bi bi-inbox"></i>Aucun calcul enregistré pour cette année.
+        </div>
+      </section>
+
+      <section id="plans" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-inbox-fill"></i> Plans</h2>
+          <button type="button" id="dti_btn_nouveau_plan" class="btn_seal no_mobile"><i class="bi bi-plus-lg"></i> Nouveau plan</button>
+        </div>
+
+        <table class="data_table" id="dti_plans_table">
+          <thead>
+            <tr>
+              <th>Entreprise</th>
+              <th>Matricule</th>
+              <th>Date</th>
+              <th>N° plan</th>
+              <th>État</th>
+              <th>Montant</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty_state" id="dti_plans_empty" hidden>
+          <i class="bi bi-inbox"></i>Aucun plan enregistré pour cette année.
+        </div>
+      </section>
+
+      <section id="commission" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-people"></i> Commission</h2>
+          <button type="button" id="dti_btn_nouvelle_commission" class="btn_seal no_mobile"><i class="bi bi-plus-lg"></i> Nouvelle commission</button>
+        </div>
+
+        <table class="data_table" id="dti_commissions_table">
+          <thead>
+            <tr>
+              <th>N° commission</th>
+              <th>Date</th>
+              <th>État</th>
+              <th>Plans</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty_state" id="dti_commissions_empty" hidden>
+          <i class="bi bi-people"></i>Aucune commission enregistrée.
+        </div>
+      </section>
+
+      <div class="modal_overlay" id="dti_modal_smig">
+        <div class="modal_dialog fi_smig_modal">
+          <div class="modal_header">
+            <h3>Réglage Smig</h3>
+            <button type="button" class="modal_close" data-close-modal="dti_modal_smig"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <table class="fi_smig_table" id="dti_smig_table">
+              <thead>
+                <tr><th>Année</th><th>Smig 40h</th><th>Smig 48h</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <p class="fi_smig_note">
+              l'année en cours est créée automatiquement.
+            </p>
+          </div>
+          <div class="fi_smig_footer">
+            <button type="button" class="btn_ghost" data-smig-copy hidden><i class="bi bi-clipboard-plus"></i> Copier SMIG</button>
+            <button type="button" class="btn_ghost" data-smig-save hidden><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <!-- <button type="button" class="btn_ghost" data-smig-cancel>Annuler</button> -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal_overlay" id="dti_realisation_modal">
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3>Réalisations selon budget</h3>
+            <button type="button" class="modal_close" data-close-modal="dti_realisation_modal"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <div class="dti_realisation_grid">
+              <label>Entreprise
+                <input type="text" id="dti_realisation_entreprise" readonly />
+              </label>
+              <label>Mode / Sous-mode de réalisation
+                <select id="dti_realisation_mode">
+                  <optgroup label="Intra-entreprise">
+                    <option value="intra-externe">Animateur externe résident</option>
+                    <option value="intra-interne" disabled>Animateur interne (à venir)</option>
+                  </optgroup>
+                  <optgroup label="Inter-entreprise">
+                    <option value="inter-entreprise" disabled>Inter-entreprise (à venir)</option>
+                  </optgroup>
+                </select>
+              </label>
+              <label>Budget
+                <input type="text" id="dti_realisation_budget" readonly />
+              </label>
+              <label>Smig DTI
+                <input type="text" id="dti_realisation_smig" readonly />
+              </label>
+            </div>
+            <div class="dti_realisation_results">
+              <div class="dti_realisation_result"><span>Réalisation en heures</span><span id="dti_realisation_nb_heures">--</span></div>
+              <div class="dti_realisation_result"><span>Réalisation en jours (6h)</span><span id="dti_realisation_nb_jours">--</span></div>
+              <div class="dti_realisation_result"><span>Réalisation en jours et heures</span><span id="dti_realisation_nbjours_heures">--</span></div>
+            </div>
+            <p class="dti_realisation_note" id="dti_realisation_note"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modale "Nouveau calcul" — ne redirige plus directement vers
+           fi.html : on choisit d'abord l'entreprise ici (comme "Nouvelle
+           classe" dans pp.html), fi.html ne gérant plus que l'édition d'un
+           dossier déjà déterminé (calcul existant via "Afficher", ou
+           entreprise fraîchement choisie via ?ese=). -->
+      <div class="modal_overlay" id="dti_modal_nouveau_calcul">
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3>Nouveau calcul — choisir une entreprise</h3>
+            <button type="button" class="modal_close" data-close-modal="dti_modal_nouveau_calcul"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <input type="text" class="dti_modal_search" id="dti_nouveau_calcul_search" placeholder="Rechercher (raison sociale, nom commercial)…" />
+            <ul class="dti_ese_list" id="dti_nouveau_calcul_list"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modale "Editer" — édition légère des métadonnées d'un calcul déjà
+           enregistré (état, année dti), sans ouvrir fi.html. L'entreprise et
+           l'année FI sont affichées en lecture seule : les changer
+           impliquerait de déplacer le fichier vers un autre sous-dossier
+           Drive, ce qui n'est pas géré ici. -->
+      <div class="modal_overlay" id="dti_modal_editer">
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3>Éditer le calcul</h3>
+            <button type="button" class="modal_close" data-close-modal="dti_modal_editer"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <div class="dti_realisation_grid">
+              <label>Entreprise
+                <input type="text" id="dti_editer_entreprise" readonly />
+              </label>
+              <label>Matricule
+                <input type="text" id="dti_editer_matricule" />
+              </label>
+              <label>Année FI
+                <input type="text" id="dti_editer_annee_fi" readonly />
+              </label>
+              <label>Année DTI
+                <input type="number" id="dti_editer_annee_dti" />
+              </label>
+              <label>État
+                <select id="dti_editer_etat">
+                  <option value="En cours">En cours</option>
+                  <option value="Clôturé">Clôturé</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="dti_editer_footer">
+            <button type="button" class="btn_success" id="dti_editer_btn_enregistrer"><i class="bi bi-check-lg"></i> Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modale "Nouveau plan" — reprend le principe de "Nouveau calcul",
+           mais liste les calculs Formation initiale déjà enregistrés
+           (dtiRealisationCache) plutôt que la base "eses" complète : un
+           plan est toujours rattaché à un calcul FI existant (son budget
+           sert de plafond au montant). On choisit d'abord l'entreprise dans
+           la liste (elle est mise en surbrillance), puis on renseigne la
+           date de la demande et le numéro de plan avant d'enregistrer :
+           l'enregistrement crée directement le fichier Drive du plan (voir
+           enregistrerNouveauPlan()) et redirige vers plan.html?id=.
+           Cette même modale est dupliquée dans plan.html (id
+           "pl_modal_nouveau_plan"), sans la liste de sélection puisque
+           l'entreprise/le calcul y sont déjà déterminés par l'URL. -->
+      <div class="modal_overlay" id="dti_modal_nouveau_plan">
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3>Nouveau plan</h3>
+            <button type="button" class="modal_close" data-close-modal="dti_modal_nouveau_plan"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <input type="text" class="dti_modal_search" id="dti_nouveau_plan_search" placeholder="Rechercher (entreprise)…" />
+            <ul class="dti_ese_list" id="dti_nouveau_plan_list"></ul>
+            <div class="dti_realisation_grid dti_nouveau_plan_grid">
+              <label>Date de la demande
+                <input type="date" id="dti_nouveau_plan_date" />
+              </label>
+              <label>N° plan UR
+                <input type="text" id="dti_nouveau_plan_num" placeholder="Numéro de plan (UR)" />
+              </label>
+              <label>N° plan Ese
+                <input type="text" id="dti_nouveau_plan_num_ese" placeholder="Numéro de plan (entreprise)" />
+              </label>
+            </div>
+          </div>
+          <div class="dti_editer_footer">
+            <button type="button" class="btn_success" id="dti_nouveau_plan_btn_enregistrer" disabled><i class="bi bi-check-lg"></i> Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modale "Editer" (plan) — édition légère (date, état, montant) sans
+           ouvrir plan.html, sur le même principe que la modale "Editer" des
+           calculs ci-dessus. Le montant reste plafonné par le budget FI du
+           calcul lié (record.budgetFi). -->
+      <div class="modal_overlay" id="dti_modal_editer_plan">
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3>Éditer le plan</h3>
+            <button type="button" class="modal_close" data-close-modal="dti_modal_editer_plan"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <div class="dti_realisation_grid">
+              <label>Entreprise
+                <input type="text" id="dti_editer_plan_entreprise" readonly />
+              </label>
+              <label>Matricule
+                <input type="text" id="dti_editer_plan_matricule" />
+              </label>
+              <label>Budget FI
+                <input type="text" id="dti_editer_plan_budget_fi" readonly />
+              </label>
+              <label>Date
+                <input type="date" id="dti_editer_plan_date" />
+              </label>
+              <label>N° plan UR
+                <input type="text" id="dti_editer_plan_num" />
+              </label>
+              <label>N° plan Ese
+                <input type="text" id="dti_editer_plan_num_ese" />
+              </label>
+              <label>État
+                <select id="dti_editer_plan_etat">
+                  <option value="Demandé">Demandé</option>
+                  <option value="Approuvé">Approuvé</option>
+                  <option value="En cours">En cours</option>
+                  <option value="Facturé">Facturé</option>
+                </select>
+              </label>
+              <label>Montant
+                <input type="number" step="0.001" min="0" id="dti_editer_plan_montant" />
+                <span class="dti_plan_montant_note" id="dti_editer_plan_montant_note"></span>
+              </label>
+              <label>Régime horaire
+                <input type="text" id="dti_editer_plan_regime_horaire" />
+              </label>
+            </div>
+          </div>
+          <div class="dti_editer_footer">
+            <button type="button" class="btn_success" id="dti_editer_plan_btn_enregistrer"><i class="bi bi-check-lg"></i> Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modale "Nouvelle commission" / "Éditer la commission" — une seule
+           modale pour les deux cas (dataset.commissionId vide = nouvelle).
+           Le champ Date n'est actif que si État = "Programmée" (voir
+           appliquerVerrouDateCommission) ; les plans cochables sont ceux en
+           état "Demandé" (dtiPlansCache), plus ceux déjà rattachés à cette
+           commission si on édite. -->
+      <div class="modal_overlay" id="dti_modal_commission">
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3 id="dti_commission_titre">Nouvelle commission</h3>
+            <button type="button" class="modal_close" data-close-modal="dti_modal_commission"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <div class="dti_realisation_grid">
+              <label>N° commission UR
+                <input type="text" id="dti_commission_num_ur" title="Numéro cumulé depuis la création de l'unité (ne se réinitialise jamais)" placeholder="Cumulé depuis la création de l'UR" />
+              </label>
+              <label>N° commission année
+                <input type="text" id="dti_commission_num_annee" title="Numéro cumulé depuis le début de l'année en cours (repart de 1 chaque année)" placeholder="Cumulé depuis le début de l'année" />
+              </label>
+              <label>État
+                <select id="dti_commission_etat">
+                  <option value="Prévue">Prévue</option>
+                  <option value="Programmée">Programmée</option>
+                  <option value="Reportée">Reportée</option>
+                  <option value="Achevé">Achevé</option>
+                </select>
+              </label>
+              <label>Date
+                <input type="date" id="dti_commission_date" disabled />
+              </label>
+            </div>
+            <div class="dti_commission_plans_field">
+              <span>Plans (demandes en attente)</span>
+              <ul class="dti_commission_plans_list" id="dti_commission_plans_list"></ul>
+            </div>
+          </div>
+          <div class="dti_editer_footer">
+            <button type="button" class="btn_success" id="dti_commission_btn_enregistrer"><i class="bi bi-check-lg"></i> Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/sidebar_toggle.js"></script>
+  <script src="js/sticky_panels.js"></script>
+  <script src="js/navbar_breadcrumb.js"></script>
+  <script src="js/smig.js"></script>
+  <script>
+/* ============================================================
+   DTI.JS
+   Récap "Formation initiale" (année n-1) affiché sur dti.html.
+   Un calcul = un fichier HTML exporté dans Drive (voir fi.html /
+   Code.gs exportDossierToDrive) ; il n'y a pas de Sheet fi_dossiers :
+   le dossier Drive (un sous-dossier par année de FI) est la seule
+   source de vérité pour "quels calculs existent déjà".
+   ============================================================ */
+
+const FI_RECAP_ANNEE = new Date().getFullYear() - 1;
+const DTI_CURRENT_YEAR = new Date().getFullYear();
+let dtiRealisationCache = {};
+let dtiEsesCache = null; // cache de la base "eses" (alimenté au 1er chargement, réutilisé partout : récap FI, plans, modale "Nouveau calcul")
+let dtiEseNomParMatricule = null; // { matricule: nom actuel } — dérivé de dtiEsesCache
+let dtiPlansCache = {}; // plans (section "Plans"), clé = fileId Drive du plan
+
+// Le nom d'une entreprise peut être modifié dans la base "eses" après la
+// création d'un calcul FI ou d'un plan (qui gardent le nom tel qu'il était
+// à ce moment-là) : le matricule, lui, ne change pas, et sert donc de
+// référence pour rattacher/rafraîchir le nom affiché. On charge la base une
+// seule fois par chargement de page.
+async function chargerEsesCache() {
+  if (!dtiEsesCache) dtiEsesCache = await apiCall("listEses", {});
+  if (!dtiEseNomParMatricule) {
+    dtiEseNomParMatricule = {};
+    dtiEsesCache.forEach((e) => {
+      const matricule = String(e["Matricule"] || "").trim();
+      if (!matricule) return;
+      dtiEseNomParMatricule[matricule] = e["Raison sociale"] || e["Nom commerciale"] || "";
+    });
+  }
+  return dtiEsesCache;
+}
+
+// Nom à jour d'une entreprise à partir de son matricule ; si le matricule
+// est absent ou introuvable dans la base "eses", on garde le nom fourni
+// (dossier ancien sans matricule, ou entreprise supprimée de la base).
+function nomEseAJour(matricule, nomActuel) {
+  const mat = String(matricule || "").trim();
+  if (!mat || !dtiEseNomParMatricule || !dtiEseNomParMatricule[mat]) return nomActuel;
+  return dtiEseNomParMatricule[mat];
+}
+
+const DTI_PLAN_ETATS = ["Demandé", "Approuvé", "En cours", "Facturé"];
+
+document.addEventListener("DOMContentLoaded", () => {
+  initSectionToggle();
+  loadRecapFormationInitiale();
+  loadPlans();
+  loadCommissions();
+  wireDtiModals();
+  wireDtiRealisationMode();
+  wireDtiNouveauCalculModal();
+  wireDtiEditerModal();
+  wireDtiNouveauPlanModal();
+  wireDtiEditerPlanModal();
+  wireDtiCommissionModal();
+  initSmigShared({
+    buttonId: "fi_btn_smig_settings",
+    modalId: "dti_modal_smig",
+    tableId: "dti_smig_table",
+    currentYear: DTI_CURRENT_YEAR,
+    apiCaller: apiCall
+  });
+  renderUserBadge(document.getElementById("sidebar_user_badge"));
+  injecterBoutonDeconnexion(document.getElementById("sidebar_user_badge"));
+});
+
+/* ---------------- Une seule section visible à la fois ---------------- */
+
+function initSectionToggle() {
+  const links = document.querySelectorAll(".sidebar_section_link[href^='#']");
+  const sections = document.querySelectorAll("main.app_content > section.panel");
+
+  function showSection(id) {
+    sections.forEach((s) => { s.hidden = s.id !== id; });
+    links.forEach((l) => l.classList.toggle("is_active", l.getAttribute("href") === `#${id}`));
+  }
+
+  links.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const id = link.getAttribute("href").slice(1);
+      showSection(id);
+      history.replaceState(null, "", `#${id}`);
+    });
+  });
+
+  const initial = window.location.hash ? window.location.hash.slice(1) : "formation_initiale";
+  showSection(initial);
+}
+
+async function loadRecapFormationInitiale() {
+  const anneeEl = document.getElementById("fi_recap_annee");
+  if (anneeEl) anneeEl.textContent = FI_RECAP_ANNEE;
+
+    // Écrire explicitement le H2 pour garantir l'absence d'espace avant le span
+    const headerH2 = document.querySelector('#formation_initiale .panel_header h2');
+    if (headerH2) {
+      headerH2.innerHTML = '<i class="bi bi-mortarboard"></i> Formation initiale ' + FI_RECAP_ANNEE;
+    }
+
+  const tbody = document.querySelector("#fi_recap_table tbody");
+  const emptyEl = document.getElementById("fi_recap_empty");
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr>`;
+  if (emptyEl) emptyEl.hidden = true;
+
+  try {
+    const calculs = await apiCall("listCalculs", { annee: FI_RECAP_ANNEE });
+
+    if (calculs.length === 0) {
+      tbody.innerHTML = "";
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+
+    const smigParams = await apiCall("getSmig", { annee: DTI_CURRENT_YEAR });
+    await chargerEsesCache(); // pour rafraîchir le nom via le matricule ci-dessous
+
+    const rows = await Promise.all(calculs.map(async (c) => {
+      let regime = "40H";
+      let smig = "";
+      let etat = "En cours";
+      let anneeDti = DTI_CURRENT_YEAR;
+      let stages = {};
+      let matricule = "";
+
+      try {
+        const data = await apiCall("chargerCalcul", { fileId: c.id });
+        regime = String(data.regime || regime).trim().toUpperCase();
+        smig = String(data.smig || "").trim();
+        etat = data.etat || etat;
+        anneeDti = data.anneeDti || anneeDti;
+        stages = data.stages || {};
+        matricule = data.matricule || "";
+      } catch (err) {
+        console.warn("Impossible de charger les données FI pour", c.id, err.message);
+      }
+
+      if (smigParams) {
+        const currentSmig = regime === "48H" ? smigParams.smig48 : smigParams.smig40;
+        if (currentSmig !== undefined && currentSmig !== null && String(currentSmig).trim() !== "") {
+          smig = currentSmig;
+        }
+      }
+
+      return {
+        ...c,
+        entreprise: nomEseAJour(matricule, c.entreprise),
+        regime,
+        smig: smig || "",
+        etat,
+        anneeDti,
+        stages,
+        matricule
+      };
+    }));
+
+    rows.forEach((row) => {
+      if (row.id) {
+        dtiRealisationCache[row.id] = row;
+      }
+    });
+
+    tbody.innerHTML = rows.map((c) => `
+      <tr>
+        <td>${c.entreprise}</td>
+        <td>${c.matricule || "----"}</td>
+        <td>${c.smig ? formatMontant(c.smig, false) : "----"}</td>
+        <td>${c.budget ? formatMontant(c.budget) : "----"}</td>
+        <td>${c.etat || "En cours"}</td>
+        <td class="fi_recap_actions">
+          <a class="btn_info" href="fi.html?calcul=${c.id}">
+            <i class="bi bi-eye"></i> Afficher
+          </a>
+          <button type="button" class="btn_primary" data-editer-id="${c.id}">
+            <i class="bi bi-pencil"></i> Editer
+          </button>
+          <button type="button" class="btn_info" data-realisation-id="${c.id}">
+            <i class="bi bi-calculator"></i> Simulation
+          </button>
+        </td>
+      </tr>`).join("");
+
+    tbody.querySelectorAll("[data-realisation-id]").forEach((btn) => {
+      btn.addEventListener("click", () => openRealisationModal(dtiRealisationCache[btn.dataset.realisationId]));
+    });
+    tbody.querySelectorAll("[data-editer-id]").forEach((btn) => {
+      btn.addEventListener("click", () => ouvrirModalEditerCalcul(dtiRealisationCache[btn.dataset.editerId]));
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+  }
+}
+
+/* ---------------- Section "Plans" ----------------
+   Un plan = un fichier Drive lié à un calcul FI (voir Code.gs
+   listPlansDti/chargerPlan). Comme pour le récap Formation initiale, la
+   liste des fichiers ne suffit pas (état/date/montant/budgetFi sont
+   embarqués dans chaque fichier) : on recharge chaque plan avec
+   chargerPlan() après listPlansDti(). */
+
+function etatBadgeClass(etat) {
+  switch (etat) {
+    case "Approuvé": return "is_approuve";
+    case "En cours": return "is_en_cours";
+    case "Facturé": return "is_facture";
+    default: return "is_demande"; // "Demandé"
+  }
+}
+
+async function loadPlans() {
+  const tbody = document.querySelector("#dti_plans_table tbody");
+  const emptyEl = document.getElementById("dti_plans_empty");
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr>`;
+  if (emptyEl) emptyEl.hidden = true;
+
+  try {
+    const fichiers = await apiCall("listPlansDti", { annee: DTI_CURRENT_YEAR });
+
+    if (fichiers.length === 0) {
+      tbody.innerHTML = "";
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+
+    await chargerEsesCache(); // pour rafraîchir le nom via le matricule ci-dessous
+
+    const plans = await Promise.all(fichiers.map(async (f) => {
+      try {
+        const data = await apiCall("chargerPlan", { fileId: f.id });
+        return { ...data, id: f.id, url: f.url, entreprise: nomEseAJour(data.matricule, data.entreprise) };
+      } catch (err) {
+        console.warn("Impossible de charger le plan", f.id, err.message);
+        return { id: f.id, url: f.url, entreprise: nomEseAJour(f.matricule, f.entreprise), etat: "Demandé", montant: "", date: "" };
+      }
+    }));
+
+    plans.forEach((p) => { if (p.id) dtiPlansCache[p.id] = p; });
+
+    tbody.innerHTML = plans.map((p) => `
+      <tr>
+        <td>${p.entreprise || ""}</td>
+        <td>${p.matricule || "----"}</td>
+        <td>${p.date || "----"}</td>
+        <td>${p.numPlan || "----"}</td>
+        <td><span class="dti_etat_badge ${etatBadgeClass(p.etat)}">${p.etat || "Demandé"}</span></td>
+        <td>${p.montant ? formatMontant(p.montant) : "----"}</td>
+        <td class="fi_recap_actions">
+          <a class="btn_info" href="plan.html?id=${p.id}">
+            <i class="bi bi-eye"></i> Afficher
+          </a>
+          <button type="button" class="btn_primary" data-editer-plan-id="${p.id}">
+            <i class="bi bi-pencil"></i> Editer
+          </button>
+        </td>
+      </tr>`).join("");
+
+    tbody.querySelectorAll("[data-editer-plan-id]").forEach((btn) => {
+      btn.addEventListener("click", () => ouvrirModalEditerPlan(dtiPlansCache[btn.dataset.editerPlanId]));
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+  }
+}
+
+/* ---------------- Section "Commission" ----------------
+   Contrairement aux Plans/Calculs (un fichier par entité), TOUTES les
+   commissions vivent dans un unique fichier Drive (voir listCommissions /
+   enregistrerCommission côté Code.gs). Une commission référence un
+   sous-ensemble des plans en état "Demandé" (dtiPlansCache, alimenté par
+   loadPlans() ci-dessus) ; à l'enregistrement, sa date et ses 2 numéros
+   sont propagés vers ces plans, où ils deviennent alors affichage seul
+   dans plan.html (onglet "Commission"). */
+
+const DTI_COMMISSION_ETATS = ["Prévue", "Programmée", "Reportée", "Achevé"];
+let dtiCommissionsCache = {}; // commissions, clé = id
+
+function commissionEtatBadgeClass(etat) {
+  switch (etat) {
+    case "Programmée": return "is_approuve";
+    case "Reportée": return "is_en_cours";
+    case "Achevé": return "is_facture";
+    default: return "is_demande"; // "Prévue"
+  }
+}
+
+async function loadCommissions() {
+  const tbody = document.querySelector("#dti_commissions_table tbody");
+  const emptyEl = document.getElementById("dti_commissions_empty");
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="5"><span class="loading_state">Chargement...</span></td></tr>`;
+  if (emptyEl) emptyEl.hidden = true;
+
+  try {
+    const commissions = await apiCall("listCommissions", {});
+    dtiCommissionsCache = {};
+    commissions.forEach((c) => { dtiCommissionsCache[c.id] = c; });
+
+    if (commissions.length === 0) {
+      tbody.innerHTML = "";
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+
+    tbody.innerHTML = commissions.map((c) => `
+      <tr>
+        <td>${c.numCommissionUR || "----"}/${c.numCommissionAnnee || "----"}</td>
+        <td>${c.date || "----"}</td>
+        <td><span class="dti_etat_badge ${commissionEtatBadgeClass(c.etat)}">${c.etat || "Prévue"}</span></td>
+        <td>${(c.plans || []).length}</td>
+        <td class="fi_recap_actions">
+          <button type="button" class="btn_primary" data-editer-commission-id="${c.id}">
+            <i class="bi bi-pencil"></i> Editer
+          </button>
+        </td>
+      </tr>`).join("");
+
+    tbody.querySelectorAll("[data-editer-commission-id]").forEach((btn) => {
+      btn.addEventListener("click", () => ouvrirModalCommission(dtiCommissionsCache[btn.dataset.editerCommissionId]));
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="5"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+  }
+}
+
+function wireDtiCommissionModal() {
+  document.getElementById("dti_btn_nouvelle_commission")?.addEventListener("click", () => ouvrirModalCommission(null));
+  document.getElementById("dti_commission_etat")?.addEventListener("change", appliquerVerrouDateCommission);
+  document.getElementById("dti_commission_btn_enregistrer")?.addEventListener("click", enregistrerCommission);
+}
+
+// La date de commission n'a de sens que pour une commission "Programmée" ;
+// désactivée (et vidée) pour les autres états.
+function appliquerVerrouDateCommission() {
+  const dateInput = document.getElementById("dti_commission_date");
+  const estProgrammee = document.getElementById("dti_commission_etat").value === "Programmée";
+  dateInput.disabled = !estProgrammee;
+  if (!estProgrammee) dateInput.value = "";
+}
+
+function ouvrirModalCommission(record) {
+  const modal = document.getElementById("dti_modal_commission");
+  modal.dataset.commissionId = record?.id || "";
+  document.getElementById("dti_commission_titre").textContent = record ? "Éditer la commission" : "Nouvelle commission";
+  document.getElementById("dti_commission_num_ur").value = record?.numCommissionUR || "";
+  document.getElementById("dti_commission_num_annee").value = record?.numCommissionAnnee || "";
+  document.getElementById("dti_commission_etat").value = DTI_COMMISSION_ETATS.includes(record?.etat) ? record.etat : "Prévue";
+  document.getElementById("dti_commission_date").value = record?.date || "";
+  appliquerVerrouDateCommission();
+
+  renderCommissionPlansList(record?.plans || []);
+  modal.classList.add("is_visible");
+}
+
+// Plans cochables : ceux en état "Demandé", plus ceux déjà rattachés à
+// cette commission (visibles/cochés même si leur état a changé depuis) —
+// évite qu'un plan déjà lié ne "disparaisse" à l'ouverture en édition.
+function renderCommissionPlansList(planIdsDejaLies) {
+  const list = document.getElementById("dti_commission_plans_list");
+  const dejaLies = new Set(planIdsDejaLies);
+  const plans = Object.values(dtiPlansCache).filter((p) => (p.etat || "Demandé") === "Demandé" || dejaLies.has(p.id));
+
+  if (plans.length === 0) {
+    list.innerHTML = `<li class="dti_commission_plans_empty">Aucune demande en attente.</li>`;
+    return;
+  }
+
+  list.innerHTML = plans.map((p) => `
+    <li>
+      <label>
+        <input type="checkbox" value="${p.id}" ${dejaLies.has(p.id) ? "checked" : ""} />
+        ${p.entreprise || "----"}${p.numPlan ? ` (N° ${p.numPlan})` : ""}
+      </label>
+    </li>`).join("");
+}
+
+async function enregistrerCommission() {
+  const modal = document.getElementById("dti_modal_commission");
+  const etat = document.getElementById("dti_commission_etat").value;
+  const date = document.getElementById("dti_commission_date").value;
+
+  if (etat === "Programmée" && !date) {
+    alert("La date est obligatoire pour une commission Programmée.");
+    return;
+  }
+
+  const commission = {
+    id: modal.dataset.commissionId || undefined,
+    numCommissionUR: document.getElementById("dti_commission_num_ur").value.trim(),
+    numCommissionAnnee: document.getElementById("dti_commission_num_annee").value.trim(),
+    etat,
+    date,
+    plans: Array.from(document.querySelectorAll("#dti_commission_plans_list input[type=checkbox]:checked")).map((cb) => cb.value)
+  };
+
+  const btn = document.getElementById("dti_commission_btn_enregistrer");
+  setBtnSaving(btn, true);
+  try {
+    await apiCall("enregistrerCommission", { commission });
+    closeModal("dti_modal_commission");
+    await loadCommissions();
+    await loadPlans(); // rafraîchit les plans dont date/n° commission viennent d'être propagés
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+/* ---------------- Modale "Nouveau plan" (choix d'un calcul FI) ----------------
+   Sélection de l'entreprise dans la liste (mise en surbrillance, pas de
+   navigation immédiate), puis saisie de la date de la demande et du numéro
+   de plan ; le bouton "Enregistrer" crée directement le fichier Drive du
+   plan (exportPlanToDrive) et redirige vers plan.html?id=. */
+
+let dtiNouveauPlanSelection = null; // calcul choisi dans la liste (voir dtiRealisationCache)
+
+function wireDtiNouveauPlanModal() {
+  document.getElementById("dti_btn_nouveau_plan")?.addEventListener("click", ouvrirModalNouveauPlan);
+  const searchInput = document.getElementById("dti_nouveau_plan_search");
+  searchInput?.addEventListener("input", () => renderNouveauPlanList(searchInput.value));
+  document.getElementById("dti_nouveau_plan_btn_enregistrer")?.addEventListener("click", enregistrerNouveauPlan);
+}
+
+async function ouvrirModalNouveauPlan() {
+  const list = document.getElementById("dti_nouveau_plan_list");
+  const searchInput = document.getElementById("dti_nouveau_plan_search");
+  if (searchInput) searchInput.value = "";
+
+  dtiNouveauPlanSelection = null;
+  document.getElementById("dti_nouveau_plan_date").value = new Date().toISOString().slice(0, 10);
+  document.getElementById("dti_nouveau_plan_num").value = "";
+  const btnEnregistrer = document.getElementById("dti_nouveau_plan_btn_enregistrer");
+  if (btnEnregistrer) btnEnregistrer.disabled = true;
+
+  document.getElementById("dti_modal_nouveau_plan")?.classList.add("is_visible");
+
+  // dtiRealisationCache est alimenté par loadRecapFormationInitiale() au
+  // chargement de la page ; si un plan est ouvert avant la fin de cet appel
+  // (chargement lent), on le déclenche ici pour ne pas laisser la liste vide.
+  if (Object.keys(dtiRealisationCache).length === 0) {
+    list.innerHTML = `<li class="dti_ese_item"><span class="loading_state">Chargement...</span></li>`;
+    await loadRecapFormationInitiale();
+  }
+  renderNouveauPlanList("");
+  searchInput?.focus();
+}
+
+function renderNouveauPlanList(query) {
+  const list = document.getElementById("dti_nouveau_plan_list");
+  const q = (query || "").trim().toLowerCase();
+
+  const calculs = Object.values(dtiRealisationCache).filter((c) =>
+    (c.entreprise || "").toLowerCase().includes(q)
+  );
+
+  if (calculs.length === 0) {
+    list.innerHTML = `<li class="dti_ese_item">Aucun calcul Formation initiale trouvé pour ${FI_RECAP_ANNEE}.</li>`;
+    return;
+  }
+
+  list.innerHTML = calculs.map((c) => `
+      <li class="dti_ese_item${dtiNouveauPlanSelection?.id === c.id ? " is_selected" : ""}" data-calcul-id="${c.id}" data-nom="${c.entreprise}">
+        <span>${c.entreprise}</span>
+        <span class="dti_ese_badge">${c.budget ? formatMontant(c.budget) : "----"}</span>
+      </li>`).join("");
+
+  list.querySelectorAll(".dti_ese_item[data-calcul-id]").forEach((el) => {
+    el.addEventListener("click", () => {
+      dtiNouveauPlanSelection = dtiRealisationCache[el.dataset.calculId] || { id: el.dataset.calculId, entreprise: el.dataset.nom };
+      list.querySelectorAll(".dti_ese_item").forEach((li) => li.classList.remove("is_selected"));
+      el.classList.add("is_selected");
+      const btnEnregistrer = document.getElementById("dti_nouveau_plan_btn_enregistrer");
+      if (btnEnregistrer) btnEnregistrer.disabled = false;
+    });
+  });
+}
+
+async function enregistrerNouveauPlan() {
+  if (!dtiNouveauPlanSelection?.id) return;
+
+  const btn = document.getElementById("dti_nouveau_plan_btn_enregistrer");
+  setBtnSaving(btn, true);
+  try {
+    // On relit le calcul FI (anneeFi/budgetFi/anneeDti à jour), la liste
+    // en cache n'en portant qu'un sous-ensemble (voir loadRecapFormationInitiale()).
+    const calcul = await apiCall("chargerCalcul", { fileId: dtiNouveauPlanSelection.id });
+    const plan = {
+      entreprise: dtiNouveauPlanSelection.entreprise,
+      matricule: calcul.matricule || "",
+      calculId: dtiNouveauPlanSelection.id,
+      anneeFi: calcul.annee,
+      budgetFi: calcul.budget,
+      anneeDti: calcul.anneeDti || DTI_CURRENT_YEAR,
+      date: document.getElementById("dti_nouveau_plan_date").value,
+      numPlan: document.getElementById("dti_nouveau_plan_num").value.trim(),
+      numPlanEse: document.getElementById("dti_nouveau_plan_num_ese").value.trim(),
+      etat: "Demandé",
+      montant: "",
+      actions: []
+    };
+    const { id } = await apiCall("exportPlanToDrive", { plan });
+    window.location.href = `plan.html?id=${id}`;
+  } catch (err) {
+    alert(`Erreur lors de la création du plan : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+/* ---------------- Modale "Editer" (plan) ---------------- */
+
+function wireDtiEditerPlanModal() {
+  document.getElementById("dti_editer_plan_btn_enregistrer")?.addEventListener("click", enregistrerEditionPlan);
+  document.getElementById("dti_editer_plan_montant")?.addEventListener("input", verifierMontantPlan);
+}
+
+function verifierMontantPlan() {
+  const modal = document.getElementById("dti_modal_editer_plan");
+  const budgetFi = parseDecimal(modal?.dataset?.budgetFi);
+  const montant = parseDecimal(document.getElementById("dti_editer_plan_montant")?.value);
+  const note = document.getElementById("dti_editer_plan_montant_note");
+  const btn = document.getElementById("dti_editer_plan_btn_enregistrer");
+  if (!note) return;
+
+  if (budgetFi === null) {
+    note.textContent = "";
+    note.classList.remove("is_over_budget");
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  const depasse = montant !== null && montant > budgetFi;
+  note.textContent = `Plafond : ${formatMontant(budgetFi)} (budget du calcul FI lié)`;
+  note.classList.toggle("is_over_budget", depasse);
+  if (btn) btn.disabled = depasse;
+}
+
+function ouvrirModalEditerPlan(record) {
+  if (!record) return;
+  const modal = document.getElementById("dti_modal_editer_plan");
+  modal.dataset.planId = record.id || "";
+  modal.dataset.budgetFi = record.budgetFi || "";
+  document.getElementById("dti_editer_plan_entreprise").value = record.entreprise || "";
+  document.getElementById("dti_editer_plan_matricule").value = record.matricule || "";
+  document.getElementById("dti_editer_plan_budget_fi").value = record.budgetFi ? formatMontant(record.budgetFi) : "----";
+  document.getElementById("dti_editer_plan_date").value = record.date || "";
+  document.getElementById("dti_editer_plan_num").value = record.numPlan || "";
+  document.getElementById("dti_editer_plan_num_ese").value = record.numPlanEse || "";
+  document.getElementById("dti_editer_plan_etat").value = DTI_PLAN_ETATS.includes(record.etat) ? record.etat : "Demandé";
+  document.getElementById("dti_editer_plan_montant").value = record.montant || "";
+  document.getElementById("dti_editer_plan_regime_horaire").value = record.regimeHoraire || "";
+  verifierMontantPlan();
+  modal.classList.add("is_visible");
+}
+
+async function enregistrerEditionPlan() {
+  const modal = document.getElementById("dti_modal_editer_plan");
+  const fileId = modal?.dataset?.planId;
+  if (!fileId) return;
+
+  const meta = {
+    date: document.getElementById("dti_editer_plan_date").value,
+    numPlan: document.getElementById("dti_editer_plan_num").value.trim(),
+    numPlanEse: document.getElementById("dti_editer_plan_num_ese").value.trim(),
+    etat: document.getElementById("dti_editer_plan_etat").value,
+    montant: parseDecimal(document.getElementById("dti_editer_plan_montant").value),
+    matricule: document.getElementById("dti_editer_plan_matricule").value.trim(),
+    regimeHoraire: document.getElementById("dti_editer_plan_regime_horaire").value.trim()
+  };
+
+  const budgetFi = parseDecimal(modal.dataset.budgetFi);
+  if (budgetFi !== null && meta.montant !== null && meta.montant > budgetFi) {
+    alert("Le montant ne peut pas dépasser le budget du calcul Formation initiale lié.");
+    return;
+  }
+
+  const btn = document.getElementById("dti_editer_plan_btn_enregistrer");
+  setBtnSaving(btn, true);
+  try {
+    await apiCall("mettreAJourPlan", { fileId, meta });
+    closeModal("dti_modal_editer_plan");
+    await loadPlans();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+function wireDtiModals() {
+  document.querySelectorAll("[data-close-modal]").forEach((btn) => {
+    btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
+  });
+  document.querySelectorAll(".modal_overlay").forEach((overlay) => {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeModal(overlay.id);
+    });
+  });
+}
+
+/* ---------------- Modale "Nouveau calcul" (choix entreprise) ----------------
+   Reprend le principe de l'ancienne modale "Choisir une entreprise" de
+   fi.html : recherche instantanée dans la base "eses". Les entreprises
+   ayant déjà un calcul pour l'année active (dtiRealisationCache, rempli
+   par loadRecapFormationInitiale) sont grisées avec un renvoi vers
+   "Afficher" plutôt que de laisser créer un doublon — fi.html revérifie
+   de toute façon côté serveur au moment du choix. Une fois l'entreprise
+   choisie, on ouvre fi.html?ese=<nom> qui repart d'un dossier vierge avec
+   cette entreprise déjà sélectionnée. */
+
+function wireDtiNouveauCalculModal() {
+  document.getElementById("dti_btn_nouveau_calcul")?.addEventListener("click", ouvrirModalNouveauCalcul);
+  const searchInput = document.getElementById("dti_nouveau_calcul_search");
+  searchInput?.addEventListener("input", () => renderNouveauCalculList(searchInput.value));
+}
+
+async function ouvrirModalNouveauCalcul() {
+  const list = document.getElementById("dti_nouveau_calcul_list");
+  const searchInput = document.getElementById("dti_nouveau_calcul_search");
+  if (searchInput) searchInput.value = "";
+  list.innerHTML = `<li class="dti_ese_item"><span class="loading_state">Chargement...</span></li>`;
+  document.getElementById("dti_modal_nouveau_calcul")?.classList.add("is_visible");
+
+  try {
+    await chargerEsesCache();
+    renderNouveauCalculList("");
+    searchInput?.focus();
+  } catch (err) {
+    list.innerHTML = `<li class="dti_ese_item"><span class="error_state">Erreur : ${err.message}</span></li>`;
+  }
+}
+
+function renderNouveauCalculList(query) {
+  const list = document.getElementById("dti_nouveau_calcul_list");
+  const q = (query || "").trim().toLowerCase();
+
+  // Le matricule est la référence : un renommage dans la base "eses" ne
+  // doit pas faire perdre la détection d'un calcul déjà existant.
+  const matriculesAvecCalcul = new Set(
+    Object.values(dtiRealisationCache).map((c) => String(c.matricule || "").trim()).filter(Boolean)
+  );
+
+  const filtered = dtiEsesCache.filter((e) =>
+    `${e["Raison sociale"] || ""} ${e["Nom commerciale"] || ""}`.toLowerCase().includes(q)
+  );
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<li class="dti_ese_item">Aucune entreprise trouvée.</li>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map((e) => {
+    const nom = e["Raison sociale"] || e["Nom commerciale"] || "(sans nom)";
+    const matricule = String(e["Matricule"] || "").trim();
+    const aDejaUnCalcul = matricule !== "" && matriculesAvecCalcul.has(matricule);
+    return `
+      <li class="dti_ese_item${aDejaUnCalcul ? " is_disabled" : ""}" data-nom="${nom}" title="${aDejaUnCalcul ? "Utilisez « Afficher » dans le tableau pour reprendre ce calcul" : ""}">
+        <span>${nom}</span>
+        <span class="dti_ese_badge">${aDejaUnCalcul ? "Calcul existant" : (e["Régime Horaire"] || "40H")}</span>
+      </li>`;
+  }).join("");
+
+  list.querySelectorAll(".dti_ese_item:not(.is_disabled)[data-nom]").forEach((el) => {
+    el.addEventListener("click", () => {
+      window.location.href = `fi.html?ese=${encodeURIComponent(el.dataset.nom)}`;
+    });
+  });
+}
+
+function wireDtiRealisationMode() {
+  const modeSelect = document.getElementById("dti_realisation_mode");
+  if (!modeSelect) return;
+  modeSelect.addEventListener("change", () => {
+    const modal = document.getElementById("dti_realisation_modal");
+    const calculId = modal?.dataset?.calculId;
+    if (calculId && dtiRealisationCache[calculId]) {
+      updateRealisationModal(dtiRealisationCache[calculId]);
+    }
+  });
+}
+
+function closeModal(id) {
+  document.getElementById(id)?.classList.remove("is_visible");
+}
+
+/* ---------------- Modale "Editer" (état / année dti d'un calcul) ---------------- */
+
+function wireDtiEditerModal() {
+  document.getElementById("dti_editer_btn_enregistrer")?.addEventListener("click", enregistrerEditionCalcul);
+  document.getElementById("dti_editer_etat")?.addEventListener("change", appliquerVerrouAnneeDti);
+}
+
+// Un calcul "Clôturé" ne doit plus voir son année dti changer : le champ
+// est verrouillé dès que l'état sélectionné (pas encore forcément enregistré)
+// est "Clôturé", y compris pendant la saisie avant "Enregistrer".
+function appliquerVerrouAnneeDti() {
+  const estCloture = document.getElementById("dti_editer_etat")?.value === "Clôturé";
+  const champAnneeDti = document.getElementById("dti_editer_annee_dti");
+  if (champAnneeDti) champAnneeDti.disabled = estCloture;
+}
+
+function ouvrirModalEditerCalcul(record) {
+  if (!record) return;
+  const modal = document.getElementById("dti_modal_editer");
+  modal.dataset.calculId = record.id || "";
+  document.getElementById("dti_editer_entreprise").value = record.entreprise || "";
+  document.getElementById("dti_editer_matricule").value = record.matricule || "";
+  document.getElementById("dti_editer_annee_fi").value = FI_RECAP_ANNEE;
+  document.getElementById("dti_editer_annee_dti").value = record.anneeDti || DTI_CURRENT_YEAR;
+  document.getElementById("dti_editer_etat").value = record.etat || "En cours";
+  appliquerVerrouAnneeDti();
+  modal.classList.add("is_visible");
+}
+
+async function enregistrerEditionCalcul() {
+  const modal = document.getElementById("dti_modal_editer");
+  const fileId = modal?.dataset?.calculId;
+  if (!fileId) return;
+
+  const meta = {
+    etat: document.getElementById("dti_editer_etat").value,
+    anneeDti: Number(document.getElementById("dti_editer_annee_dti").value) || DTI_CURRENT_YEAR,
+    matricule: document.getElementById("dti_editer_matricule").value.trim()
+  };
+
+  const btn = document.getElementById("dti_editer_btn_enregistrer");
+  setBtnSaving(btn, true);
+  try {
+    await apiCall("mettreAJourCalcul", { fileId, meta });
+    closeModal("dti_modal_editer");
+    await loadRecapFormationInitiale();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+// Affiche/masque un spinner sur un bouton "Enregistrer" pendant l'appel
+// serveur (même comportement que fi.html, pour une expérience uniforme).
+function setBtnSaving(btn, saving, savingLabel = "Enregistrement...") {
+  if (!btn) return;
+  if (saving) {
+    if (btn.dataset.originalHtml === undefined) btn.dataset.originalHtml = btn.innerHTML;
+    btn.innerHTML = `<span class="btn_saving_spinner"></span> ${savingLabel}`;
+    btn.classList.add("btn_saving");
+    btn.disabled = true;
+  } else {
+    if (btn.dataset.originalHtml !== undefined) btn.innerHTML = btn.dataset.originalHtml;
+    btn.classList.remove("btn_saving");
+    btn.disabled = false;
+  }
+}
+
+function parseDecimal(value) {
+  const n = Number(String(value || "").trim().replace(",", "."));
+  return Number.isNaN(n) ? null : n;
+}
+
+function openRealisationModal(record) {
+  if (!record) return;
+  const modal = document.getElementById("dti_realisation_modal");
+  const entreprise = document.getElementById("dti_realisation_entreprise");
+  const modeSelect = document.getElementById("dti_realisation_mode");
+  const budget = document.getElementById("dti_realisation_budget");
+  const smig = document.getElementById("dti_realisation_smig");
+
+  modal.dataset.calculId = record.id || "";
+  entreprise.value = record.entreprise || "";
+  modeSelect.value = "intra-externe";
+  budget.value = record.budget ? formatMontant(record.budget) : "----";
+  smig.value = record.smig ? formatMontant(record.smig, false) : "----";
+
+  updateRealisationModal(record);
+  modal.classList.add("is_visible");
+}
+
+function updateRealisationModal(record) {
+  const note = document.getElementById("dti_realisation_note");
+  const nbHeuresEl = document.getElementById("dti_realisation_nb_heures");
+  const nbJoursEl = document.getElementById("dti_realisation_nb_jours");
+  const nbResultEl = document.getElementById("dti_realisation_nbjours_heures");
+
+  const budget = parseDecimal(record.budget);
+  const smig = parseDecimal(record.smig);
+  if (budget === null || smig === null || smig === 0) {
+    note.textContent = "Budget et SMIG DTI valides requis pour calculer la réalisation.";
+    nbHeuresEl.textContent = "--";
+    nbJoursEl.textContent = "--";
+    nbResultEl.textContent = "--";
+    return;
+  }
+
+  const mode = document.getElementById("dti_realisation_mode")?.value;
+  let modeNote = "";
+  if (mode !== "intra-externe") {
+    modeNote = "Ce mode est à venir : le calcul est affiché avec le mode ‘Animateur externe résident’.";
+  }
+
+  note.textContent = modeNote;
+  const nbHeures = Math.round((budget / (smig / 5)) * 100) / 100;
+  const nbJours = Math.round((nbHeures / 6) * 100) / 100;
+  const joursComplets = Math.floor(nbHeures / 6);
+  const restantHeures = Math.round((nbHeures - joursComplets * 6) * 100) / 100;
+
+  nbHeuresEl.textContent = `${nbHeures.toFixed(2)} heures`;
+  nbJoursEl.textContent = `${nbJours.toFixed(2)} jours`;
+  nbResultEl.textContent = `${joursComplets} jour${joursComplets > 1 ? "s" : ""}` + (restantHeures ? ` et ${restantHeures.toFixed(2)} heures` : "");
+}
+  </script>
+</body>
+</html>

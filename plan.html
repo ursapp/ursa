@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plan — URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/navbar.css" />
+  <style>
+    /* ============================================================
+       Styles propres à plan.html (page autonome, sans sidebar).
+       Reprise du principe de fi.html / bilan.html : bandeau pêche
+       (.btns_metiers / .infos_metiers, définis dans layout.css/navbar.css),
+       préfixe "pl_" pour ce module. Trois sections métier repliables :
+       Actions / Réalisation / Facturation (pas de section "Formation
+       initiale" ici — le calcul FI lié n'est qu'une référence, affichée
+       dans la barre .infos_metiers).
+       ============================================================ */
+
+    .pl_info_inline { font-size: var(--fs_sm); font-family: var(--font_mono); color: var(--text_secondary); }
+    .pl_info_inline span { font-weight: bold; color: var(--text_primary); }
+
+    .pl_form_card {
+      background: var(--color_paper_raised);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_md);
+      padding: var(--space_5);
+      max-width: 640px;
+    }
+
+    .pl_form_grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space_4);
+    }
+
+    .pl_form_grid label {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_2);
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+    }
+
+    .pl_form_grid input,
+    .pl_form_grid select {
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper_raised);
+      color: var(--text_primary);
+    }
+
+    /* Modale "Editer" : sections regroupées en onglets horizontaux (Demande /
+       Complément / Commission / Lettre d'approbation / Décision de
+       financement), un seul panneau visible à la fois — voir
+       ouvrirModalEditer() / activerOngletEditer() plus bas. */
+    .pl_editer_tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space_2);
+      border-bottom: 1px solid var(--border_soft);
+      margin-bottom: var(--space_4);
+    }
+    .pl_editer_tab {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: var(--space_2) var(--space_1);
+      font-size: var(--fs_sm);
+      font-weight: 600;
+      color: var(--text_secondary);
+      cursor: pointer;
+    }
+    .pl_editer_tab:hover { color: var(--text_primary); }
+    .pl_editer_tab.is_active { color: var(--color_info); border-bottom-color: var(--color_info); }
+    .pl_editer_panel { display: none; }
+    .pl_editer_panel.is_active { display: block; }
+    .pl_form_grid_3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #pl_modal_editer .modal_dialog { max-width: 760px; }
+
+    .pl_form_grid input:disabled,
+    .pl_form_grid input[readonly] { background: var(--color_paper); color: var(--text_secondary); cursor: not-allowed; }
+
+    .pl_montant_note {
+      display: block;
+      margin-top: var(--space_1);
+      font-size: var(--fs_xs);
+      color: var(--text_secondary);
+    }
+    .pl_montant_note.is_over_budget { color: var(--color_danger); font-weight: 600; }
+
+    /* Badge état — même palette que dti.html#plans (DTI.CSS) */
+    .dti_etat_badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space_1);
+      padding: 2px var(--space_2);
+      border-radius: var(--radius_sm);
+      font-family: var(--font_mono);
+      font-weight: 700;
+      font-size: var(--fs_xs);
+      white-space: nowrap;
+    }
+    .dti_etat_badge.is_demande { background: color-mix(in srgb, var(--color_notify) 18%, var(--color_paper_raised)); color: var(--color_notify); }
+    .dti_etat_badge.is_approuve { background: color-mix(in srgb, var(--color_info) 18%, var(--color_paper_raised)); color: var(--color_info); }
+    .dti_etat_badge.is_en_cours { background: color-mix(in srgb, var(--color_seal) 18%, var(--color_paper_raised)); color: var(--color_seal); }
+    .dti_etat_badge.is_facture { background: color-mix(in srgb, var(--color_real) 18%, var(--color_paper_raised)); color: var(--color_real); }
+
+    /* Sections "Réalisation" / "Facturation" : à construire (voir dti.html
+       #realisation / #facturation, même statut). */
+    .fi_placeholder {
+      color: var(--text_secondary);
+      font-style: italic;
+      padding: var(--space_4);
+      margin: 0;
+    }
+
+    /* Table des actions du plan (Réf action / Thème / Jours / Heures /
+       Cabinet / Formateur / CIN) : réutilise .data_table (layout.css). */
+    .pl_actions_header {
+      display: flex;
+      justify-content: flex-end;
+      padding: var(--space_3) var(--space_4);
+    }
+
+    /* Boutons de la colonne Actions des 3 tableaux : mêmes boutons
+       discrets (icône seule, sans fond) que fi.html. */
+    .fi_row_actions { display: flex; align-items: center; gap: var(--space_2); }
+    .fi_row_edit { background: transparent; border: none; color: var(--text_secondary); }
+    .fi_row_edit:hover { color: var(--color_info); }
+    .fi_row_delete { background: transparent; border: none; color: var(--text_secondary); }
+    .fi_row_delete:hover { color: var(--color_danger); }
+
+    /* Cellule Thème : largeur réduite, sans retour à la ligne, complétée
+       par des points de suspension ; le texte complet s'affiche au survol
+       via l'attribut title. */
+    .pl_theme_cell {
+      max-width: 180px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Reprises telles quelles de dti.html (styles locaux, non globaux). */
+    .fi_recap_actions {
+      display: flex;
+      gap: var(--space_2);
+      flex-wrap: wrap;
+    }
+    .dti_editer_footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space_3);
+      padding: var(--space_4);
+      border-top: 1px solid var(--border_soft);
+    }
+
+    .pl_confirmation_list {
+      list-style: none;
+      margin: var(--space_3) 0 0;
+      padding: 0;
+      max-height: 260px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_2);
+    }
+    .pl_confirmation_item label {
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+      font-weight: normal;
+    }
+    .pl_confirmation_item .pl_confirmation_deja {
+      color: var(--text_secondary);
+      font-size: var(--fs_sm);
+    }
+
+    .pl_cabinet_field { display: flex; gap: var(--space_2); }
+    .pl_cabinet_field input { flex: 1 1 auto; }
+    .pl_cabinet_field button { flex: 0 0 auto; }
+
+    #pl_modal_cabinet_choix .modal_dialog { max-width: 640px; }
+    #pl_cabinet_choix_table tbody tr { cursor: pointer; }
+    #pl_cabinet_choix_table tbody tr:hover { background: var(--color_paper); }
+
+    .pl_cabinet_propager_nom { font-weight: 600; margin: 0 0 var(--space_3); }
+    .pl_cabinet_propager_option { display: block; margin-bottom: var(--space_2); }
+    .pl_cabinet_propager_option input:disabled + span { color: var(--text_secondary); }
+    .pl_cabinet_propager_note { font-size: var(--fs_sm); color: var(--text_secondary); margin-left: var(--space_5); }
+
+    /* Modale "Imprimer" : liste des fichiers déjà déposés sur le Drive pour
+       ce plan (lettre d'approbation, etc. — voir listFichiersPlan côté
+       Code.gs et chargerFichiersImprimer() plus bas). */
+    .pl_print_choix {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_3);
+    }
+    .pl_print_choix .btn_info { justify-content: flex-start; }
+    .pl_print_aucun { text-align: center; padding: var(--space_3); color: var(--text_secondary); }
+  </style>
+  <script src="js/session.js"></script>
+</head>
+<body>
+
+  <header class="navbar navbar_metier">
+    <div class="page_title_group">
+      <span class="page_eyebrow">DTI · Droits de tirage individuels</span>
+      <h1 class="page_title">Plan <span data-field="entreprise">----</span></h1>
+    </div>
+    <div class="navbar_status" id="navbar_status">
+      <span class="loading_state navbar_load" id="navbar_loading">Chargement...</span>
+      <span class="navbar_alert" id="navbar_alert_save" hidden>
+        <i class="bi bi-exclamation-triangle-fill"></i> Données à sauvegarder !
+      </span>
+    </div>
+    <div class="navbar_actions">
+      <span class="navbar_breadcrumb">
+        <a href="index.html">Accueil</a> <i class="bi bi-chevron-right"></i>
+        <a href="dti.html#plans">Droits de tirage individuels</a> <i class="bi bi-chevron-right"></i>
+        Plans
+      </span>
+      <button type="button" class="btn_logout_navbar" id="navbar_btn_logout" hidden title="Se déconnecter">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="btns_metiers">
+    <a href="dti.html#plans" class="btn_ghost btn_retour"><i class="bi bi-arrow-return-left"></i> Retour</a>
+    <button type="button" class="btn_primary" id="pl_btn_editer">
+      <i class="bi bi-pencil-square"></i> Editer
+    </button>
+    <button type="button" class="btn_success" id="pl_btn_enregistrer">
+      <i class="bi bi-save"></i> Enregistrer
+    </button>
+    <button type="button" class="btn_info" id="pl_btn_imprimer">
+      <i class="bi bi-printer"></i> Imprimer
+    </button>
+  </div>
+
+  <div class="infos_metiers">
+    <span class="pl_info_inline">Entreprise : <span data-field="entreprise">----</span></span>
+    <span class="pl_info_inline" hidden>Matricule : <span data-field="matricule">----</span></span>
+    <span class="pl_info_inline">Date : <span data-field="date">----</span></span>
+    <span class="pl_info_inline">N° plan : <span data-field="numPlan">----</span></span>
+    <span class="pl_info_inline">Réf : <span data-field="refPlan">----</span></span>
+    <span class="pl_info_inline">État : <span data-field="etat"><span class="dti_etat_badge is_demande">Demandé</span></span></span>
+    <span class="pl_info_inline">Montant : <span data-field="montant">----</span></span>
+  </div>
+
+  <main class="app_content app_content_metier">
+
+    <section class="block_metiers block_metiers_accordion is_collapsed" data-section="actions">
+      <div class="block_metiers_header">
+        <h3>Actions de formation</h3>
+        <span class="block_metiers_status" data-status="actions">Aucune action</span>
+        <button type="button" class="btn_info" id="pl_btn_import_excel">
+          <i class="bi bi-file-earmark-excel"></i> Importer d'Excel
+        </button>
+        <input type="file" id="pl_import_file" accept=".xlsx,.xls,.csv" hidden />
+        <button type="button" class="btn_info" id="pl_btn_ajouter_action">
+          <i class="bi bi-plus-lg"></i> Ajouter une action
+        </button>
+        <button type="button" class="btn_info" id="pl_btn_ajouter_planif">
+          <i class="bi bi-calendar-plus"></i> Ajouter une planification
+        </button>
+        <button type="button" class="btn_info" id="pl_btn_ajouter_confirmation">
+          <i class="bi bi-calendar-check"></i> Ajouter une confirmation
+        </button>
+        <button type="button" class="btn_info section_toggle_btn" title="Développer la section" aria-label="Développer la section">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      <table class="data_table" id="pl_actions_table">
+        <thead>
+          <tr>
+            <th>Réf</th><th>Thème</th><th>Bénéficiaires H</th><th>Bénéficiaires F</th>
+            <th>S-mode</th><th>Durée Hr</th><th>Durée Jr</th><th>Montant agrée</th>
+            <th>Date planification</th><th>Date Confirmation</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="empty_state" id="pl_actions_empty">
+        <i class="bi bi-inbox"></i>Aucune action enregistrée pour ce plan.
+      </div>
+    </section>
+
+    <section class="block_metiers block_metiers_accordion is_collapsed" data-section="realisation">
+      <div class="block_metiers_header">
+        <h3>Réalisation</h3>
+        <span class="block_metiers_status" data-status="realisation">Aucune action</span>
+        <button type="button" class="btn_info section_toggle_btn" title="Développer la section" aria-label="Développer la section">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      <table class="data_table" id="pl_realisation_table">
+        <thead>
+          <tr>
+            <th>Réf</th><th>Cabinet</th><th>Date Début</th><th>Date fin</th><th>Horaire</th>
+            <th>Lieu</th><th>Formateur</th><th>CIN formateur</th><th>Date Contrôle</th>
+            <th>Chargé du contrôle</th><th>Agréés</th><th>Agréés suivi</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="empty_state" id="pl_realisation_empty">
+        <i class="bi bi-inbox"></i>Aucune action à réaliser pour ce plan.
+      </div>
+    </section>
+
+    <section class="block_metiers block_metiers_accordion is_collapsed" data-section="facturation">
+      <div class="block_metiers_header">
+        <h3>Facturation</h3>
+        <span class="block_metiers_status" data-status="facturation">Aucune action</span>
+        <button type="button" class="btn_info section_toggle_btn" title="Développer la section" aria-label="Développer la section">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      <table class="data_table" id="pl_facturation_table">
+        <thead>
+          <tr>
+            <th>Réf</th><th>Date facturation</th><th>Numéro facturation</th><th>Complément facturation</th>
+            <th>Agréés facturation</th><th>Mnt Calculé</th><th>Date transfert</th>
+            <th>Observations</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="empty_state" id="pl_facturation_empty">
+        <i class="bi bi-inbox"></i>Aucune action à facturer pour ce plan.
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- Modale "Nouveau plan" — copie de dti_modal_nouveau_plan (dti.html),
+       sans la liste de sélection d'entreprise puisqu'ici le calcul FI lié
+       est déjà déterminé par l'URL (?calcul=&ese=). Affichée automatiquement
+       à l'ouverture de la page dans ce cas (voir demarrerNouveauPlan()) ;
+       "Enregistrer" crée directement le fichier Drive du plan et bascule
+       la page en mode "plan existant" (?id=). -->
+  <div class="modal_overlay" id="pl_modal_nouveau_plan">
+    <div class="modal_dialog">
+      <div class="modal_header">
+        <h3>Nouveau plan</h3>
+        <button type="button" class="modal_close" data-close-modal="pl_modal_nouveau_plan"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <div class="pl_form_grid">
+          <label>Entreprise
+            <input type="text" id="pl_nouveau_plan_entreprise" readonly />
+          </label>
+          <label>Date de la demande
+            <input type="date" id="pl_nouveau_plan_date" />
+          </label>
+          <label>N° plan UR
+            <input type="text" id="pl_nouveau_plan_num" placeholder="Numéro de plan (UR)" />
+          </label>
+          <label>N° plan Ese
+            <input type="text" id="pl_nouveau_plan_num_ese" placeholder="Numéro de plan (entreprise)" />
+          </label>
+        </div>
+      </div>
+      <div class="dti_editer_footer">
+        <button type="button" class="btn_success" id="pl_nouveau_plan_btn_enregistrer"><i class="bi bi-check-lg"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Editer" — date / état / montant du plan (métadonnées, pas les
+       actions). Valide seulement en mémoire (planWorking) ; l'enregistrement
+       Drive se fait via le bouton "Enregistrer" du bandeau, comme pour les
+       actions ci-dessous. -->
+  <div class="modal_overlay" id="pl_modal_editer">
+    <div class="modal_dialog">
+      <div class="modal_header">
+        <h3>Éditer le plan</h3>
+        <button type="button" class="modal_close" data-close-modal="pl_modal_editer"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <div class="pl_editer_tabs" role="tablist">
+          <button type="button" class="pl_editer_tab is_active" data-editer-tab="demande">Demande</button>
+          <button type="button" class="pl_editer_tab" data-editer-tab="complement">Complément</button>
+          <button type="button" class="pl_editer_tab" data-editer-tab="commission">Commission</button>
+          <button type="button" class="pl_editer_tab" data-editer-tab="lettre">Lettre d'approbation</button>
+          <button type="button" class="pl_editer_tab" data-editer-tab="decision">Décision de financement</button>
+        </div>
+
+        <div class="pl_editer_panel is_active" data-editer-panel="demande">
+          <div class="pl_form_grid pl_form_grid_3">
+            <label>Date demande
+              <input type="date" id="pl_editer_date" />
+            </label>
+            <label>N° arrivée demande
+              <input type="text" id="pl_editer_num_arrivee_demande" />
+            </label>
+            <label>N° plan Ese
+              <input type="text" id="pl_editer_num_ese" />
+            </label>
+            <label>N° plan UR
+              <input type="text" id="pl_editer_num" />
+            </label>
+            <label>État
+              <select id="pl_editer_etat">
+                <option value="Demandé">Demandé</option>
+                <option value="Approuvé">Approuvé</option>
+                <option value="En cours">En cours</option>
+                <option value="Facturé">Facturé</option>
+              </select>
+            </label>
+            <label>Montant demandé
+              <input type="number" step="0.001" min="0" id="pl_editer_montant_demande" />
+            </label>
+            <label>Montant agréé
+              <input type="number" step="0.001" min="0" id="pl_editer_montant" />
+              <span class="pl_montant_note" id="pl_editer_montant_note"></span>
+            </label>
+            <label>Régime horaire
+              <input type="text" id="pl_editer_regime_horaire" />
+            </label>
+            <label>Actions demandées
+              <input type="number" min="0" step="1" id="pl_editer_actions_demandees" />
+            </label>
+          </div>
+        </div>
+
+        <div class="pl_editer_panel" data-editer-panel="complement">
+          <div class="pl_form_grid pl_form_grid_3">
+            <label>Date demande complément
+              <input type="date" id="pl_editer_date_demande_complement" />
+            </label>
+            <label>N° départ demande complément
+              <input type="text" id="pl_editer_num_depart_demande_complement" />
+            </label>
+            <label>Date dépôt complément
+              <input type="date" id="pl_editer_date_depot_complement" />
+            </label>
+            <label>N° arrivé dépôt complément
+              <input type="text" id="pl_editer_num_arrivee_depot_complement" />
+            </label>
+          </div>
+        </div>
+
+        <div class="pl_editer_panel" data-editer-panel="commission">
+          <div class="pl_form_grid pl_form_grid_3">
+            <label>Date lettre commission
+              <input type="date" id="pl_editer_date_lettre_commission" />
+            </label>
+            <label>N° départ lettre commission
+              <input type="text" id="pl_editer_num_depart_lettre_commission" />
+            </label>
+            <label>Date commission
+              <input type="date" id="pl_editer_date_commission" disabled />
+              <span class="pl_montant_note">Géré depuis la section "Commission" (dti.html)</span>
+            </label>
+            <label>N° commission UR
+              <input type="text" id="pl_editer_num_commission" disabled />
+            </label>
+            <label>N° commission année date demande
+              <input type="text" id="pl_editer_num_commission_annee" disabled />
+            </label>
+            <label>PV envoyé le (au siège)
+              <input type="date" id="pl_editer_date_pv_envoi_siege" />
+            </label>
+          </div>
+        </div>
+
+        <div class="pl_editer_panel" data-editer-panel="lettre">
+          <div class="pl_form_grid pl_form_grid_3">
+            <label>Date départ lettre approbation
+              <input type="date" id="pl_editer_date_depart_lettre_approbation" />
+            </label>
+            <label>N° départ lettre approbation
+              <input type="text" id="pl_editer_num_depart_lettre_approbation" />
+            </label>
+          </div>
+        </div>
+
+        <div class="pl_editer_panel" data-editer-panel="decision">
+          <div class="pl_form_grid pl_form_grid_3">
+            <label>Montant agréé (en lettres arabes)
+              <input type="text" id="pl_editer_montant_agree_lettre" />
+            </label>
+            <label>Date décision de financement
+              <input type="date" id="pl_editer_date_decision" />
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="dti_editer_footer">
+        <button type="button" class="btn_success" id="pl_editer_btn_valider"><i class="bi bi-check-lg"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Ajouter/Éditer une action de formation" -->
+  <div class="modal_overlay" id="pl_modal_action">
+    <div class="modal_dialog">
+      <div class="modal_header">
+        <h3 id="pl_modal_action_titre">Nouvelle action</h3>
+        <button type="button" class="modal_close" data-close-modal="pl_modal_action"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <div class="pl_form_grid">
+          <label>Réf
+            <input type="text" id="pl_action_ref" />
+          </label>
+          <label>Thème
+            <input type="text" id="pl_action_theme" />
+          </label>
+          <label>Bénéficiaires H
+            <input type="number" min="0" step="1" id="pl_action_benef_h" />
+          </label>
+          <label>Bénéficiaires F
+            <input type="number" min="0" step="1" id="pl_action_benef_f" />
+          </label>
+          <label>S-mode
+            <input type="text" id="pl_action_smode" />
+          </label>
+          <label>Durée Hr
+            <input type="number" step="0.5" min="0" id="pl_action_duree_hr" />
+          </label>
+          <label>Durée Jr
+            <input type="number" step="0.5" min="0" id="pl_action_duree_jr" />
+          </label>
+          <label>Montant agrée
+            <input type="number" step="0.001" min="0" id="pl_action_montant_agree" />
+          </label>
+          <label>Date planification
+            <input type="date" id="pl_action_date_planif" />
+          </label>
+          <label>Date Confirmation
+            <input type="date" id="pl_action_date_confirm" />
+          </label>
+        </div>
+      </div>
+      <div class="dti_editer_footer">
+        <button type="button" class="btn_success" id="pl_action_btn_valider"><i class="bi bi-check-lg"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Réalisation" — complète la ligne d'une action existante -->
+  <div class="modal_overlay" id="pl_modal_realisation">
+    <div class="modal_dialog">
+      <div class="modal_header">
+        <h3 id="pl_modal_realisation_titre">Réalisation</h3>
+        <button type="button" class="modal_close" data-close-modal="pl_modal_realisation"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <div class="pl_form_grid">
+          <label>Réf
+            <input type="text" id="pl_real_ref" readonly />
+          </label>
+          <label>Cabinet
+            <div class="pl_cabinet_field">
+              <input type="text" id="pl_real_cabinet" />
+              <button type="button" class="btn_info" id="pl_real_cabinet_choisir" title="Choisir depuis la base des cabinets">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
+            <input type="hidden" id="pl_real_cabinet_agrement" />
+            <input type="hidden" id="pl_real_cabinet_matricule" />
+          </label>
+          <label>Date Début
+            <input type="date" id="pl_real_date_debut" />
+          </label>
+          <label>Date fin
+            <input type="date" id="pl_real_date_fin" />
+          </label>
+          <label>Horaire
+            <input type="text" id="pl_real_horaire" />
+          </label>
+          <label>Lieu
+            <input type="text" id="pl_real_lieu" />
+          </label>
+          <label>Formateur
+            <input type="text" id="pl_real_formateur" />
+          </label>
+          <label>CIN formateur
+            <input type="text" id="pl_real_cin" />
+          </label>
+          <label>Date Contrôle
+            <input type="date" id="pl_real_date_controle" />
+          </label>
+          <label>Chargé du contrôle
+            <input type="text" id="pl_real_charge_controle" />
+          </label>
+          <label>Agréés
+            <input type="number" min="0" step="1" id="pl_real_agrees" />
+          </label>
+          <label>Agréés suivi
+            <input type="number" min="0" step="1" id="pl_real_agrees_suivi" />
+          </label>
+        </div>
+      </div>
+      <div class="dti_editer_footer">
+        <button type="button" class="btn_success" id="pl_real_btn_valider"><i class="bi bi-check-lg"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Choisir un cabinet" — recherche/sélection depuis la base
+       "cabinets" (Sheet Base, onglet "cabinets", même source que le module
+       Partenaires de part.html). Sélection → remplit Raison Sociale dans
+       pl_real_cabinet, Agrément/Matricule dans les champs cachés associés,
+       puis ouvre pl_modal_cabinet_propager. -->
+  <div class="modal_overlay" id="pl_modal_cabinet_choix">
+    <div class="modal_dialog">
+      <div class="modal_header">
+        <h3>Choisir un cabinet</h3>
+        <button type="button" class="modal_close" data-close-modal="pl_modal_cabinet_choix"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <div class="search_wrap">
+          <i class="bi bi-search search_icon"></i>
+          <input type="text" class="ese_search" id="pl_cabinet_choix_search" placeholder="Rechercher (agrément, raison sociale, matricule)…" />
+        </div>
+        <table class="data_table" id="pl_cabinet_choix_table">
+          <thead><tr><th>Agrément</th><th>Raison Sociale</th><th>Matricule</th></tr></thead>
+          <tbody id="pl_cabinet_choix_body"></tbody>
+        </table>
+        <div class="empty_state" id="pl_cabinet_choix_empty" hidden>
+          <i class="bi bi-inbox"></i>Aucun cabinet trouvé.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Appliquer le cabinet" — après sélection dans
+       pl_modal_cabinet_choix, propose d'appliquer le cabinet choisi à
+       l'action en cours d'édition seulement, ou de le reporter sur
+       d'autres actions dont le cabinet est actuellement vide (toutes, ou
+       une sélection). L'option "Toutes" n'est proposée que si TOUTES les
+       autres actions ont un cabinet vide. -->
+  <div class="modal_overlay" id="pl_modal_cabinet_propager">
+    <div class="modal_dialog">
+      <div class="modal_header">
+        <h3>Appliquer le cabinet</h3>
+        <button type="button" class="modal_close" data-close-modal="pl_modal_cabinet_propager"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <p class="pl_cabinet_propager_nom" id="pl_cabinet_propager_nom"></p>
+        <label class="pl_cabinet_propager_option">
+          <input type="radio" name="pl_cabinet_propager_mode" value="courante" checked /> Cette action seulement
+        </label>
+        <label class="pl_cabinet_propager_option">
+          <input type="radio" name="pl_cabinet_propager_mode" value="toutes" id="pl_cabinet_propager_toutes" /> Toutes les actions (cabinet actuellement vide)
+        </label>
+        <div class="pl_cabinet_propager_note" id="pl_cabinet_propager_note" hidden>Indisponible : certaines actions ont déjà un cabinet renseigné.</div>
+        <label class="pl_cabinet_propager_option">
+          <input type="radio" name="pl_cabinet_propager_mode" value="certaines" /> Certaines actions vides
+        </label>
+        <ul class="pl_confirmation_list" id="pl_cabinet_propager_liste" hidden></ul>
+      </div>
+      <div class="dti_editer_footer">
+        <button type="button" class="btn_success" id="pl_cabinet_propager_btn_valider"><i class="bi bi-check-lg"></i> Appliquer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Facturation" — complète la ligne d'une action existante -->
+  <div class="modal_overlay" id="pl_modal_facturation">
+    <div class="modal_dialog">
+      <div class="modal_header">
+        <h3 id="pl_modal_facturation_titre">Facturation</h3>
+        <button type="button" class="modal_close" data-close-modal="pl_modal_facturation"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <div class="pl_form_grid">
+          <label>Réf
+            <input type="text" id="pl_fact_ref" readonly />
+          </label>
+          <label>Date facturation
+            <input type="date" id="pl_fact_date" />
+          </label>
+          <label>Numéro facturation
+            <input type="text" id="pl_fact_numero" />
+          </label>
+          <label>Complément facturation
+            <input type="text" id="pl_fact_complement" />
+          </label>
+          <label>Agréés facturation
+            <input type="number" min="0" step="1" id="pl_fact_agrees" />
+          </label>
+          <label>Mnt Calculé
+            <input type="number" step="0.001" min="0" id="pl_fact_montant" />
+          </label>
+          <label>Date transfert
+            <input type="date" id="pl_fact_date_transfert" />
+          </label>
+          <label>Observations
+            <input type="text" id="pl_fact_observations" />
+          </label>
+        </div>
+      </div>
+      <div class="dti_editer_footer">
+        <button type="button" class="btn_success" id="pl_fact_btn_valider"><i class="bi bi-check-lg"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Ajouter une planification" — renseigne la planification et le
+       déroulé prévu (dates, horaire, lieu, formateur) d'une action existante,
+       choisie par sa Réf. -->
+  <div class="modal_overlay" id="pl_modal_planif">
+    <div class="modal_dialog">
+      <div class="modal_header">
+        <h3>Ajouter une planification</h3>
+        <button type="button" class="modal_close" data-close-modal="pl_modal_planif"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <div class="pl_form_grid">
+          <label>Réf
+            <select id="pl_planif_ref"></select>
+          </label>
+          <label>Date planification
+            <input type="date" id="pl_planif_date" />
+          </label>
+          <label>Date Début
+            <input type="date" id="pl_planif_date_debut" />
+          </label>
+          <label>Date fin
+            <input type="date" id="pl_planif_date_fin" />
+          </label>
+          <label>Horaire
+            <input type="text" id="pl_planif_horaire" />
+          </label>
+          <label>Lieu
+            <input type="text" id="pl_planif_lieu" />
+          </label>
+          <label>Formateur
+            <input type="text" id="pl_planif_formateur" />
+          </label>
+          <label>CIN formateur
+            <input type="text" id="pl_planif_cin" />
+          </label>
+        </div>
+      </div>
+      <div class="dti_editer_footer">
+        <button type="button" class="btn_success" id="pl_planif_btn_valider"><i class="bi bi-check-lg"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Ajouter une confirmation" — une case à cocher par action,
+       cochée automatiquement si sa date de confirmation est déjà remplie ;
+       cocher/décocher une action puis "Enregistrer" renseigne/efface sa date
+       de confirmation (la même date pour toutes les actions cochées). -->
+  <div class="modal_overlay" id="pl_modal_confirmation">
+    <div class="modal_dialog">
+      <div class="modal_header">
+        <h3>Ajouter une confirmation</h3>
+        <button type="button" class="modal_close" data-close-modal="pl_modal_confirmation"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <div class="pl_form_grid">
+          <label>Date Confirmation
+            <input type="date" id="pl_confirmation_date" />
+          </label>
+        </div>
+        <ul class="pl_confirmation_list" id="pl_confirmation_list"></ul>
+      </div>
+      <div class="dti_editer_footer">
+        <button type="button" class="btn_success" id="pl_confirmation_btn_valider"><i class="bi bi-check-lg"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Imprimer" — liste les fichiers déjà déposés sur le Drive pour
+       ce plan (voir chargerFichiersImprimer() / listFichiersPlan côté
+       Code.gs) ; un clic ouvre le fichier dans un nouvel onglet, prêt à
+       imprimer depuis le lecteur PDF du navigateur. -->
+  <div class="modal_overlay" id="pl_modal_imprimer">
+    <div class="modal_dialog">
+      <div class="modal_header">
+        <h3>Imprimer</h3>
+        <button type="button" class="modal_close" data-close-modal="pl_modal_imprimer"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <div class="pl_print_choix" id="pl_print_choix"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/navbar_breadcrumb.js"></script>
+  <script src="js/sticky_metiers.js"></script>
+  <script src="js/section_toggles.js"></script>
+  <script src="js/ui_common.js"></script>
+  <script>
+/* ============================================================
+   PLAN.JS
+   Page autonome "Plan" (section dti.html#plans). Un plan est toujours
+   rattaché à un calcul Formation initiale existant (calculId) dont le
+   budget sert de plafond au montant. Comme fi.html/bilan.html : pas de
+   Sheet dédiée, le fichier HTML exporté dans Drive (voir Code.gs
+   exportPlanToDrive) EST le plan enregistré.
+
+   Édition des métadonnées (date/état/montant) et des actions : tout se
+   fait en mémoire (planWorking), avec l'alerte "Données à sauvegarder !"
+   (même principe que fi.html) — la persistance Drive n'a lieu qu'au clic
+   sur le bouton "Enregistrer" du bandeau.
+   ============================================================ */
+
+let planWorking = null; // { entreprise, matricule, calculId, anneeFi, budgetFi, anneeDti, date, etat, montant, actions[] }
+let planFileId = null;
+let planActionEditRow = null; // <tr> en cours d'édition dans la modale action, ou null (ajout)
+let plEsesCache = null; // cache de la base "eses" pour vérifier le nom via le matricule
+
+// Le nom d'une entreprise peut être modifié dans la base "eses" après la
+// création du plan (qui garde le nom tel qu'il était à ce moment-là) : le
+// matricule, lui, ne change pas, et sert donc de référence pour retrouver
+// le nom actuel.
+async function nomEseActuel(matricule) {
+  const mat = String(matricule || "").trim();
+  if (!mat) return null;
+  try {
+    if (!plEsesCache) plEsesCache = await apiCall("listEses", {});
+    const ese = plEsesCache.find((e) => String(e["Matricule"] || "").trim() === mat);
+    return ese ? (ese["Raison sociale"] || ese["Nom commerciale"] || "") : null;
+  } catch (err) {
+    console.error("Vérification de l'entreprise actuelle impossible :", err.message);
+    return null;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  document.getElementById("pl_btn_enregistrer")?.addEventListener("click", enregistrerPlan);
+  document.getElementById("pl_btn_editer")?.addEventListener("click", ouvrirModalEditer);
+  document.getElementById("pl_editer_btn_valider")?.addEventListener("click", validerEditionMeta);
+  document.getElementById("pl_editer_montant")?.addEventListener("input", verifierMontantPlafond);
+  wireEditerTabs();
+  document.getElementById("pl_nouveau_plan_btn_enregistrer")?.addEventListener("click", enregistrerNouveauPlan);
+  document.getElementById("pl_btn_ajouter_action")?.addEventListener("click", () => ouvrirModalAction(null));
+  document.getElementById("pl_btn_ajouter_planif")?.addEventListener("click", ouvrirModalPlanif);
+  document.getElementById("pl_planif_ref")?.addEventListener("change", (e) => remplirPlanifDepuisAction(Number(e.target.value)));
+  document.getElementById("pl_planif_btn_valider")?.addEventListener("click", validerPlanif);
+  document.getElementById("pl_btn_ajouter_confirmation")?.addEventListener("click", ouvrirModalConfirmation);
+  document.getElementById("pl_confirmation_btn_valider")?.addEventListener("click", validerConfirmation);
+  document.getElementById("pl_btn_imprimer")?.addEventListener("click", () => {
+    document.getElementById("pl_modal_imprimer").classList.add("is_visible");
+    chargerFichiersImprimer();
+  });
+  document.getElementById("pl_btn_import_excel")?.addEventListener("click", () => document.getElementById("pl_import_file")?.click());
+  document.getElementById("pl_import_file")?.addEventListener("change", importerDepuisExcel);
+  document.getElementById("pl_action_btn_valider")?.addEventListener("click", validerAction);
+  document.getElementById("pl_real_btn_valider")?.addEventListener("click", validerRealisation);
+  document.getElementById("pl_real_cabinet_choisir")?.addEventListener("click", ouvrirModalCabinetChoix);
+  document.getElementById("pl_real_cabinet")?.addEventListener("input", () => {
+    setVal("pl_real_cabinet_agrement", "");
+    setVal("pl_real_cabinet_matricule", "");
+  });
+  document.getElementById("pl_cabinet_choix_search")?.addEventListener("input", (e) => renderCabinetChoixTable(e.target.value));
+  document.querySelectorAll('input[name="pl_cabinet_propager_mode"]').forEach((r) =>
+    r.addEventListener("change", majAffichagePropagerListe)
+  );
+  document.getElementById("pl_cabinet_propager_btn_valider")?.addEventListener("click", validerCabinetPropager);
+  document.getElementById("pl_fact_btn_valider")?.addEventListener("click", validerFacturation);
+  wireMetierHeaderCapture();
+  wireModalClose();
+  wireNouveauPlanModalAbandon();
+
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+  const calculId = params.get("calcul");
+  const eseParam = params.get("ese");
+
+  try {
+    if (id) {
+      await chargerPlanExistant(id);
+    } else if (calculId) {
+      await demarrerNouveauPlan(calculId, eseParam);
+    }
+  } finally {
+    document.getElementById("navbar_loading").hidden = true;
+  }
+});
+
+// Modale "Nouveau plan" : si l'utilisateur ferme la modale sans enregistrer,
+// il n'y a rien à afficher sur cette page (aucun plan créé) — on revient à
+// dti.html#plans plutôt que de laisser une page vide.
+function wireNouveauPlanModalAbandon() {
+  const modal = document.getElementById("pl_modal_nouveau_plan");
+  if (!modal) return;
+  const abandonner = () => { if (!planFileId) window.location.href = "dti.html#plans"; };
+  modal.querySelector(".modal_close")?.addEventListener("click", abandonner);
+  modal.addEventListener("click", (e) => { if (e.target === modal) abandonner(); });
+}
+
+// Fermeture générique des modales (clic sur [data-close-modal] ou l'overlay).
+function wireModalClose() {
+  document.querySelectorAll("[data-close-modal]").forEach((btn) => {
+    btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
+  });
+  document.querySelectorAll(".modal_overlay").forEach((overlay) => {
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.classList.remove("is_visible"); });
+  });
+}
+function closeModal(id) { document.getElementById(id)?.classList.remove("is_visible"); }
+
+/* ---------------- Sections repliables ----------------
+   .block_metiers_accordion / .section_toggle_btn : voir js/section_toggles.js
+   (partagé) pour le chevron - sections repliées par défaut, chevron déplie
+   la section et replie les autres de la page, scroll uniquement au dépli.
+   Spécifique à cette page : un clic sur un AUTRE bouton de l'entête d'une
+   section repliée la déplie d'abord (en repliant les autres, comme le
+   ferait le chevron) sans déclencher l'action propre du bouton ; un second
+   clic, section déjà dépliée, exécute normalement l'action. */
+function wireMetierHeaderCapture() {
+  document.querySelectorAll(".block_metiers_accordion").forEach((section) => {
+    const header = section.querySelector(".block_metiers_header");
+    const toggleBtn = section.querySelector(".section_toggle_btn");
+    if (!header) return;
+    header.querySelectorAll("button").forEach((btn) => {
+      if (btn === toggleBtn) return;
+      btn.addEventListener("click", (e) => {
+        if (section.classList.contains("is_collapsed")) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          expandMetierSection(section);
+          collapseOtherMetierSections(section);
+        }
+      }, true);
+    });
+  });
+}
+
+/* ---------------- Chargement ---------------- */
+
+async function chargerPlanExistant(fileId) {
+  planFileId = fileId;
+  const data = await apiCall("chargerPlan", { fileId });
+  planWorking = { ...data, actions: Array.isArray(data.actions) ? data.actions : [] };
+  history.replaceState(null, "", `plan.html?id=${fileId}`);
+
+  const nomActuel = await nomEseActuel(planWorking.matricule);
+  if (nomActuel && nomActuel !== planWorking.entreprise) {
+    planWorking.entreprise = nomActuel;
+    marquerDonneesNonSauvegardees();
+  }
+
+  await appliquerLettreApprobationDetectee();
+
+  afficherPlan();
+}
+
+// Recherche, dans le dossier Drive de l'année DTI du plan, la lettre
+// d'approbation déjà envoyée depuis Word (nommée "LETTRE APPROB DTI<année>
+// <entreprise> <date d'envoi ddMMyyyy><n° départ sur 3 chiffres>.pdf" par
+// ProposerEnvoiPdfDrive côté .docm, voir infosLettreApprobation côté
+// Code.gs) et préremplit automatiquement la date/n° départ correspondants
+// dans planWorking, pour éviter une ressaisie manuelle dans la modale
+// "Editer" (voir ouvrirModalEditer, qui affiche ces deux champs). N'écrase
+// rien si aucune lettre n'est trouvée (ancien export sans suffixe date+n°,
+// ou lettre pas encore envoyée) ; si les valeurs détectées diffèrent de
+// celles déjà enregistrées, marque le plan comme modifié pour inciter à
+// "Enregistrer".
+async function appliquerLettreApprobationDetectee() {
+  try {
+    const infos = await apiCall("infosLettreApprobation", {
+      anneeDti: planWorking.anneeDti,
+      entreprise: planWorking.entreprise
+    });
+    if (!infos) return;
+
+    if (
+      planWorking.dateDepartLettreApprobation !== infos.date ||
+      planWorking.numDepartLettreApprobation !== infos.numDepart
+    ) {
+      planWorking.dateDepartLettreApprobation = infos.date;
+      planWorking.numDepartLettreApprobation = infos.numDepart;
+      marquerDonneesNonSauvegardees();
+    }
+  } catch (err) {
+    // Pas bloquant : en cas d'échec, l'utilisateur garde la main pour saisir
+    // manuellement la date/n° départ dans la modale "Editer".
+    console.error("Recherche lettre d'approbation :", err);
+  }
+}
+
+// Calcul FI en attente de validation via la modale "Nouveau plan"
+// (pl_modal_nouveau_plan) : aucun fichier Drive n'est créé tant que
+// l'utilisateur n'a pas rempli date/numPlan et cliqué "Enregistrer" —
+// voir enregistrerNouveauPlan().
+let planPendingCalcul = null;
+
+async function demarrerNouveauPlan(calculId, eseParam) {
+  const calcul = await apiCall("chargerCalcul", { fileId: calculId });
+  const matricule = calcul.matricule || "";
+  const nomActuel = await nomEseActuel(matricule);
+  planPendingCalcul = {
+    entreprise: nomActuel || eseParam || calcul.entreprise,
+    matricule,
+    calculId,
+    anneeFi: calcul.annee,
+    budgetFi: calcul.budget,
+    anneeDti: calcul.anneeDti || new Date().getFullYear()
+  };
+  ouvrirModalNouveauPlan();
+}
+
+/* ---------------- Modale "Nouveau plan" (copie de dti_modal_nouveau_plan, sans sélection ese) ---------------- */
+
+function ouvrirModalNouveauPlan() {
+  document.getElementById("pl_nouveau_plan_entreprise").value = planPendingCalcul?.entreprise || "";
+  document.getElementById("pl_nouveau_plan_date").value = new Date().toISOString().slice(0, 10);
+  document.getElementById("pl_nouveau_plan_num").value = "";
+  document.getElementById("pl_nouveau_plan_num_ese").value = "";
+  document.getElementById("pl_modal_nouveau_plan")?.classList.add("is_visible");
+}
+
+async function enregistrerNouveauPlan() {
+  if (!planPendingCalcul?.calculId) return;
+
+  const plan = {
+    ...planPendingCalcul,
+    date: document.getElementById("pl_nouveau_plan_date").value,
+    numPlan: document.getElementById("pl_nouveau_plan_num").value.trim(),
+    numPlanEse: document.getElementById("pl_nouveau_plan_num_ese").value.trim(),
+    etat: "Demandé",
+    montant: "",
+    actions: []
+  };
+
+  const btn = document.getElementById("pl_nouveau_plan_btn_enregistrer");
+  setBtnSaving(btn, true);
+  try {
+    const { id } = await apiCall("exportPlanToDrive", { plan });
+    planFileId = id;
+    planWorking = plan;
+    history.replaceState(null, "", `plan.html?id=${id}`);
+    closeModal("pl_modal_nouveau_plan");
+    afficherPlan();
+  } catch (err) {
+    alert(`Erreur lors de la création du plan : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+/* ---------------- Affichage ---------------- */
+
+function afficherPlan() {
+  document.querySelectorAll('[data-field="entreprise"]').forEach((el) => { el.textContent = planWorking.entreprise || "----"; });
+  document.querySelector('[data-field="matricule"]').textContent = planWorking.matricule || "----";
+  document.querySelector('[data-field="date"]').textContent = planWorking.date || "----";
+  document.querySelector('[data-field="numPlan"]').textContent = planWorking.numPlan || "----";
+  document.querySelector('[data-field="montant"]').textContent = planWorking.montant ? formatMontant(planWorking.montant) : "----";
+  document.querySelector('[data-field="etat"]').innerHTML = `<span class="dti_etat_badge ${etatBadgeClass(planWorking.etat)}">${planWorking.etat || "Demandé"}</span>`;
+  document.querySelector('[data-field="refPlan"]').textContent = construireRefPlan(planWorking) || "----";
+
+  renderActionsTable();
+  renderRealisationTable();
+  renderFacturationTable();
+}
+
+/* Référence du plan : PI/<matricule sans lettres + 1re et 3e lettre>/<n° plan>/<année>/<n° plan sur 2 chiffres>/SA
+   Ex. matricule 1820269AAM000, plan n°1, année 2026 → PI/1820269AM/1/2026/01/SA */
+function construireRefPlan(plan) {
+  if (!plan) return "";
+  const matricule = String(plan.matricule || "").trim();
+  if (!matricule) return "";
+  const chiffres = (matricule.match(/^\d+/) || [""])[0];
+  const lettres = matricule.replace(/[^A-Za-z]/g, "");
+  const abrev = (lettres[0] || "") + (lettres[2] || "");
+  const num = String(plan.numPlan || "").trim();
+  if (!num) return "";
+  const annee = plan.anneeDti || (plan.date ? String(plan.date).slice(0, 4) : new Date().getFullYear());
+  const num2 = String(Number(num) || num).padStart(2, "0");
+  return `PI/${chiffres}${abrev}/${num}/${annee}/${num2}/SA`;
+}
+
+// Même mapping état → couleur que dti.html#plans (voir DTI.CSS).
+function etatBadgeClass(etat) {
+  switch (etat) {
+    case "Approuvé": return "is_approuve";
+    case "En cours": return "is_en_cours";
+    case "Facturé": return "is_facture";
+    default: return "is_demande"; // "Demandé"
+  }
+}
+
+function parseDecimal(value) {
+  const n = Number(String(value || "").trim().replace(",", "."));
+  return Number.isNaN(n) ? null : n;
+}
+
+/* ---------------- Modale "Editer" (date / état / montant) ---------------- */
+
+// Onglets horizontaux de la modale "Editer" (Demande / Complément /
+// Commission / Lettre d'approbation / Décision de financement) : un seul
+// panneau visible à la fois, purement présentationnel (aucun impact sur
+// planWorking, tous les champs restent lus/écrits comme avant — voir
+// ouvrirModalEditer() / validerEditionMeta()).
+function wireEditerTabs() {
+  document.querySelectorAll("#pl_modal_editer .pl_editer_tab").forEach((btn) => {
+    btn.addEventListener("click", () => activerOngletEditer(btn.dataset.editerTab));
+  });
+}
+
+function activerOngletEditer(nom) {
+  document.querySelectorAll("#pl_modal_editer .pl_editer_tab").forEach((btn) => {
+    btn.classList.toggle("is_active", btn.dataset.editerTab === nom);
+  });
+  document.querySelectorAll("#pl_modal_editer .pl_editer_panel").forEach((panel) => {
+    panel.classList.toggle("is_active", panel.dataset.editerPanel === nom);
+  });
+}
+
+function ouvrirModalEditer() {
+  activerOngletEditer("demande");
+  document.getElementById("pl_editer_date").value = planWorking.date || "";
+  document.getElementById("pl_editer_num").value = planWorking.numPlan || "";
+  document.getElementById("pl_editer_num_ese").value = planWorking.numPlanEse || "";
+  document.getElementById("pl_editer_etat").value = planWorking.etat || "Demandé";
+  document.getElementById("pl_editer_montant").value = planWorking.montant || "";
+  document.getElementById("pl_editer_montant_demande").value = planWorking.montantDemande || "";
+  document.getElementById("pl_editer_regime_horaire").value = planWorking.regimeHoraire || "";
+  document.getElementById("pl_editer_actions_demandees").value = planWorking.actionsDemandees || "";
+  document.getElementById("pl_editer_num_arrivee_demande").value = planWorking.numArriveeDemande || "";
+  document.getElementById("pl_editer_date_commission").value = planWorking.dateCommission || "";
+  document.getElementById("pl_editer_num_commission").value = planWorking.numCommission || "";
+  document.getElementById("pl_editer_num_commission_annee").value = planWorking.numCommissionAnnee || "";
+  document.getElementById("pl_editer_date_pv_envoi_siege").value = planWorking.datePvEnvoiSiege || "";
+  document.getElementById("pl_editer_date_lettre_commission").value = planWorking.dateLettreCommission || "";
+  document.getElementById("pl_editer_num_depart_lettre_commission").value = planWorking.numDepartLettreCommission || "";
+  document.getElementById("pl_editer_num_depart_lettre_approbation").value = planWorking.numDepartLettreApprobation || "";
+  document.getElementById("pl_editer_date_depart_lettre_approbation").value = planWorking.dateDepartLettreApprobation || "";
+  document.getElementById("pl_editer_montant_agree_lettre").value = planWorking.montantAgreeLettreArabe || "";
+  document.getElementById("pl_editer_date_decision").value = planWorking.dateDecision || "";
+  document.getElementById("pl_editer_date_demande_complement").value = planWorking.dateDemandeComplement || "";
+  document.getElementById("pl_editer_num_depart_demande_complement").value = planWorking.numDepartDemandeComplement || "";
+  document.getElementById("pl_editer_date_depot_complement").value = planWorking.dateDepotComplement || "";
+  document.getElementById("pl_editer_num_arrivee_depot_complement").value = planWorking.numArriveeDepotComplement || "";
+  verifierMontantPlafond();
+  document.getElementById("pl_modal_editer").classList.add("is_visible");
+}
+
+function verifierMontantPlafond() {
+  const note = document.getElementById("pl_editer_montant_note");
+  const btn = document.getElementById("pl_editer_btn_valider");
+  const budgetFi = parseDecimal(planWorking?.budgetFi);
+  const montant = parseDecimal(document.getElementById("pl_editer_montant").value);
+
+  if (!note) return;
+  if (budgetFi === null) {
+    note.textContent = "";
+    note.classList.remove("is_over_budget");
+    return;
+  }
+
+  const depasse = montant !== null && montant > budgetFi;
+  note.textContent = `Plafond : ${formatMontant(budgetFi)} (budget du calcul FI lié)`;
+  note.classList.toggle("is_over_budget", depasse);
+  if (btn) btn.disabled = depasse;
+}
+
+function validerEditionMeta() {
+  const budgetFi = parseDecimal(planWorking.budgetFi);
+  const montant = parseDecimal(document.getElementById("pl_editer_montant").value);
+  if (budgetFi !== null && montant !== null && montant > budgetFi) {
+    alert("Le montant ne peut pas dépasser le budget du calcul Formation initiale lié.");
+    return;
+  }
+
+  planWorking.date = document.getElementById("pl_editer_date").value;
+  planWorking.numPlan = document.getElementById("pl_editer_num").value.trim();
+  planWorking.numPlanEse = document.getElementById("pl_editer_num_ese").value.trim();
+  planWorking.etat = document.getElementById("pl_editer_etat").value;
+  planWorking.montant = montant;
+  planWorking.montantDemande = parseDecimal(document.getElementById("pl_editer_montant_demande").value);
+  planWorking.regimeHoraire = document.getElementById("pl_editer_regime_horaire").value.trim();
+  planWorking.actionsDemandees = document.getElementById("pl_editer_actions_demandees").value.trim();
+  planWorking.numArriveeDemande = document.getElementById("pl_editer_num_arrivee_demande").value.trim();
+  planWorking.dateCommission = document.getElementById("pl_editer_date_commission").value;
+  planWorking.numCommission = document.getElementById("pl_editer_num_commission").value.trim();
+  planWorking.numCommissionAnnee = document.getElementById("pl_editer_num_commission_annee").value.trim();
+  planWorking.datePvEnvoiSiege = document.getElementById("pl_editer_date_pv_envoi_siege").value;
+  planWorking.dateLettreCommission = document.getElementById("pl_editer_date_lettre_commission").value;
+  planWorking.numDepartLettreCommission = document.getElementById("pl_editer_num_depart_lettre_commission").value.trim();
+  planWorking.numDepartLettreApprobation = document.getElementById("pl_editer_num_depart_lettre_approbation").value.trim();
+  planWorking.dateDepartLettreApprobation = document.getElementById("pl_editer_date_depart_lettre_approbation").value;
+  planWorking.montantAgreeLettreArabe = document.getElementById("pl_editer_montant_agree_lettre").value.trim();
+  planWorking.dateDecision = document.getElementById("pl_editer_date_decision").value;
+  planWorking.dateDemandeComplement = document.getElementById("pl_editer_date_demande_complement").value;
+  planWorking.numDepartDemandeComplement = document.getElementById("pl_editer_num_depart_demande_complement").value.trim();
+  planWorking.dateDepotComplement = document.getElementById("pl_editer_date_depot_complement").value;
+  planWorking.numArriveeDepotComplement = document.getElementById("pl_editer_num_arrivee_depot_complement").value.trim();
+
+  closeModal("pl_modal_editer");
+  afficherPlan();
+  marquerDonneesNonSauvegardees();
+}
+
+/* ---------------- Sections "Actions de formation" / "Réalisation" / "Facturation" ----------------
+   Une action = une ligne partagée par les trois sections (même Réf) :
+   la section Actions porte les données agréées, Réalisation le déroulé
+   sur le terrain, Facturation le règlement. */
+
+const PL_SECTIONS = {
+  actions: {
+    table: "pl_actions_table", empty: "pl_actions_empty", status: "actions",
+    cols: ["ref", "theme", "benefH", "benefF", "smode", "dureeHr", "dureeJr", "montantAgree", "datePlanif", "dateConfirmation"],
+    edit: (i) => ouvrirModalAction(i)
+  },
+  realisation: {
+    table: "pl_realisation_table", empty: "pl_realisation_empty", status: "realisation",
+    cols: ["ref", "cabinet", "dateDebut", "dateFin", "horaire", "lieu", "formateur", "cinFormateur", "dateControle", "chargeControle", "agrees", "agreesSuivi"],
+    edit: (i) => ouvrirModalRealisation(i)
+  },
+  facturation: {
+    table: "pl_facturation_table", empty: "pl_facturation_empty", status: "facturation",
+    cols: ["ref", "dateFacturation", "numFacturation", "complementFacturation", "agreesFacturation", "mntCalcule", "dateTransfert", "observations"],
+    edit: (i) => ouvrirModalFacturation(i)
+  }
+};
+
+function renderSectionTable(key, options = {}) {
+  const cfg = PL_SECTIONS[key];
+  const tbody = document.querySelector(`#${cfg.table} tbody`);
+  const emptyEl = document.getElementById(cfg.empty);
+  const statutEl = document.querySelector(`[data-status="${cfg.status}"]`);
+  const actions = planWorking?.actions || [];
+  if (!tbody) return;
+
+  if (actions.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    if (statutEl) statutEl.textContent = "Aucune action";
+    return;
+  }
+  if (emptyEl) emptyEl.hidden = true;
+
+  tbody.innerHTML = actions.map((a, i) => `
+    <tr data-index="${i}">
+      ${cfg.cols.map((c) => {
+        const v = a[c] ?? "";
+        if (c === "theme") return `<td class="pl_theme_cell" title="${String(v).replace(/"/g, "&quot;")}">${v}</td>`;
+        return `<td>${v}</td>`;
+      }).join("")}
+      <td class="fi_row_actions">
+        <button type="button" class="fi_row_edit" title="Modifier" data-editer-ligne="${i}"><i class="bi bi-pencil"></i></button>
+        ${options.suppression ? `<button type="button" class="fi_row_delete" title="Supprimer" data-supprimer-action="${i}"><i class="bi bi-trash3"></i></button>` : ""}
+      </td>
+    </tr>`).join("");
+
+  tbody.querySelectorAll("[data-editer-ligne]").forEach((btn) => {
+    btn.addEventListener("click", () => cfg.edit(Number(btn.dataset.editerLigne)));
+  });
+  tbody.querySelectorAll("[data-supprimer-action]").forEach((btn) => {
+    btn.addEventListener("click", () => supprimerAction(Number(btn.dataset.supprimerAction)));
+  });
+
+  if (statutEl) statutEl.innerHTML = options.statut ? options.statut(actions) : `<strong>${actions.length}</strong> action${plurielS(actions.length)}`;
+}
+
+/* Pluriel automatique : "s" dès que n > 1. */
+function plurielS(n) { return n > 1 ? "s" : ""; }
+
+/* Une cellule est "remplie" dès qu'elle contient une valeur, y compris 0. */
+function celluleRemplie(v) { return String(v ?? "").trim() !== ""; }
+
+function renderActionsTable() {
+  renderSectionTable("actions", {
+    suppression: true,
+    statut: (actions) => `<strong>${actions.length}</strong> action${plurielS(actions.length)}`
+  });
+}
+
+/* Réalisation : chaque cellule "Agréés suivi" remplie (même avec 0)
+   compte pour une action réalisée. */
+function renderRealisationTable() {
+  renderSectionTable("realisation", {
+    statut: (actions) => {
+      const realisees = actions.filter((a) => celluleRemplie(a.agreesSuivi)).length;
+      return realisees > 0
+        ? `<strong>${realisees}</strong> action${plurielS(realisees)} réalisée${plurielS(realisees)}`
+        : "Aucune action réalisée";
+    }
+  });
+}
+
+/* Facturation : chaque "Date facturation" remplie = une action facturée,
+   chaque "Date transfert" remplie = une action transférée. */
+function renderFacturationTable() {
+  renderSectionTable("facturation", {
+    statut: (actions) => {
+      const facturees = actions.filter((a) => celluleRemplie(a.dateFacturation)).length;
+      const transferees = actions.filter((a) => celluleRemplie(a.dateTransfert)).length;
+      return facturees > 0
+        ? `<strong>${facturees}</strong> action${plurielS(facturees)} facturée${plurielS(facturees)} — <strong>${transferees}</strong> transférée${plurielS(transferees)}`
+        : "Aucune action facturée";
+    }
+  });
+}
+
+function rafraichirTables() {
+  renderActionsTable();
+  renderRealisationTable();
+  renderFacturationTable();
+}
+
+const val = (id) => document.getElementById(id)?.value ?? "";
+const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ""; };
+
+/* ---------------- Import Excel ----------------
+   Un seul fichier alimente les trois sections : la colonne "Réf" se répète
+   au début de chaque bloc (Actions / Réalisation / Facturation). Les lignes
+   sont fusionnées par Réf sur planWorking.actions. */
+const PL_IMPORT_MAP = {
+  "réf": "ref", "ref": "ref",
+  "thème": "theme", "theme": "theme",
+  "bénéficiaires h": "benefH", "beneficiaires h": "benefH",
+  "bénéficiaires f": "benefF", "beneficiaires f": "benefF",
+  "s-mode": "smode", "smode": "smode",
+  "durée hr": "dureeHr", "duree hr": "dureeHr",
+  "durée jr": "dureeJr", "duree jr": "dureeJr",
+  "montant agrée": "montantAgree", "montant agree": "montantAgree",
+  "date planification": "datePlanif",
+  "date confirmation": "dateConfirmation",
+  "cabinet": "cabinet",
+  "date début": "dateDebut", "date debut": "dateDebut",
+  "date fin": "dateFin",
+  "horaire": "horaire",
+  "lieu": "lieu",
+  "formateur": "formateur",
+  "cin formateur": "cinFormateur",
+  "date contrôle": "dateControle", "date controle": "dateControle",
+  "chargé du contrôle": "chargeControle", "charge du controle": "chargeControle",
+  "agréés": "agrees", "agrees": "agrees",
+  "agréés suivi": "agreesSuivi", "agrees suivi": "agreesSuivi",
+  "date facturation": "dateFacturation",
+  "numéro facturation": "numFacturation", "numero facturation": "numFacturation",
+  "complément facturation": "complementFacturation", "complement facturation": "complementFacturation",
+  "agréés facturation": "agreesFacturation", "agrees facturation": "agreesFacturation",
+  "mnt calculé": "mntCalcule", "mnt calcule": "mntCalcule",
+  "date transfert": "dateTransfert",
+  "observations": "observations"
+};
+
+function plNormEntete(h) {
+  return String(h ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+// Les dates Excel arrivent en numéro de série ou en Date : on normalise en AAAA-MM-JJ.
+function plNormValeur(champ, v) {
+  if (v === null || v === undefined) return "";
+  if (champ.toLowerCase().startsWith("date")) {
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    if (typeof v === "number") {
+      const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+      return d.toISOString().slice(0, 10);
+    }
+  }
+  return String(v).trim();
+}
+
+async function importerDepuisExcel(event) {
+  const input = event.target;
+  const file = input.files && input.files[0];
+  input.value = "";
+  if (!file) return;
+  if (!planWorking) { alert("Aucun plan chargé."); return; }
+  if (typeof XLSX === "undefined") { alert("Le module de lecture Excel n'est pas disponible."); return; }
+
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "", raw: true });
+    if (!rows.length) { alert("Le fichier ne contient aucune ligne."); return; }
+
+    if (!planWorking.actions) planWorking.actions = [];
+    let ajoutes = 0, majs = 0, ignores = 0;
+
+    rows.forEach((row) => {
+      const rec = {};
+      Object.keys(row).forEach((entete) => {
+        const champ = PL_IMPORT_MAP[plNormEntete(entete)];
+        if (!champ) return;
+        const v = plNormValeur(champ, row[entete]);
+        if (v !== "") rec[champ] = v;
+      });
+      if (!rec.ref) { ignores++; return; }
+
+      const existant = planWorking.actions.findIndex((a) => String(a.ref).trim() === rec.ref);
+      if (existant >= 0) {
+        planWorking.actions[existant] = { ...planWorking.actions[existant], ...rec };
+        majs++;
+      } else {
+        planWorking.actions.push(rec);
+        ajoutes++;
+      }
+    });
+
+    rafraichirTables();
+    marquerDonneesNonSauvegardees();
+    alert(`Import terminé : ${ajoutes} action(s) ajoutée(s), ${majs} mise(s) à jour${ignores ? `, ${ignores} ligne(s) sans Réf ignorée(s)` : ""}.`);
+  } catch (e) {
+    console.error(e);
+    alert("Impossible de lire le fichier Excel : " + (e && e.message ? e.message : e));
+  }
+}
+
+/* ---------------- Modale "Action de formation" ---------------- */
+
+function ouvrirModalAction(index) {
+  planActionEditRow = (index === null || index === undefined) ? null : index;
+  const a = (planActionEditRow !== null) ? planWorking.actions[planActionEditRow] : null;
+
+  document.getElementById("pl_modal_action_titre").textContent = a ? "Éditer l'action" : "Nouvelle action";
+  setVal("pl_action_ref", a?.ref);
+  setVal("pl_action_theme", a?.theme);
+  setVal("pl_action_benef_h", a?.benefH);
+  setVal("pl_action_benef_f", a?.benefF);
+  setVal("pl_action_smode", a?.smode);
+  setVal("pl_action_duree_hr", a?.dureeHr);
+  setVal("pl_action_duree_jr", a?.dureeJr);
+  setVal("pl_action_montant_agree", a?.montantAgree);
+  setVal("pl_action_date_planif", a?.datePlanif);
+  setVal("pl_action_date_confirm", a?.dateConfirmation);
+
+  document.getElementById("pl_modal_action").classList.add("is_visible");
+}
+
+function validerAction() {
+  const base = (planActionEditRow !== null) ? { ...planWorking.actions[planActionEditRow] } : {};
+  const record = {
+    ...base,
+    ref: val("pl_action_ref").trim(),
+    theme: val("pl_action_theme").trim(),
+    benefH: val("pl_action_benef_h"),
+    benefF: val("pl_action_benef_f"),
+    smode: val("pl_action_smode").trim(),
+    dureeHr: val("pl_action_duree_hr"),
+    dureeJr: val("pl_action_duree_jr"),
+    montantAgree: val("pl_action_montant_agree"),
+    datePlanif: val("pl_action_date_planif"),
+    dateConfirmation: val("pl_action_date_confirm")
+  };
+
+  if (!planWorking.actions) planWorking.actions = [];
+  if (planActionEditRow !== null) {
+    planWorking.actions[planActionEditRow] = record;
+  } else {
+    planWorking.actions.push(record);
+  }
+
+  closeModal("pl_modal_action");
+  rafraichirTables();
+  marquerDonneesNonSauvegardees();
+}
+
+/* ---------------- Modale "Ajouter une planification" ----------------
+   Planifie une action existante (choisie par sa Réf) : remplit la date de
+   planification et le déroulé prévu (dates, horaire, lieu, formateur).
+   Une action est une ligne unique partagée par les sections Actions /
+   Réalisation / Facturation (voir PL_SECTIONS) : au choix d'une Réf, la
+   modale récupère donc les valeurs déjà connues sur cette action, quelle
+   que soit la section qui les a renseignées en premier (import Excel,
+   Réalisation, etc.), plutôt que de repartir de champs vides. */
+
+function ouvrirModalPlanif() {
+  const actions = planWorking?.actions || [];
+  if (!actions.length) {
+    alert("Aucune action à planifier : ajoutez d'abord une action de formation.");
+    return;
+  }
+
+  const select = document.getElementById("pl_planif_ref");
+  select.innerHTML = actions
+    .map((a, i) => `<option value="${i}">${String(a.ref || `Action ${i + 1}`).replace(/</g, "&lt;")}</option>`)
+    .join("");
+  select.value = "0";
+
+  remplirPlanifDepuisAction(0);
+  document.getElementById("pl_modal_planif").classList.add("is_visible");
+}
+
+// Recharge les champs de la modale "Ajouter une planification" à partir des
+// données déjà connues sur l'action sélectionnée (toutes sections
+// confondues) — appelée à l'ouverture et à chaque changement de Réf.
+function remplirPlanifDepuisAction(index) {
+  const a = planWorking?.actions?.[index] || {};
+  setVal("pl_planif_date", a.datePlanif || new Date().toISOString().slice(0, 10));
+  setVal("pl_planif_date_debut", a.dateDebut);
+  setVal("pl_planif_date_fin", a.dateFin);
+  setVal("pl_planif_horaire", a.horaire);
+  setVal("pl_planif_lieu", a.lieu);
+  setVal("pl_planif_formateur", a.formateur);
+  setVal("pl_planif_cin", a.cinFormateur);
+}
+
+function validerPlanif() {
+  const index = Number(val("pl_planif_ref"));
+  const action = planWorking?.actions?.[index];
+  if (!action) return;
+
+  planWorking.actions[index] = {
+    ...action,
+    datePlanif: val("pl_planif_date"),
+    dateDebut: val("pl_planif_date_debut"),
+    dateFin: val("pl_planif_date_fin"),
+    horaire: val("pl_planif_horaire").trim(),
+    lieu: val("pl_planif_lieu").trim(),
+    formateur: val("pl_planif_formateur").trim(),
+    cinFormateur: val("pl_planif_cin").trim()
+  };
+
+  closeModal("pl_modal_planif");
+  rafraichirTables();
+  marquerDonneesNonSauvegardees();
+}
+
+/* ---------------- Modale "Ajouter une confirmation" ----------------
+   Une case à cocher par action, cochée (et activable) uniquement si sa date
+   de planification est déjà remplie — on ne peut confirmer que ce qui a été
+   planifié. Cocher/décocher puis "Enregistrer" renseigne (ou efface) la date
+   de confirmation des actions concernées, toutes avec la même date choisie
+   en haut de la modale. */
+
+function ouvrirModalConfirmation() {
+  const actions = planWorking?.actions || [];
+  if (!actions.length) {
+    alert("Aucune action à confirmer : ajoutez d'abord une action de formation.");
+    return;
+  }
+
+  setVal("pl_confirmation_date", new Date().toISOString().slice(0, 10));
+
+  const liste = document.getElementById("pl_confirmation_list");
+  liste.innerHTML = actions
+    .map((a, i) => {
+      const ref = String(a.ref || `Action ${i + 1}`).replace(/</g, "&lt;");
+      const estPlanifiee = Boolean(a.datePlanif);
+      const note = !estPlanifiee
+        ? `<span class="pl_confirmation_deja">(non planifiée)</span>`
+        : a.dateConfirmation
+        ? `<span class="pl_confirmation_deja">— confirmée le ${a.dateConfirmation}</span>`
+        : "";
+      return `
+        <li class="pl_confirmation_item">
+          <label>
+            <input type="checkbox" class="pl_confirmation_check" data-index="${i}" ${estPlanifiee ? "checked" : ""} ${estPlanifiee ? "" : "disabled"} />
+            ${ref} ${note}
+          </label>
+        </li>`;
+    })
+    .join("");
+
+  document.getElementById("pl_modal_confirmation").classList.add("is_visible");
+}
+
+function validerConfirmation() {
+  const date = val("pl_confirmation_date");
+  document.querySelectorAll(".pl_confirmation_check").forEach((cb) => {
+    const index = Number(cb.dataset.index);
+    const action = planWorking?.actions?.[index];
+    if (!action) return;
+    action.dateConfirmation = cb.checked ? date : "";
+  });
+
+  closeModal("pl_modal_confirmation");
+  rafraichirTables();
+  marquerDonneesNonSauvegardees();
+}
+
+/* ---------------- Modale "Réalisation" ---------------- */
+
+function ouvrirModalRealisation(index) {
+  planActionEditRow = index;
+  const a = planWorking.actions[index] || {};
+  document.getElementById("pl_modal_realisation_titre").textContent = `Réalisation — ${a.ref || "action"}`;
+  setVal("pl_real_ref", a.ref);
+  setVal("pl_real_cabinet", a.cabinet);
+  setVal("pl_real_cabinet_agrement", a.cabinetAgrement);
+  setVal("pl_real_cabinet_matricule", a.cabinetMatricule);
+  setVal("pl_real_date_debut", a.dateDebut);
+  setVal("pl_real_date_fin", a.dateFin);
+  setVal("pl_real_horaire", a.horaire);
+  setVal("pl_real_lieu", a.lieu);
+  setVal("pl_real_formateur", a.formateur);
+  setVal("pl_real_cin", a.cinFormateur);
+  setVal("pl_real_date_controle", a.dateControle);
+  setVal("pl_real_charge_controle", a.chargeControle);
+  setVal("pl_real_agrees", a.agrees);
+  setVal("pl_real_agrees_suivi", a.agreesSuivi);
+  document.getElementById("pl_modal_realisation").classList.add("is_visible");
+}
+
+function validerRealisation() {
+  if (planActionEditRow === null) return;
+  planWorking.actions[planActionEditRow] = {
+    ...planWorking.actions[planActionEditRow],
+    cabinet: val("pl_real_cabinet").trim(),
+    cabinetAgrement: val("pl_real_cabinet_agrement").trim(),
+    cabinetMatricule: val("pl_real_cabinet_matricule").trim(),
+    dateDebut: val("pl_real_date_debut"),
+    dateFin: val("pl_real_date_fin"),
+    horaire: val("pl_real_horaire").trim(),
+    lieu: val("pl_real_lieu").trim(),
+    formateur: val("pl_real_formateur").trim(),
+    cinFormateur: val("pl_real_cin").trim(),
+    dateControle: val("pl_real_date_controle"),
+    chargeControle: val("pl_real_charge_controle").trim(),
+    agrees: val("pl_real_agrees"),
+    agreesSuivi: val("pl_real_agrees_suivi")
+  };
+  closeModal("pl_modal_realisation");
+  rafraichirTables();
+  marquerDonneesNonSauvegardees();
+}
+
+/* ---------------- Modale "Choisir un cabinet" ---------------- */
+/* Source : Sheet "Base", onglet "cabinets" (même base que le module
+   Partenaires de part.html, action backend "listCabinets"). */
+
+let plCabinetsCache = null;
+let cabinetChoisi = null; // { raisonSociale, agrement, matricule } en attente de pl_modal_cabinet_propager
+
+async function ouvrirModalCabinetChoix() {
+  setVal("pl_cabinet_choix_search", "");
+  document.getElementById("pl_modal_cabinet_choix").classList.add("is_visible");
+
+  const tbody = document.getElementById("pl_cabinet_choix_body");
+  if (!plCabinetsCache) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="3"><span class="loading_state">Chargement...</span></td></tr>`;
+    try {
+      plCabinetsCache = await apiCall("listCabinets", {});
+    } catch (err) {
+      tbody.innerHTML = `<tr class="table_state_row"><td colspan="3"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+      return;
+    }
+  }
+  renderCabinetChoixTable("");
+}
+
+function renderCabinetChoixTable(query) {
+  const tbody = document.getElementById("pl_cabinet_choix_body");
+  const emptyEl = document.getElementById("pl_cabinet_choix_empty");
+  const q = (query || "").trim().toLowerCase();
+
+  const filtres = !q ? plCabinetsCache : (plCabinetsCache || []).filter((c) =>
+    `${c["Agrément"] || ""} ${c["Raison Sociale"] || ""} ${c["Matricule"] || ""}`.toLowerCase().includes(q)
+  );
+
+  if (!filtres || filtres.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+  if (emptyEl) emptyEl.hidden = true;
+
+  tbody.innerHTML = filtres.map((c, i) => `
+    <tr data-index="${i}">
+      <td>${c["Agrément"] || ""}</td>
+      <td>${c["Raison Sociale"] || ""}</td>
+      <td>${c["Matricule"] || ""}</td>
+    </tr>`).join("");
+
+  tbody.querySelectorAll("tr").forEach((tr, i) => {
+    tr.addEventListener("click", () => selectionnerCabinetChoix(filtres[i]));
+  });
+}
+
+function selectionnerCabinetChoix(c) {
+  cabinetChoisi = {
+    raisonSociale: c["Raison Sociale"] || "",
+    agrement: c["Agrément"] || "",
+    matricule: c["Matricule"] || ""
+  };
+  closeModal("pl_modal_cabinet_choix");
+  ouvrirModalCabinetPropager();
+}
+
+/* ---------------- Modale "Appliquer le cabinet" ---------------- */
+
+function ouvrirModalCabinetPropager() {
+  if (!cabinetChoisi) return;
+  document.getElementById("pl_cabinet_propager_nom").textContent = cabinetChoisi.raisonSociale;
+
+  const actions = planWorking?.actions || [];
+  const autresVides = actions
+    .map((a, i) => ({ a, i }))
+    .filter(({ a, i }) => i !== planActionEditRow && !celluleRemplie(a.cabinet));
+  const toutesVides = autresVides.length === actions.length - 1;
+
+  const radioToutes = document.getElementById("pl_cabinet_propager_toutes");
+  radioToutes.disabled = !toutesVides;
+  document.getElementById("pl_cabinet_propager_note").hidden = toutesVides;
+
+  const liste = document.getElementById("pl_cabinet_propager_liste");
+  liste.innerHTML = autresVides.map(({ a, i }) => {
+    const ref = String(a.ref || `Action ${i + 1}`).replace(/</g, "&lt;");
+    return `
+      <li class="pl_confirmation_item">
+        <label>
+          <input type="checkbox" class="pl_cabinet_propager_check" data-index="${i}" />
+          ${ref}
+        </label>
+      </li>`;
+  }).join("");
+
+  document.querySelector('input[name="pl_cabinet_propager_mode"][value="courante"]').checked = true;
+  majAffichagePropagerListe();
+  document.getElementById("pl_modal_cabinet_propager").classList.add("is_visible");
+}
+
+function majAffichagePropagerListe() {
+  const mode = document.querySelector('input[name="pl_cabinet_propager_mode"]:checked')?.value;
+  document.getElementById("pl_cabinet_propager_liste").hidden = mode !== "certaines";
+}
+
+function validerCabinetPropager() {
+  if (!cabinetChoisi) return;
+  const mode = document.querySelector('input[name="pl_cabinet_propager_mode"]:checked')?.value;
+
+  // Action en cours d'édition (champs du formulaire Réalisation, pas encore
+  // enregistrés dans planWorking — validerRealisation s'en charge).
+  setVal("pl_real_cabinet", cabinetChoisi.raisonSociale);
+  setVal("pl_real_cabinet_agrement", cabinetChoisi.agrement);
+  setVal("pl_real_cabinet_matricule", cabinetChoisi.matricule);
+
+  let indices = [];
+  if (mode === "toutes") {
+    indices = (planWorking?.actions || [])
+      .map((a, i) => i)
+      .filter((i) => i !== planActionEditRow);
+  } else if (mode === "certaines") {
+    indices = Array.from(document.querySelectorAll(".pl_cabinet_propager_check:checked"))
+      .map((cb) => Number(cb.dataset.index));
+  }
+
+  indices.forEach((i) => {
+    const action = planWorking?.actions?.[i];
+    if (!action) return;
+    action.cabinet = cabinetChoisi.raisonSociale;
+    action.cabinetAgrement = cabinetChoisi.agrement;
+    action.cabinetMatricule = cabinetChoisi.matricule;
+  });
+
+  closeModal("pl_modal_cabinet_propager");
+  cabinetChoisi = null;
+
+  if (indices.length) {
+    rafraichirTables();
+    marquerDonneesNonSauvegardees();
+  }
+}
+
+/* ---------------- Modale "Facturation" ---------------- */
+
+function ouvrirModalFacturation(index) {
+  planActionEditRow = index;
+  const a = planWorking.actions[index] || {};
+  document.getElementById("pl_modal_facturation_titre").textContent = `Facturation — ${a.ref || "action"}`;
+  setVal("pl_fact_ref", a.ref);
+  setVal("pl_fact_date", a.dateFacturation);
+  setVal("pl_fact_numero", a.numFacturation);
+  setVal("pl_fact_complement", a.complementFacturation);
+  setVal("pl_fact_agrees", a.agreesFacturation);
+  setVal("pl_fact_montant", a.mntCalcule);
+  setVal("pl_fact_date_transfert", a.dateTransfert);
+  setVal("pl_fact_observations", a.observations);
+  document.getElementById("pl_modal_facturation").classList.add("is_visible");
+}
+
+function validerFacturation() {
+  if (planActionEditRow === null) return;
+  planWorking.actions[planActionEditRow] = {
+    ...planWorking.actions[planActionEditRow],
+    dateFacturation: val("pl_fact_date"),
+    numFacturation: val("pl_fact_numero").trim(),
+    complementFacturation: val("pl_fact_complement").trim(),
+    agreesFacturation: val("pl_fact_agrees"),
+    mntCalcule: val("pl_fact_montant"),
+    dateTransfert: val("pl_fact_date_transfert"),
+    observations: val("pl_fact_observations").trim()
+  };
+  closeModal("pl_modal_facturation");
+  rafraichirTables();
+  marquerDonneesNonSauvegardees();
+}
+
+function supprimerAction(index) {
+  if (!confirm("Supprimer cette action ?")) return;
+  planWorking.actions.splice(index, 1);
+  rafraichirTables();
+  marquerDonneesNonSauvegardees();
+}
+
+/* ---------------- Alerte "Données à sauvegarder !" (même principe que fi.html) ---------------- */
+
+function marquerDonneesNonSauvegardees() {
+  const lbl = document.getElementById("navbar_alert_save");
+  if (lbl) lbl.hidden = false;
+}
+function marquerDonneesSauvegardees() {
+  const lbl = document.getElementById("navbar_alert_save");
+  if (lbl) lbl.hidden = true;
+}
+window.addEventListener("beforeunload", (e) => {
+  const lbl = document.getElementById("navbar_alert_save");
+  if (lbl && !lbl.hidden) {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
+
+/* ---------------- Enregistrement ---------------- */
+
+async function enregistrerPlan() {
+  if (!planWorking || !planWorking.calculId) {
+    alert("Aucun plan à enregistrer.");
+    return;
+  }
+
+  const btn = document.getElementById("pl_btn_enregistrer");
+  setBtnSaving(btn, true);
+  try {
+    const { id } = await apiCall("exportPlanToDrive", { plan: planWorking });
+    planFileId = id;
+    history.replaceState(null, "", `plan.html?id=${id}`);
+    marquerDonneesSauvegardees();
+    alert("Plan enregistré.");
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+/* ---------------- Impression ----------------
+   La modale "Imprimer" ne reconstruit plus les documents dans le
+   navigateur : elle liste les fichiers déjà déposés sur le Drive pour ce
+   plan (lettre d'approbation envoyée depuis le .docm via uploadLettrePdf,
+   et tout futur document déposé au même endroit — voir listFichiersPlan
+   côté Code.gs). Un clic ouvre le fichier dans un nouvel onglet, prêt à
+   imprimer depuis le lecteur PDF du navigateur. */
+
+async function chargerFichiersImprimer() {
+  const conteneur = document.getElementById("pl_print_choix");
+  conteneur.innerHTML = `<div class="pl_print_aucun">Chargement...</div>`;
+
+  if (!planWorking) {
+    conteneur.innerHTML = `<div class="pl_print_aucun">Aucun plan chargé.</div>`;
+    return;
+  }
+
+  try {
+    const fichiers = await apiCall("listFichiersPlan", {
+      anneeDti: planWorking.anneeDti,
+      entreprise: planWorking.entreprise
+    });
+
+    if (!fichiers || fichiers.length === 0) {
+      conteneur.innerHTML = `<div class="pl_print_aucun">Aucun document déposé sur le Drive pour ce plan pour l'instant.</div>`;
+      return;
+    }
+
+    conteneur.innerHTML = "";
+    fichiers.forEach((f) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn_info";
+      btn.innerHTML = `<i class="bi bi-file-earmark-text"></i> ${esc(f.name)}`;
+      btn.addEventListener("click", () => {
+        closeModal("pl_modal_imprimer");
+        window.open(f.url, "_blank");
+      });
+      conteneur.appendChild(btn);
+    });
+  } catch (err) {
+    conteneur.innerHTML = `<div class="pl_print_aucun">Erreur lors du chargement : ${esc(err.message)}</div>`;
+  }
+}
+
+function esc(v) {
+  return String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// setBtnSaving() : voir js/ui_common.js (partagé par toutes les pages).
+  </script>
+</body>
+</html>
