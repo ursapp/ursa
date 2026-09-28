@@ -1193,6 +1193,9 @@
           Total regroupement par étudiant : <strong id="plan_total_reg">0</strong> / 84 h &nbsp;|&nbsp;
           Total examens par étudiant : <strong id="plan_total_eval">0</strong>
         </span>
+        <button type="button" class="btn_info no_mobile" id="plan_btn_imprimer" title="Imprimer le plan d'étude">
+          <i class="bi bi-printer"></i> Imprimer
+        </button>
         <button type="button" class="btn_info no_mobile" id="matiere_btn_nouveau">
           <i class="bi bi-plus-lg"></i> Ajouter une matière
         </button>
@@ -2177,6 +2180,7 @@
       });
 
       // Matières
+      document.getElementById("plan_btn_imprimer")?.addEventListener("click", imprimerPlanEtude);
       document.getElementById("matiere_btn_nouveau")?.addEventListener("click", () => {
         unhideSection("plan_etude");
         openMatiereForm(null);
@@ -4101,8 +4105,8 @@
     // Centralise la visibilité des 4 boutons "Ajouter" (Plan d'étude,
     // Tutorat, Regroupements, Examen) : masqués (pas seulement désactivés)
     // dès que la classe est facturée ; le bouton "Ajouter une matière"
-    // reste par ailleurs masqué une fois les limites 140h tutorat / 84h
-    // regroupement atteintes (même logique qu'avant, simplement déplacée
+    // reste par ailleurs masqué une fois les limites 154h tutorat / 92,4h
+    // regroupement (140h / 84h + 10 %) atteintes (même logique qu'avant, simplement déplacée
     // ici et changée de disabled à hidden). Appelée au chargement, à
     // chaque changement d'état, et à chaque re-rendu des sections
     // concernées.
@@ -4121,7 +4125,9 @@
       if (btnMatiere) {
         const totalTutorat = matieres.reduce((s, m) => s + (Number(m.tutorat) || 0), 0);
         const totalReg = matieres.reduce((s, m) => s + (Number(m.regClasse) || 0) + (Number(m.regG1) || 0), 0);
-        const limiteAtteinte = totalTutorat >= 140 && totalReg >= 84;
+        // Seuils = 140 h / 84 h + 10 % de tolérance (154 h / 92,4 h), les
+        // mêmes que pour l'impression du plan d'étude.
+        const limiteAtteinte = totalTutorat >= 140 * 1.1 - 1e-9 && totalReg >= 84 * 1.1 - 1e-9;
         btnMatiere.hidden = facturee || limiteAtteinte;
       }
     }
@@ -4167,12 +4173,12 @@
 
     // Rendu HTML d'un bloc (semaine de tutorat ou de regroupement) tel qu'utilisé
     // dans la notification et dans l'impression "Tutorat et regroupements alternés".
-    // isCurrentWeek : marque le bloc (data-current-week) pour permettre à la
-    // notification de le masquer/afficher via la case "Inclure la semaine en
-    // cours" (voir genererDocumentNotification).
-    function rendreBlocChrono({ type, week }, isCurrentWeek = false) {
+    // semaineKey : numéro de semaine (data-semaine) qui permet à la notification
+    // de masquer/afficher les blocs tutorat ET regroupement d'une même semaine
+    // depuis la liste de choix des semaines (voir genererDocumentNotification).
+    function rendreBlocChrono({ type, week }, semaineKey = null) {
       const joursOrdre = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
-      const currentWeekAttr = isCurrentWeek ? ' data-current-week="1"' : '';
+      const currentWeekAttr = semaineKey !== null ? ` data-semaine="${escapeHtml(String(semaineKey))}"` : '';
 
       if (type === 'tutorat') {
         const jours = week.jours || {};
@@ -4261,24 +4267,36 @@
 
       const subHeaderInfo = `Classe : ${classeVal || '----'} &nbsp; Spécialité : ${specVal || '----'} &nbsp; Promotion : ${promoVal ? 'Pr' + promoVal : '----'} &nbsp; Niveau : ${niveauVal || '----'} &nbsp; Semestre : ${(semNum && semAnnee) ? `${semNum}-${semAnnee}` : '----'}`;
 
-      // Semaine en cours (lundi -> dimanche) : sert à marquer les blocs
-      // correspondants (data-current-week) et à retrouver leur numéro de
-      // semaine pour l'affichage de la case à cocher ci-dessous.
+      // Semaine en cours (lundi -> dimanche) : simple repère affiché dans la
+      // modale de choix des semaines.
       const sundayCourante = new Date(monday);
       sundayCourante.setDate(sundayCourante.getDate() + 6);
       const estSemaineEnCours = date => date >= monday && date <= sundayCourante;
-      const blocsSemaineEnCours = blocs.filter(b => estSemaineEnCours(b.date));
-      const numeroSemaineEnCours = blocsSemaineEnCours.length > 0
-        ? (blocsSemaineEnCours[0].week.semaine ?? null)
-        : null;
+
+      const cleSemaine = b => String(b.week.semaine ?? '?');
 
       // Chaque bloc reprend exactement le tableau affiché dans sa propre
       // section (Répartition tutorat / Regroupements), sans les boutons
-      // d'édition.
-      const blocsHtml = blocs.map(b => rendreBlocChrono(b, estSemaineEnCours(b.date))).join('');
-      const labelSemaineEnCours = numeroSemaineEnCours !== null
-        ? `Inclure la semaine en cours (Semaine ${escapeHtml(String(numeroSemaineEnCours))})`
-        : `Inclure la semaine en cours`;
+      // d'édition. Le numéro de semaine sert de repère pour la liste de choix.
+      const blocsHtml = blocs.map(b => rendreBlocChrono(b, cleSemaine(b))).join('');
+
+      // Une case par semaine (et non par tutorat/regroupement), dans l'ordre
+      // chronologique ; toutes cochées par défaut.
+      const semainesUniques = [];
+      blocs.forEach(b => {
+        const cle = cleSemaine(b);
+        let entree = semainesUniques.find(x => x.cle === cle);
+        if (!entree) {
+          entree = { cle, enCours: false };
+          semainesUniques.push(entree);
+        }
+        if (estSemaineEnCours(b.date)) entree.enCours = true;
+      });
+      const nbSemaines = semainesUniques.length;
+      const choixSemainesHtml = semainesUniques.map(x => {
+        const badge = x.enCours ? '<em class="notif-badge">en cours</em>' : '';
+        return `<label class="notif-modal-item"><input type="checkbox" class="notif-week-check" data-semaine="${escapeHtml(x.cle)}" checked onchange="majSemaines()"><span>Semaine ${escapeHtml(x.cle)}</span>${badge}</label>`;
+      }).join('');
 
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
@@ -4338,27 +4356,88 @@
       cursor: pointer;
       background: #fff;
     }
-    .notif-current-week-toggle {
+    .notif-weeks-count {
+      font-weight: normal;
+      margin-left: 4px;
+    }
+    .notif-weeks-wrap { position: relative; }
+    /* "Avoir PDF" désactivé tant que la liste des semaines est affichée ;
+       pointer-events: none laisse passer l'appui vers l'arrière-plan, ce qui
+       referme la liste (appui externe). */
+    .notif-actions button:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+    .notif-modal-overlay {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      z-index: 1000;
+    }
+    .notif-modal-overlay.is_open { display: block; }
+    .notif-modal {
+      background: #fff;
+      border: 1px solid #333;
+      border-radius: 8px;
+      width: 260px;
+      max-height: 60vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+    }
+    .notif-modal-header {
+      padding: 14px 18px;
+      font-weight: bold;
+      font-size: 15px;
+      border-bottom: 1px solid #ddd;
+    }
+    .notif-modal-tools {
+      display: flex;
+      gap: 8px;
+      padding: 10px 18px 0;
+    }
+    .notif-modal-tools button {
+      font-family: inherit;
+      font-size: 12px;
+      padding: 4px 10px;
+      border: 1px solid #999;
+      border-radius: 5px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .notif-modal-body {
+      padding: 10px 18px;
+      overflow-y: auto;
+    }
+    .notif-modal-item {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      padding: 7px 4px;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .notif-modal-item input { cursor: pointer; }
+    .notif-badge {
+      margin-left: auto;
+      font-size: 11px;
+      color: #1f8a54;
+      font-weight: bold;
+    }
+    .notif-modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid #ddd;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .notif-modal-footer button {
       font-family: inherit;
       font-size: 13px;
       font-weight: bold;
-      padding: 8px 14px;
+      padding: 8px 16px;
       border-radius: 6px;
-      border: 1px solid #333;
-      background: #fff;
-      color: #000;
-      cursor: pointer;
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-    }
-    .notif-current-week-toggle:has(input:checked) {
+      border: 1px solid #1f8a54;
       background: #1f8a54;
-      border-color: #1f8a54;
       color: #fff;
-    }
-    .notif-current-week-toggle input {
       cursor: pointer;
     }
     .week-block {
@@ -4388,6 +4467,7 @@
     @media print {
       body { -webkit-print-color-adjust: exact; }
       .notif-actions { display: none; }
+      .notif-modal-overlay { display: none !important; }
     }
   </style>
 </head>
@@ -4397,24 +4477,69 @@
   <div class="notif-title">Séances de tutorat et regroupement planifiées</div>
 
   <div class="notif-actions">
-    <label class="notif-current-week-toggle">
-      <input type="checkbox" id="notif_include_current_week" checked onchange="toggleSemaineEnCours(this.checked)">
-      ${labelSemaineEnCours}
-    </label>
-    <button type="button" onclick="window.print()">Avoir PDF</button>
+    <div class="notif-weeks-wrap">
+      <button type="button" onclick="basculerModaleSemaines()">Choisir les semaines <span class="notif-weeks-count" id="notif_weeks_count">(${nbSemaines}/${nbSemaines})</span></button>
+      <div class="notif-modal-overlay" id="notif_modal_weeks">
+        <div class="notif-modal">
+          <div class="notif-modal-header">Semaines à inclure</div>
+          <div class="notif-modal-tools">
+            <button type="button" onclick="toutCocherSemaines(true)">Tout cocher</button>
+            <button type="button" onclick="toutCocherSemaines(false)">Tout décocher</button>
+          </div>
+          <div class="notif-modal-body">${choixSemainesHtml}</div>
+          <div class="notif-modal-footer">
+            <button type="button" onclick="fermerModaleSemaines()">Valider</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button type="button" id="notif_btn_pdf" onclick="window.print()">Avoir PDF</button>
   </div>
 
   ${blocsHtml}
 
+
   <script>
-    // Affiche/masque les blocs de la semaine en cours (marqués
-    // data-current-week côté génération) selon l'état de la case à cocher,
-    // cochée par défaut (comportement actuel : semaine en cours incluse).
-    function toggleSemaineEnCours(inclure) {
-      document.querySelectorAll('[data-current-week="1"]').forEach(el => {
-        el.style.display = inclure ? '' : 'none';
+    // Affiche/masque tous les blocs (tutorat et regroupement) d'une semaine
+    // selon la case cochée dans la liste ; toutes cochées par défaut.
+    function majSemaines() {
+      var checks = document.querySelectorAll('.notif-week-check');
+      var n = 0;
+      checks.forEach(function (c) {
+        var cle = c.getAttribute('data-semaine');
+        document.querySelectorAll('.week-block[data-semaine="' + cle + '"]').forEach(function (bloc) {
+          bloc.style.display = c.checked ? '' : 'none';
+        });
+        if (c.checked) n++;
       });
+      var lbl = document.getElementById('notif_weeks_count');
+      if (lbl) lbl.textContent = '(' + n + '/' + checks.length + ')';
     }
+    function toutCocherSemaines(valeur) {
+      document.querySelectorAll('.notif-week-check').forEach(function (c) { c.checked = valeur; });
+      majSemaines();
+    }
+    // "Avoir PDF" est désactivé tant que la liste des semaines est affichée.
+    function syncBoutonPdf() {
+      var ouverte = document.getElementById('notif_modal_weeks').classList.contains('is_open');
+      var btn = document.getElementById('notif_btn_pdf');
+      if (btn) btn.disabled = ouverte;
+    }
+    function basculerModaleSemaines() {
+      document.getElementById('notif_modal_weeks').classList.toggle('is_open');
+      syncBoutonPdf();
+    }
+    function fermerModaleSemaines() {
+      document.getElementById('notif_modal_weeks').classList.remove('is_open');
+      syncBoutonPdf();
+    }
+    // Un appui en dehors de la liste (ou la touche Échap) la referme.
+    document.addEventListener('pointerdown', function (e) {
+      if (!e.target.closest('.notif-weeks-wrap')) fermerModaleSemaines();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') fermerModaleSemaines();
+    });
   <\/script>
 </body>
 </html>`);
@@ -5653,6 +5778,43 @@
       }
 
       return parts.join('');
+    }
+
+    // Bouton "Imprimer" de l'en-tête du Plan d'étude : imprime le plan d'étude
+    // tel qu'il figure dans le dossier de facturation (même section "plan").
+    // Condition : les heures doivent être remplies — au moins 140 h de tutorat
+    // et 84 h de regroupement, avec un dépassement toléré de 10 % (max 154 h
+    // et 92,4 h). Un enseignant non assigné n'empêche pas l'impression.
+    function imprimerPlanEtude() {
+      if (!matieres || matieres.length === 0) {
+        alert("Le plan d'étude est vide : aucune matière à imprimer.");
+        return;
+      }
+
+      const TOLERANCE = 1.1;
+      const EPS = 1e-9;
+      const LIMITES = [
+        { label: 'tutorat', min: 140, total: matieres.reduce((s, m) => s + (Number(m.tutorat) || 0), 0) },
+        { label: 'regroupement', min: 84, total: matieres.reduce((s, m) => s + (Number(m.regClasse) || 0) + (Number(m.regG1) || 0), 0) }
+      ];
+
+      const fmt = n => String(Math.round(n * 100) / 100).replace('.', ',');
+      const manques = [];
+      LIMITES.forEach(l => {
+        const max = l.min * TOLERANCE;
+        if (l.total < l.min - EPS) {
+          manques.push(`Heures de ${l.label} : ${fmt(l.total)} h (minimum ${fmt(l.min)} h)`);
+        } else if (l.total > max + EPS) {
+          manques.push(`Heures de ${l.label} : ${fmt(l.total)} h (maximum toléré ${fmt(max)} h)`);
+        }
+      });
+
+      if (manques.length > 0) {
+        alert("Impression impossible : les heures du plan d'étude ne sont pas conformes.\n\n- " + manques.join("\n- "));
+        return;
+      }
+
+      printFacturationSelectedSections(["plan"]);
     }
 
     function printFacturationSelectedSections(selected) {
