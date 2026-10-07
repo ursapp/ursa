@@ -195,6 +195,10 @@
       order: -1;
       margin-right: auto;
     }
+    .matiere_form_actions #etudiant_btn_base {
+      order: -1;
+      margin-right: auto;
+    }
     .matiere_form_actions button[type="submit"] {
       order: 1;
       margin-left: auto;
@@ -454,7 +458,7 @@
     /* --- Styles pour le tutorat --- */
     .tut_day_row {
       display: grid;
-      grid-template-columns: 80px 100px 1fr 1fr 1.5fr;
+      grid-template-columns: 80px 100px 1fr 1fr 1.5fr 36px;
       gap: var(--space_2);
       align-items: center;
       margin-bottom: var(--space_2);
@@ -462,6 +466,20 @@
       border-bottom: 1px solid var(--border_soft);
     }
     .tut_day_row:last-child { border-bottom: none; }
+    /* 2e séance de la soirée (total de la soirée <= 3 h) */
+    .tut_seance2 {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: calc(180px + var(--space_2)) 1fr 1fr 1.5fr 36px;
+      gap: var(--space_2);
+      align-items: center;
+    }
+    .tut_seance2[hidden] { display: none; }
+    .tut_seance2 .tut_s2_label {
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+      text-align: right;
+    }
     .tut_day_row label {
       font-size: var(--fs_sm);
       font-weight: 600;
@@ -761,6 +779,18 @@
             <label id="label_date_fin" hidden>Date fin de formation
               <input type="date" id="classe_date_fin" />
             </label>
+            <!-- Constantes de la classe : éditables par l'admin (pp) seulement,
+                 affichées en lecture seule pour le coordinateur (invité).
+                 Elles alimentent les stats d'en-tête du Plan d'étude, du
+                 tutorat et des regroupements, et conditionnent l'ajout de nouvelles
+                 semaines (possible tant que les heures planifiées sont sous
+                 ces heures). -->
+            <label>Heures de tutorat par étudiant
+              <input type="number" id="classe_heures_tutorat" min="0" step="0.5" value="140" />
+            </label>
+            <label>Heures de regroupement par étudiant
+              <input type="number" id="classe_heures_reg" min="0" step="0.5" value="84" />
+            </label>
             <label>Nom du premier responsable
               <input type="text" id="classe_responsable_nom" placeholder="Rempli automatiquement depuis la base" disabled />
             </label>
@@ -858,6 +888,10 @@
                 <input type="email" id="etudiant_email" />
               </label>
               <div class="matiere_form_actions">
+                <!-- Admin seulement (masqué en accès invité) et uniquement en création -->
+                <button type="button" class="btn_info" id="etudiant_btn_base" hidden>
+                  <i class="bi bi-database-down"></i> Importer depuis base
+                </button>
                 <button type="button" class="btn_danger" id="etudiant_btn_supprimer" hidden>
                   <i class="bi bi-trash3"></i> Supprimer
                 </button>
@@ -885,6 +919,33 @@
                 <table>
                   <thead><tr><th></th><th>Nom</th><th>Prénom</th><th>CIN</th></tr></thead>
                   <tbody id="inscrits_precedent_body"></tbody>
+                </table>
+              </div>
+              <div class="matiere_form_actions">
+                <button type="submit" class="btn_success"><i class="bi bi-check-lg"></i> Ajouter la sélection</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODALE IMPORT DEPUIS LA BASE (inscrits de pp.html, filtrés selon la classe) -->
+      <div class="modal_overlay" id="inscrits_base_modal">
+        <div class="modal_dialog modal_lg">
+          <div class="modal_header">
+            <h3>Importer depuis la base</h3>
+            <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <p class="inscrits_source_info" id="inscrits_base_info"></p>
+            <button type="button" class="btn_ghost inscrits_toggle_all" id="inscrits_base_toggle_all">
+              <i class="bi bi-check-all"></i> Tout cocher / décocher
+            </button>
+            <form id="inscrits_base_form">
+              <div class="inscrits_check_list">
+                <table>
+                  <thead><tr><th></th><th>CIN</th><th>Nom</th><th>Prénom</th><th>Année</th></tr></thead>
+                  <tbody id="inscrits_base_body"></tbody>
                 </table>
               </div>
               <div class="matiere_form_actions">
@@ -1189,8 +1250,8 @@
       <div class="block_metiers_header">
         <h3>Plan d'étude</h3>
         <span class="block_metiers_status">
-          Total tutorat : <strong id="plan_total_tutorat">0</strong> / 140 h &nbsp;|&nbsp;
-          Total regroupement par étudiant : <strong id="plan_total_reg">0</strong> / 84 h &nbsp;|&nbsp;
+          Total tutorat : <strong id="plan_total_tutorat">0</strong> / <span class="cible_tutorat">140</span> h &nbsp;|&nbsp;
+          Total regroupement par étudiant : <strong id="plan_total_reg">0</strong> / <span class="cible_reg">84</span> h &nbsp;|&nbsp;
           Total examens par étudiant : <strong id="plan_total_eval">0</strong>
         </span>
         <button type="button" class="btn_info no_mobile" id="plan_btn_imprimer" title="Imprimer le plan d'étude">
@@ -1322,7 +1383,7 @@
       <div class="block_metiers_header">
         <h3>Répartition tutorat</h3>
         <span class="block_metiers_status">
-          Heures planifiées : <strong id="tut_total_planifie">0</strong> / 140 h
+          Heures planifiées : <strong id="tut_total_planifie">0</strong> / <span class="cible_tutorat">140</span> h
         </span>
         <button type="button" class="btn_info no_mobile" id="tut_btn_planifier">
           <i class="bi bi-calendar4-week"></i> Planifier tutorat
@@ -1348,8 +1409,8 @@
             <input type="hidden" id="tut_week_edit_index" />
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space_3); margin-bottom: var(--space_3);">
               <label style="display:flex; flex-direction:column; gap:var(--space_1); font-size:var(--fs_sm); color:var(--text_secondary);">
-                Semaine (1-14)
-                <input type="number" id="tut_week_num" min="1" max="14" required />
+                Semaine
+                <input type="number" id="tut_week_num" min="1" step="1" required />
               </label>
               <label style="display:flex; flex-direction:column; gap:var(--space_1); font-size:var(--fs_sm); color:var(--text_secondary);">
                 Date de début (lundi)
@@ -1363,6 +1424,9 @@
             <h4 style="margin: var(--space_3) 0 var(--space_2) 0;">Séances par jour</h4>
             <p class="seq_time_hint">
               <i class="bi bi-info-circle"></i> saisir heure hhmm sans les deux points (:) — changer heure par flèches ↑ / ↓ : +/- 15 min (↑ / ↓ + Maj : +/- 1 h)
+            </p>
+            <p class="seq_time_hint">
+              <i class="bi bi-info-circle"></i> séance de 2 h par défaut — une soirée peut durer jusqu'à 3 h : 1 séance de 3 h, ou 2 séances (bouton +) dont le total ne dépasse pas 3 h
             </p>
             <div id="tut_jours_container"></div>
 
@@ -1383,8 +1447,8 @@
       <div class="block_metiers_header">
         <h3>Regroupements</h3>
         <span class="block_metiers_status">
-          Heures planifiées : <strong id="reg_total_planifie">0</strong> / 84 h &nbsp;|&nbsp;
-          Semaines planifiés : <strong id="reg_total_semaines">0</strong> / 14
+          Heures planifiées : <strong id="reg_total_planifie">0</strong> / <span class="cible_reg">84</span> h &nbsp;|&nbsp;
+          Semaines planifiés : <strong id="reg_total_semaines">0</strong>
         </span>
         <button type="button" class="btn_info no_mobile" id="reg_btn_planifier">
           <i class="bi bi-calendar4-event"></i> Planifier regroupements
@@ -1415,12 +1479,15 @@
             <input type="hidden" id="reg_week_edit_index" />
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space_3); margin-bottom: var(--space_3);">
               <label style="display:flex; flex-direction:column; gap:var(--space_1); font-size:var(--fs_sm); color:var(--text_secondary);">
-                Semaine (1-14)
-                <input type="number" id="reg_week_num" min="1" max="14" required />
+                Semaine
+                <input type="number" id="reg_week_num" min="1" step="1" required />
               </label>
               <label style="display:flex; flex-direction:column; gap:var(--space_1); font-size:var(--fs_sm); color:var(--text_secondary);">
-                Date (dimanche)
+                Date (samedi ou dimanche)
                 <input type="date" id="reg_week_date" required />
+                <span id="reg_week_date_warning" class="tut_time_hint_warning" hidden>
+                  <i class="bi bi-exclamation-triangle"></i> Un regroupement a normalement lieu un samedi ou un dimanche.
+                </span>
               </label>
             </div>
 
@@ -1540,6 +1607,61 @@
     // qui doit reconstruire l'URL avec le même nom de paramètre plutôt que
     // de toujours retomber sur "classe").
     let CLASS_GUEST_MODE = false;
+
+    // Constantes de la classe (modale "Editer", admin seulement) : heures de
+    // tutorat et de regroupement dues PAR ÉTUDIANT. Valeurs par défaut = les
+    // anciennes valeurs en dur (140 h / 84 h), reprises tant que la fiche
+    // n'en contient pas.
+    const HEURES_TUTORAT_DEFAUT = 140;
+    const HEURES_REG_DEFAUT = 84;
+    let heuresTutoratEtudiant = HEURES_TUTORAT_DEFAUT;
+    let heuresRegEtudiant = HEURES_REG_DEFAUT;
+    // Pas de plafond sur le nombre de semaines : on peut planifier une
+    // nouvelle semaine (tutorat ou regroupement) tant que les heures
+    // planifiées de la section restent sous les heures de la classe.
+    // Soirée de tutorat : 3 h maximum, en 1 séance (3 h) ou 2 séances dont
+    // le total ne dépasse pas 3 h.
+    const TUT_MAX_SOIREE_H = 3;
+
+    // Dernière semaine de regroupement planifiée : nombre de lignes des
+    // compteurs de regroupement (plus de 14 lignes fixes).
+    function derniereSemaineReg() {
+      return Math.max(0, ...regroupements.map(w => Number(w.semaine) || 0));
+    }
+
+    // Heures planifiées par étudiant, par section (mêmes calculs que les
+    // stats d'en-tête de Répartition tutorat / Regroupements).
+    function totalTutoratPlanifie() {
+      let total = 0;
+      tutorat.forEach(week => {
+        JOURS_SEMAINE.forEach(j => {
+          seancesDuJour((week.jours || {})[j]).forEach(d => {
+            if (d.debut && d.fin) total += durationInHours(d.debut, d.fin);
+          });
+        });
+      });
+      return total;
+    }
+
+    function totalRegPlanifie() {
+      const stats = getSequenceStats(regroupements.flatMap(week => week.sequences || []));
+      return stats.g1 + stats.classe;
+    }
+
+    function lireConstantesDepuisFormulaire() {
+      const t = parseFloat(document.getElementById("classe_heures_tutorat")?.value);
+      const r = parseFloat(document.getElementById("classe_heures_reg")?.value);
+      heuresTutoratEtudiant = (isFinite(t) && t > 0) ? t : HEURES_TUTORAT_DEFAUT;
+      heuresRegEtudiant = (isFinite(r) && r > 0) ? r : HEURES_REG_DEFAUT;
+    }
+
+    // Reporte les constantes sur tout ce qui les affiche ou les utilise.
+    function appliquerConstantesHeures() {
+      const fmt = n => String(Math.round(n * 100) / 100).replace('.', ',');
+      document.querySelectorAll('.cible_tutorat').forEach(el => { el.textContent = fmt(heuresTutoratEtudiant); });
+      document.querySelectorAll('.cible_reg').forEach(el => { el.textContent = fmt(heuresRegEtudiant); });
+      if (typeof updateAjoutButtonsVisibility === 'function') updateAjoutButtonsVisibility();
+    }
     // Date (ISO) à laquelle le coordinateur (accès invité, coord.html) a
     // demandé le "Check Tutorat" à l'administrateur (pp.html). Tant qu'elle
     // est vide, la colonne "Nb d'h réalisées" du compteur tutorat par matière
@@ -1557,6 +1679,7 @@
     let etudiants = [];
     let intervenants = [];
     let examens = [];
+    let inscritsBaseCandidats = []; // liste temporaire affichée dans la modale "importer depuis base"
     let inscritsPrecedentCandidats = []; // liste temporaire affichée dans la modale "récupérer"
     let intervenantsPrecedentCandidats = []; // idem, pour les intervenants (Coordination)
     let inscritsImportCandidats = []; // liste temporaire affichée dans la modale "import xlsx"
@@ -1650,6 +1773,12 @@
         // classe (voir chargerClasseExistante : etatSelect.value = c.etat).
         const optFacturee = document.getElementById("classe_etat_facturee");
         if (optFacturee) { optFacturee.hidden = true; optFacturee.disabled = true; }
+        // Constantes d'heures par étudiant : réservées à l'admin, le
+        // coordinateur les voit mais ne peut pas les modifier.
+        ["classe_heures_tutorat", "classe_heures_reg"].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.disabled = true;
+        });
       }
 
       // Le spinner couvre tout le chargement initial (options partenaires /
@@ -1822,6 +1951,16 @@
 
       document.getElementById("class_btn_enregistrer")?.addEventListener("click", () => enregistrerClasse(false));
       document.getElementById("class_btn_editer")?.addEventListener("click", () => openFormModal("classe_fiche_modal", "classe_fiche_form"));
+      ["classe_heures_tutorat", "classe_heures_reg"].forEach(id => {
+        document.getElementById(id)?.addEventListener("input", () => {
+          lireConstantesDepuisFormulaire();
+          appliquerConstantesHeures();
+          renderPlanTable();
+          renderCompteurReg();
+          setUnsavedChanges();
+        });
+      });
+      document.getElementById("reg_week_date")?.addEventListener("input", majAvertissementDateReg);
       document.getElementById("classe_fiche_btn_inscrits")?.addEventListener("click", () => {
         closeFormModal("classe_fiche_modal");
         fermerAutresSections("liste_inscrits");
@@ -2165,6 +2304,12 @@
       document.getElementById("inscrits_import_form")?.addEventListener("submit", onSubmitImportForm);
       document.getElementById("inscrits_import_toggle_all")?.addEventListener("click", () => {
         toggleAllCheckboxes("inscrits_import_body");
+      });
+
+      document.getElementById("etudiant_btn_base")?.addEventListener("click", onImporterDepuisBase);
+      document.getElementById("inscrits_base_form")?.addEventListener("submit", onSubmitBaseForm);
+      document.getElementById("inscrits_base_toggle_all")?.addEventListener("click", () => {
+        toggleAllCheckboxes("inscrits_base_body");
       });
 
       document.getElementById("inscrits_btn_precedent")?.addEventListener("click", onRecupererSemestrePrecedent);
@@ -2720,6 +2865,9 @@
       document.getElementById("etudiant_telephone").value = et?.telephone || "";
       document.getElementById("etudiant_telephone2").value = et?.telephone2 || "";
       document.getElementById("etudiant_email").value = et?.email || "";
+      // "Importer depuis base" : admin seulement, et uniquement en création
+      const btnBase = document.getElementById("etudiant_btn_base");
+      if (btnBase) btnBase.hidden = CLASS_GUEST_MODE || (index !== null && index !== undefined);
       openFormModal("etudiant_modal", "etudiant_form");
       setTimeout(() => document.getElementById("etudiant_cin").focus(), 50);
     }
@@ -3163,6 +3311,146 @@
       alert(`${ajoutes} étudiant(s) ajouté(s)${ajoutes < selection.length ? ` (${selection.length - ajoutes} déjà présent(s), ignoré(s))` : ""}.`);
     }
 
+    // ---------------- Import depuis la base (inscrits de pp.html) ----------------
+
+    // Lit une ligne "Label : valeur" dans le champ composite "Coordonnées"
+    // de la base pp (même convention que getCoordField() dans pp.html).
+    function coordChampBase(text, label) {
+      const lignes = String(text || "").split("\n");
+      for (const ligne of lignes) {
+        const idx = ligne.indexOf(":");
+        if (idx === -1) continue;
+        if (ligne.slice(0, idx).trim() === label) return ligne.slice(idx + 1).trim();
+      }
+      return "";
+    }
+
+    // Valeur "Année" (base pp) attendue pour les inscrits éligibles à la
+    // classe courante, ex. "LATI Pr1 1ère". Correspondance niveau -> année :
+    //   LA  (x/6) : 1-2 -> 1ère, 3-4 -> 2ème, 5-6 -> 3ème
+    //   BTP (x/4) : 1-2 -> 1ère, 3-4 -> 2ème
+    //   BTS (x/5) : 1-2 -> 1ère, 3-4 -> 2ème, 5 -> "Sem5"
+    // Renvoie null si la classe n'a pas de correspondance (CAP, champs vides).
+    function anneeBasePourClasse(fiche) {
+      const classe = String(fiche.classe || "").trim();
+      const spec = String(fiche.specialite || "").trim();
+      // La fiche stocke le numéro seul ("2") ; la base pp utilise "Pr2".
+      const promoBrute = String(fiche.promotion || "").trim();
+      const promo = promoBrute && !/^pr/i.test(promoBrute) ? `Pr${promoBrute}` : promoBrute;
+      const p = parseNiveau(fiche.niveau);
+      if (!classe || !spec || spec === "Aucune" || !promo || !p) return null;
+      let suffixe;
+      if (classe === "BTS" && p.i === 5) {
+        suffixe = "Sem5";
+      } else {
+        const ordinaux = ["1ère", "2ème", "3ème"];
+        suffixe = ordinaux[Math.ceil(p.i / 2) - 1];
+      }
+      if (!suffixe) return null;
+      return `${classe}${spec} ${promo} ${suffixe}`;
+    }
+
+    function normaliserAnneeBase(v) {
+      return normaliserEnTete(v).replace(/\s+/g, " ");
+    }
+
+    // Un candidat est déjà dans la liste actuelle si son CIN y figure.
+    // Sans CIN (côté candidat ou côté liste), repli sur nom + prénom.
+    function etudiantDejaPresent(candidat) {
+      const cin = String(candidat.cin || "").trim();
+      const nomCle = `${String(candidat.nom || "").trim().toUpperCase()}|${String(candidat.prenom || "").trim().toUpperCase()}`;
+      return etudiants.some((e) => {
+        const cinE = String(e.cin || "").trim();
+        if (cin && cinE) return cin === cinE;
+        return `${String(e.nom || "").trim().toUpperCase()}|${String(e.prenom || "").trim().toUpperCase()}` === nomCle;
+      });
+    }
+
+    async function onImporterDepuisBase() {
+      const fiche = lireFicheDepuisFormulaire();
+      const anneeCible = anneeBasePourClasse(fiche);
+      if (!anneeCible) {
+        alert("Impossible de déterminer les inscrits éligibles : renseignez Classe, Spécialité, Promotion et Niveau dans la fiche de la classe.");
+        return;
+      }
+      const btn = document.getElementById("etudiant_btn_base");
+      const originalContent = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<i class="bi bi-hourglass-split"></i> Chargement...`;
+      try {
+        const inscrits = await apiCallDirect("listInscritsPP", {});
+        const cle = normaliserAnneeBase(anneeCible);
+        const eligibles = (inscrits || [])
+          .filter((x) => normaliserAnneeBase(x["Année"]) === cle)
+          .map((x) => ({
+            nom: String(x["Nom"] || "").trim().toUpperCase(),
+            prenom: capitaliserPremiereLettre(String(x["Prénom"] || "").trim()),
+            cin: String(x["CIN"] || "").trim(),
+            telephone: coordChampBase(x["Coordonnées"], "Tél"),
+            telephone2: coordChampBase(x["Coordonnées"], "Tél2"),
+            email: coordChampBase(x["Coordonnées"], "Email"),
+            _annee: String(x["Année"] || "").trim()
+          }));
+        if (eligibles.length === 0) {
+          alert(`Aucun inscrit "${anneeCible}" dans la base.`);
+          return;
+        }
+        // Seuls les inscrits absents de la liste actuelle sont proposés
+        const candidats = eligibles.filter((et) => !etudiantDejaPresent(et));
+        if (candidats.length === 0) {
+          alert(`Les ${eligibles.length} inscrit(s) "${anneeCible}" sont déjà dans la liste.`);
+          return;
+        }
+        ouvrirModaleBase(anneeCible, candidats, eligibles.length - candidats.length);
+      } catch (err) {
+        alert(`Erreur : ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+      }
+    }
+
+    function ouvrirModaleBase(anneeCible, candidats, nbDejaPresents) {
+      inscritsBaseCandidats = candidats;
+      document.getElementById("inscrits_base_info").textContent =
+        `Inscrits éligibles : ${anneeCible}` +
+        (nbDejaPresents > 0 ? ` (${nbDejaPresents} déjà dans la liste, masqué(s))` : "");
+      const tbody = document.getElementById("inscrits_base_body");
+      tbody.innerHTML = candidats.map((et, i) => `
+        <tr>
+          <td><input type="checkbox" data-index="${i}" checked /></td>
+          <td>${escapeHtml(et.cin)}</td>
+          <td>${escapeHtml(et.nom)}</td>
+          <td>${escapeHtml(et.prenom)}</td>
+          <td>${escapeHtml(et._annee)}</td>
+        </tr>`).join("");
+      closeFormModal("etudiant_modal");
+      openFormModal("inscrits_base_modal", "inscrits_base_form");
+    }
+
+    function onSubmitBaseForm(e) {
+      e.preventDefault();
+      const boxes = document.querySelectorAll('#inscrits_base_body input[type="checkbox"]:checked');
+      const selection = Array.from(boxes).map((b) => {
+        const { _annee, ...et } = inscritsBaseCandidats[Number(b.dataset.index)];
+        return et;
+      });
+      if (selection.length === 0) {
+        alert("Aucun étudiant sélectionné.");
+        return;
+      }
+      let ajoutes = 0;
+      selection.forEach((et) => {
+        if (etudiantDejaPresent(et)) return;
+        etudiants.push(et);
+        ajoutes++;
+      });
+      closeFormModal("inscrits_base_modal");
+      renderEtudiants();
+      setUnsavedChanges();
+      alert(`${ajoutes} étudiant(s) ajouté(s)${ajoutes < selection.length ? ` (${selection.length - ajoutes} déjà présent(s), ignoré(s))` : ""}.`);
+    }
+
     // ---------------- Import xlsx ----------------
 
     // Reconnaissance des colonnes par mots-clés dans l'en-tête (insensible
@@ -3320,16 +3608,17 @@
       tutorat.forEach(week => {
         const jours = week.jours || {};
         JOURS_SEMAINE.forEach(j => {
-          const d = jours[j];
-          if (d && d.debut && d.fin && d.matiere) {
-            const heures = durationInHours(d.debut, d.fin);
-            if (heures > 0) {
-              if (!result[d.matiere]) {
-                result[d.matiere] = { tutorat: 0, classe: 0, g1: 0, g2: 0 };
+          seancesDuJour(jours[j]).forEach(d => {
+            if (d && d.debut && d.fin && d.matiere) {
+              const heures = durationInHours(d.debut, d.fin);
+              if (heures > 0) {
+                if (!result[d.matiere]) {
+                  result[d.matiere] = { tutorat: 0, classe: 0, g1: 0, g2: 0 };
+                }
+                result[d.matiere].tutorat += heures;
               }
-              result[d.matiere].tutorat += heures;
             }
-          }
+          });
         });
       });
       return result;
@@ -3653,6 +3942,13 @@
       const start = timeToMinutes(debut);
       const end = timeToMinutes(fin);
       return start === null || end === null || end <= start ? 0 : (end - start) / 60;
+    }
+
+    // Une soirée de tutorat = 1 séance (jours[j]) + éventuellement une 2e
+    // séance (jours[j].seance2), le total de la soirée étant limité à
+    // TUT_MAX_SOIREE_H. Les anciennes données (sans seance2) restent valides.
+    function seancesDuJour(d) {
+      return d ? [d, d.seance2].filter(Boolean) : [];
     }
 
     function applyPublicSuggestion(row) {
@@ -4106,18 +4402,21 @@
     // Tutorat, Regroupements, Examen) : masqués (pas seulement désactivés)
     // dès que la classe est facturée ; le bouton "Ajouter une matière"
     // reste par ailleurs masqué une fois les limites 154h tutorat / 92,4h
-    // regroupement (140h / 84h + 10 %) atteintes (même logique qu'avant, simplement déplacée
+    // regroupement (heures de la classe, sans tolérance) atteintes (même logique qu'avant, simplement déplacée
     // ici et changée de disabled à hidden). Appelée au chargement, à
     // chaque changement d'état, et à chaque re-rendu des sections
     // concernées.
     function updateAjoutButtonsVisibility() {
       const facturee = estClasseFacturee();
 
+      // Une nouvelle semaine ne peut être planifiée que tant que les heures
+      // planifiées de la section sont sous les heures de la classe (les
+      // semaines existantes restent modifiables via le crayon).
       const btnTut = document.getElementById("tut_btn_planifier");
-      if (btnTut) btnTut.hidden = facturee;
+      if (btnTut) btnTut.hidden = facturee || totalTutoratPlanifie() >= heuresTutoratEtudiant - 1e-9;
 
       const btnReg = document.getElementById("reg_btn_planifier");
-      if (btnReg) btnReg.hidden = facturee;
+      if (btnReg) btnReg.hidden = facturee || totalRegPlanifie() >= heuresRegEtudiant - 1e-9;
 
       updateExamBtnVisibility();
 
@@ -4125,9 +4424,10 @@
       if (btnMatiere) {
         const totalTutorat = matieres.reduce((s, m) => s + (Number(m.tutorat) || 0), 0);
         const totalReg = matieres.reduce((s, m) => s + (Number(m.regClasse) || 0) + (Number(m.regG1) || 0), 0);
-        // Seuils = 140 h / 84 h + 10 % de tolérance (154 h / 92,4 h), les
-        // mêmes que pour l'impression du plan d'étude.
-        const limiteAtteinte = totalTutorat >= 140 * 1.1 - 1e-9 && totalReg >= 84 * 1.1 - 1e-9;
+        // Seuils = heures de la classe (140 h / 84 h par défaut, modale
+        // "Editer"), sans tolérance : les mêmes que pour l'impression du
+        // plan d'étude.
+        const limiteAtteinte = totalTutorat >= heuresTutoratEtudiant - 1e-9 && totalReg >= heuresRegEtudiant - 1e-9;
         btnMatiere.hidden = facturee || limiteAtteinte;
       }
     }
@@ -4183,15 +4483,17 @@
       if (type === 'tutorat') {
         const jours = week.jours || {};
         const rows = joursOrdre.map((j, idx) => {
-          const d = jours[j] || {};
           const date = new Date(week.dateDebut);
           date.setDate(date.getDate() + idx);
           const dateStr = date.toLocaleDateString('fr-FR');
-          const matiere = d.matiere || '—';
-          const debut = d.debut || '—';
-          const fin = d.fin || '—';
-          const enseignant = getEnseignantForMatiere(d.matiere) || '—';
-          return `
+          const seances = seancesDuJour(jours[j]);
+          // Une ligne par séance (2 lignes si la soirée compte 2 séances).
+          return (seances.length ? seances : [{}]).map(d => {
+            const matiere = d.matiere || '—';
+            const debut = d.debut || '—';
+            const fin = d.fin || '—';
+            const enseignant = getEnseignantForMatiere(d.matiere) || '—';
+            return `
             <tr>
               <td>${escapeHtml(JOURS_LABELS[j] || j)}</td>
               <td>${escapeHtml(dateStr)}</td>
@@ -4201,6 +4503,7 @@
               <td>${escapeHtml(enseignant)}</td>
             </tr>
           `;
+          }).join('');
         }).join('');
 
         return `
@@ -4493,6 +4796,7 @@
         </div>
       </div>
     </div>
+    <button type="button" id="notif_btn_png" onclick="obtenirImages()">Obtenir image</button>
     <button type="button" id="notif_btn_pdf" onclick="window.print()">Avoir PDF</button>
   </div>
 
@@ -4514,6 +4818,7 @@
       });
       var lbl = document.getElementById('notif_weeks_count');
       if (lbl) lbl.textContent = '(' + n + '/' + checks.length + ')';
+      majTitreImage();
     }
     function toutCocherSemaines(valeur) {
       document.querySelectorAll('.notif-week-check').forEach(function (c) { c.checked = valeur; });
@@ -4524,6 +4829,8 @@
       var ouverte = document.getElementById('notif_modal_weeks').classList.contains('is_open');
       var btn = document.getElementById('notif_btn_pdf');
       if (btn) btn.disabled = ouverte;
+      var btnPng = document.getElementById('notif_btn_png');
+      if (btnPng) btnPng.disabled = ouverte;
     }
     function basculerModaleSemaines() {
       document.getElementById('notif_modal_weeks').classList.toggle('is_open');
@@ -4533,6 +4840,143 @@
       document.getElementById('notif_modal_weeks').classList.remove('is_open');
       syncBoutonPdf();
     }
+    // "Obtenir image" : une image PNG par page du PDF. La pagination du PDF
+    // est simulée à l'identique (A4 portrait, marges 10mm/12mm, un bloc
+    // "semaine" n'est jamais coupé entre deux pages), puis chaque page est
+    // dessinée sur un canvas A4 (SVG foreignObject, sans bibliothèque).
+    var PAGE_W = 794;      // A4 : 210 mm à 96 dpi
+    var PAGE_H = 1123;     // A4 : 297 mm à 96 dpi
+    var MARGE_X = 45;      // 12 mm
+    var MARGE_Y = 38;      // 10 mm
+    var CONTENU_W = 703;   // 186 mm
+    var CONTENU_H = 1046;  // 277 mm
+    var FONT_CSS = 'font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#000;';
+
+    function blocsVisibles() {
+      return Array.prototype.filter.call(
+        document.querySelectorAll('.week-block'),
+        function (b) { return b.style.display !== 'none'; }
+      );
+    }
+    function clonerEntete(parent) {
+      ['.header-title', '.sub-header-info', '.notif-title'].forEach(function (sel) {
+        var el = document.querySelector(sel);
+        if (el) parent.appendChild(el.cloneNode(true));
+      });
+    }
+
+    // Répartit les semaines cochées par page PDF : tableau de pages, chacune
+    // étant la liste des blocs qu'elle contient.
+    function paginerBlocs() {
+      var visibles = blocsVisibles();
+      if (visibles.length === 0) return [];
+      var m = document.createElement('div');
+      m.style.cssText = 'box-sizing:border-box;position:absolute;left:-10000px;top:0;width:' + CONTENU_W + 'px;padding:20px;' + FONT_CSS;
+      clonerEntete(m);
+      var clones = visibles.map(function (b) {
+        var c = b.cloneNode(true);
+        m.appendChild(c);
+        return c;
+      });
+      document.body.appendChild(m);
+      var top0 = m.getBoundingClientRect().top;
+      var pages = [[]];
+      var debutPage = 0;
+      clones.forEach(function (c, i) {
+        var r = c.getBoundingClientRect();
+        var haut = r.top - top0;
+        var bas = r.bottom - top0;
+        var courante = pages[pages.length - 1];
+        if (courante.length > 0 && bas - debutPage > CONTENU_H) {
+          courante = [];
+          pages.push(courante);
+          debutPage = haut;
+        }
+        courante.push(visibles[i]);
+      });
+      document.body.removeChild(m);
+      return pages;
+    }
+
+    function svgDePage(blocsPage, premiere) {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'box-sizing:border-box;width:' + CONTENU_W + 'px;padding:' + (premiere ? '20px' : '0') + ' 20px 0;background:#fff;' + FONT_CSS;
+      var styleEl = document.createElement('style');
+      styleEl.textContent = document.querySelector('style').textContent;
+      wrap.appendChild(styleEl);
+      if (premiere) clonerEntete(wrap);
+      blocsPage.forEach(function (b) { wrap.appendChild(b.cloneNode(true)); });
+      var xhtml = new XMLSerializer().serializeToString(wrap);
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="' + PAGE_W + '" height="' + PAGE_H + '">'
+        + '<foreignObject x="' + MARGE_X + '" y="' + MARGE_Y + '" width="' + CONTENU_W + '" height="' + CONTENU_H + '">'
+        + xhtml + '</foreignObject></svg>';
+    }
+
+    function telechargerPagePng(svg, nomFichier, fin) {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var echelle = 2; // meilleure netteté
+          var canvas = document.createElement('canvas');
+          canvas.width = PAGE_W * echelle;
+          canvas.height = PAGE_H * echelle;
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.scale(echelle, echelle);
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob(function (blob) {
+            if (!blob) { fin(false); return; }
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = nomFichier;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+            fin(true);
+          }, 'image/png');
+        } catch (err) {
+          fin(false);
+        }
+      };
+      img.onerror = function () { fin(false); };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    function obtenirImages() {
+      var pages = paginerBlocs();
+      if (pages.length === 0) {
+        alert('Aucune semaine sélectionnée.');
+        return;
+      }
+      var n = pages.length;
+      var echecs = 0;
+      var termines = 0;
+      pages.forEach(function (blocsPage, i) {
+        var nom = n === 1 ? 'notification_seances.png' : 'notification_seances_page' + (i + 1) + 'sur' + n + '.png';
+        var svg = svgDePage(blocsPage, i === 0);
+        // Téléchargements espacés : les navigateurs refusent souvent les rafales
+        setTimeout(function () {
+          telechargerPagePng(svg, nom, function (ok) {
+            if (!ok) echecs++;
+            termines++;
+            if (termines === n && echecs > 0) {
+              alert("Impossible de générer " + echecs + " image(s) sur " + n + ".");
+            }
+          });
+        }, i * 500);
+      });
+    }
+
+    // Infobulle du bouton : nombre de pages du PDF = nombre d'images.
+    function majTitreImage() {
+      var btn = document.getElementById('notif_btn_png');
+      if (!btn) return;
+      var n = paginerBlocs().length;
+      btn.title = n === 0 ? 'Aucune semaine sélectionnée' : n + ' image' + (n > 1 ? 's' : '') + ' (' + n + ' page' + (n > 1 ? 's' : '') + ' du PDF)';
+    }
     // Un appui en dehors de la liste (ou la touche Échap) la referme.
     document.addEventListener('pointerdown', function (e) {
       if (!e.target.closest('.notif-weeks-wrap')) fermerModaleSemaines();
@@ -4540,6 +4984,7 @@
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') fermerModaleSemaines();
     });
+    majTitreImage();
   <\/script>
 </body>
 </html>`);
@@ -5077,7 +5522,7 @@
 
         const weekByNum = {};
         regroupements.forEach(week => { weekByNum[week.semaine] = week; });
-        for (let sem = 1; sem <= 14; sem++) {
+        for (let sem = 1; sem <= derniereSemaineReg(); sem++) {
           const week = weekByNum[sem];
           (week?.sequences || []).forEach(s => {
             const enseignant = getEnseignantForMatiere(s.matiere);
@@ -5229,7 +5674,7 @@
         nomsEnsUniques.forEach(n => { totalRegParEnseignant[n] = 0; });
         const weekByNum = {};
         regroupements.forEach(week => { weekByNum[week.semaine] = week; });
-        for (let sem = 1; sem <= 14; sem++) {
+        for (let sem = 1; sem <= derniereSemaineReg(); sem++) {
           const week = weekByNum[sem];
           (week?.sequences || []).forEach(s => {
             const enseignant = getEnseignantForMatiere(s.matiere);
@@ -5557,7 +6002,7 @@
 
         const lignes = [];
 
-        for (let sem = 1; sem <= 14; sem++) {
+        for (let sem = 1; sem <= derniereSemaineReg(); sem++) {
           const week = weekByNum[sem];
           const seqs = week ? (week.sequences || []) : [];
           const dateStr = formatDateFr(week?.date) || '—';
@@ -5782,30 +6227,28 @@
 
     // Bouton "Imprimer" de l'en-tête du Plan d'étude : imprime le plan d'étude
     // tel qu'il figure dans le dossier de facturation (même section "plan").
-    // Condition : les heures doivent être remplies — au moins 140 h de tutorat
-    // et 84 h de regroupement, avec un dépassement toléré de 10 % (max 154 h
-    // et 92,4 h). Un enseignant non assigné n'empêche pas l'impression.
+    // Condition : les heures du plan d'étude doivent être exactement celles de
+    // la classe (140 h de tutorat / 84 h de regroupement par défaut, voir
+    // modale "Editer"), sans tolérance. Un enseignant non assigné n'empêche pas l'impression.
     function imprimerPlanEtude() {
       if (!matieres || matieres.length === 0) {
         alert("Le plan d'étude est vide : aucune matière à imprimer.");
         return;
       }
 
-      const TOLERANCE = 1.1;
       const EPS = 1e-9;
       const LIMITES = [
-        { label: 'tutorat', min: 140, total: matieres.reduce((s, m) => s + (Number(m.tutorat) || 0), 0) },
-        { label: 'regroupement', min: 84, total: matieres.reduce((s, m) => s + (Number(m.regClasse) || 0) + (Number(m.regG1) || 0), 0) }
+        { label: 'tutorat', min: heuresTutoratEtudiant, total: matieres.reduce((s, m) => s + (Number(m.tutorat) || 0), 0) },
+        { label: 'regroupement', min: heuresRegEtudiant, total: matieres.reduce((s, m) => s + (Number(m.regClasse) || 0) + (Number(m.regG1) || 0), 0) }
       ];
 
       const fmt = n => String(Math.round(n * 100) / 100).replace('.', ',');
       const manques = [];
       LIMITES.forEach(l => {
-        const max = l.min * TOLERANCE;
         if (l.total < l.min - EPS) {
-          manques.push(`Heures de ${l.label} : ${fmt(l.total)} h (minimum ${fmt(l.min)} h)`);
-        } else if (l.total > max + EPS) {
-          manques.push(`Heures de ${l.label} : ${fmt(l.total)} h (maximum toléré ${fmt(max)} h)`);
+          manques.push(`Heures de ${l.label} : ${fmt(l.total)} h (il en faut ${fmt(l.min)} h)`);
+        } else if (l.total > l.min + EPS) {
+          manques.push(`Heures de ${l.label} : ${fmt(l.total)} h (maximum ${fmt(l.min)} h)`);
         }
       });
 
@@ -6096,7 +6539,7 @@
       teachers.forEach(t => { totalParEnseignant[t] = 0; });
 
       let rowsHtml = '';
-      for (let sem = 1; sem <= 14; sem++) {
+      for (let sem = 1; sem <= derniereSemaineReg(); sem++) {
         const week = weekByNum[sem];
         const seqs = week ? (week.sequences || []) : [];
         const rowCount = Math.max(seqs.length, 1);
@@ -6237,16 +6680,17 @@
       tutorat.forEach(week => {
         const jours = week.jours || {};
         joursList.forEach((j, idx) => {
-          const d = jours[j];
-          if (!d || !d.matiere) return;
-          if (Object.prototype.hasOwnProperty.call(heuresRealisees, d.matiere)) {
-            heuresRealisees[d.matiere] += durationInHours(d.debut, d.fin);
-          }
-          if (Object.prototype.hasOwnProperty.call(seancesParMatiere, d.matiere) && week.dateDebut) {
-            const date = new Date(week.dateDebut);
-            date.setDate(date.getDate() + idx);
-            seancesParMatiere[d.matiere].push({ date, debut: d.debut || '', fin: d.fin || '' });
-          }
+          seancesDuJour(jours[j]).forEach(d => {
+            if (!d || !d.matiere) return;
+            if (Object.prototype.hasOwnProperty.call(heuresRealisees, d.matiere)) {
+              heuresRealisees[d.matiere] += durationInHours(d.debut, d.fin);
+            }
+            if (Object.prototype.hasOwnProperty.call(seancesParMatiere, d.matiere) && week.dateDebut) {
+              const date = new Date(week.dateDebut);
+              date.setDate(date.getDate() + idx);
+              seancesParMatiere[d.matiere].push({ date, debut: d.debut || '', fin: d.fin || '' });
+            }
+          });
         });
       });
       Object.values(seancesParMatiere).forEach(list => list.sort((a, b) => a.date - b.date));
@@ -6486,11 +6930,12 @@
       tutorat.forEach(week => {
         const jours = week.jours || {};
         joursList.forEach(j => {
-          const d = jours[j];
-          if (!d || !d.matiere) return;
-          if (Object.prototype.hasOwnProperty.call(heuresRealisees, d.matiere)) {
-            heuresRealisees[d.matiere] += durationInHours(d.debut, d.fin);
-          }
+          seancesDuJour(jours[j]).forEach(d => {
+            if (!d || !d.matiere) return;
+            if (Object.prototype.hasOwnProperty.call(heuresRealisees, d.matiere)) {
+              heuresRealisees[d.matiere] += durationInHours(d.debut, d.fin);
+            }
+          });
         });
       });
 
@@ -6531,6 +6976,7 @@
       const totalPlanifie = stats.g1 + stats.classe;
       document.getElementById("reg_total_planifie").textContent = totalPlanifie.toFixed(1);
       document.getElementById("reg_total_semaines").textContent = regroupements.length;
+      updateAjoutButtonsVisibility();
     }
 
     // ------------------------------------------------------------
@@ -6539,6 +6985,16 @@
     // Règle générale : la semaine commence par le tutorat (le début de
     // classe = le début du tutorat). Le regroupement par défaut est donc
     // proposé pour le dimanche qui clôture cette même semaine.
+    // Un regroupement a lieu le samedi OU le dimanche : toute autre date est
+    // acceptée (jour férié, rattrapage...) mais signalée, sans blocage.
+    function majAvertissementDateReg() {
+      const warning = document.getElementById("reg_week_date_warning");
+      const valeur = document.getElementById("reg_week_date")?.value;
+      if (!warning) return;
+      const d = valeur ? new Date(valeur) : null;
+      warning.hidden = !d || isNaN(d) || d.getDay() === 6 || d.getDay() === 0;
+    }
+
     function getDefaultSunday() {
       const monday = getDefaultMonday();
       const sunday = new Date(monday);
@@ -6904,6 +7360,7 @@
       }
 
       updateSeqControls();
+      majAvertissementDateReg();
       openFormModal("reg_week_modal", "reg_week_form");
       requestAnimationFrame(() => document.querySelector('#reg_seq_list .seq_fin')?.focus());
     }
@@ -6916,8 +7373,12 @@
       const semaine = Number(document.getElementById("reg_week_num").value);
       const date = document.getElementById("reg_week_date").value;
 
-      if (!semaine || semaine < 1 || semaine > 14) {
-        alert('La semaine doit être comprise entre 1 et 14.');
+      if (!Number.isInteger(semaine) || semaine < 1) {
+        alert('Le numéro de semaine doit être un entier supérieur ou égal à 1.');
+        return;
+      }
+      if (index === null && totalRegPlanifie() >= heuresRegEtudiant - 1e-9) {
+        alert(`Les ${String(heuresRegEtudiant).replace('.', ',')} h de regroupement par étudiant sont déjà planifiées : impossible d'ajouter une semaine.`);
         return;
       }
       if (!date) {
@@ -6987,12 +7448,12 @@
     // ------------------------------------------------------------
     // EXAMENS
     // ------------------------------------------------------------
-    // Le bouton "Planifier examen" n'apparaît qu'une fois la semaine 12
-    // de regroupement planifiée, et jamais si la classe est facturée.
+    // Le bouton "Planifier examen" ne dépend ni des semaines ni de leur
+    // nombre : il n'est masqué que si la classe est facturée.
     function updateExamBtnVisibility() {
       const btn = document.getElementById("exam_btn_planifier");
       if (!btn) return;
-      btn.hidden = estClasseFacturee() || !regroupements.some(w => Number(w.semaine) === 12);
+      btn.hidden = estClasseFacturee();
     }
 
     function getMatieresAvecEval() {
@@ -7656,10 +8117,9 @@
         const joursList = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
         let totalHeures = 0;
         joursList.forEach(j => {
-          const d = jours[j];
-          if (d && d.debut && d.fin) {
-            totalHeures += durationInHours(d.debut, d.fin);
-          }
+          seancesDuJour(jours[j]).forEach(d => {
+            if (d.debut && d.fin) totalHeures += durationInHours(d.debut, d.fin);
+          });
         });
 
         const explicit = tutWeekCollapseState[week.semaine];
@@ -7667,15 +8127,17 @@
 
         let rows = '';
         joursList.forEach((j, idx) => {
-          const d = jours[j] || {};
           const date = new Date(week.dateDebut);
           date.setDate(date.getDate() + idx);
           const dateStr = date.toLocaleDateString('fr-FR');
-          const matiere = d.matiere || '—';
-          const debut = d.debut || '—';
-          const fin = d.fin || '—';
-          const enseignant = getEnseignantForMatiere(d.matiere) || '—';
-          rows += `
+          const seances = seancesDuJour(jours[j]);
+          // Une ligne par séance (2 lignes si la soirée compte 2 séances).
+          (seances.length ? seances : [{}]).forEach(d => {
+            const matiere = d.matiere || '—';
+            const debut = d.debut || '—';
+            const fin = d.fin || '—';
+            const enseignant = getEnseignantForMatiere(d.matiere) || '—';
+            rows += `
             <tr>
               <td>${JOURS_LABELS[j]}</td>
               <td>${dateStr}</td>
@@ -7685,6 +8147,7 @@
               <td>${enseignant}</td>
             </tr>
           `;
+          });
         });
 
         html += `
@@ -7770,13 +8233,13 @@
       tutorat.forEach(week => {
         const jours = week.jours || {};
         JOURS_SEMAINE.forEach(j => {
-          const d = jours[j];
-          if (d && d.debut && d.fin) {
-            totalHeures += durationInHours(d.debut, d.fin);
-          }
+          seancesDuJour(jours[j]).forEach(d => {
+            if (d.debut && d.fin) totalHeures += durationInHours(d.debut, d.fin);
+          });
         });
       });
       document.getElementById("tut_total_planifie").textContent = totalHeures.toFixed(1);
+      updateAjoutButtonsVisibility();
     }
 
     // Fonction pour lier le comportement des inputs de temps (tutorat)
@@ -7859,12 +8322,21 @@
 
         const div = document.createElement('div');
         div.className = 'tut_day_row';
+        const s2 = data.seance2 || null;
         div.innerHTML = `
           <label>${JOURS_LABELS[jour]}</label>
           <span class="tut_date">${dateStr}</span>
           <input type="text" class="tut_debut tut_time_input" placeholder="19:00" value="${defaultDebut}" maxlength="5" />
           <input type="text" class="tut_fin tut_time_input" placeholder="21:00" value="${defaultFin}" maxlength="5" />
           <select class="tut_matiere">${getMatiereOptionsForTutorat(selectedMatiere)}</select>
+          <button type="button" class="btn_ghost tut_s2_add" title="Ajouter une 2e séance (soirée de ${TUT_MAX_SOIREE_H} h max)" aria-label="Ajouter une 2e séance"${s2 ? ' hidden' : ''}><i class="bi bi-plus-lg"></i></button>
+          <div class="tut_seance2"${s2 ? '' : ' hidden'}>
+            <span class="tut_s2_label">2e séance</span>
+            <input type="text" class="tut_debut2 tut_time_input" placeholder="20:30" value="${s2?.debut || ''}" maxlength="5" />
+            <input type="text" class="tut_fin2 tut_time_input" placeholder="22:00" value="${s2?.fin || ''}" maxlength="5" />
+            <select class="tut_matiere2">${getMatiereOptionsForTutorat(s2?.matiere || '')}</select>
+            <button type="button" class="btn_danger_small tut_s2_remove" title="Retirer la 2e séance" aria-label="Retirer la 2e séance"><i class="bi bi-x-lg"></i></button>
+          </div>
         `;
         container.appendChild(div);
         const debutInput = div.querySelector('.tut_debut');
@@ -7872,10 +8344,43 @@
         bindTutTimeBehavior(debutInput);
         bindTutTimeBehavior(finInput);
 
+        // 2e séance de la soirée : même plage de 3 h partagée en deux
+        // séances de 1 h 30 par défaut (modifiable ensuite).
+        const s2Bloc = div.querySelector('.tut_seance2');
+        const s2Debut = div.querySelector('.tut_debut2');
+        const s2Fin = div.querySelector('.tut_fin2');
+        const s2AddBtn = div.querySelector('.tut_s2_add');
+        bindTutTimeBehavior(s2Debut);
+        bindTutTimeBehavior(s2Fin);
+        const repartirSoireeEnDeux = () => {
+          const d1 = timeToMinutes(normalize24HourTime(debutInput.value) || debutInput.value);
+          if (d1 === null) return;
+          finInput.value = minutesToTime(d1 + 90);
+          s2Debut.value = minutesToTime(d1 + 90);
+          s2Fin.value = minutesToTime(d1 + 180);
+          [finInput, s2Debut, s2Fin].forEach(i => i.classList.remove('tut_time_invalid'));
+        };
+        s2AddBtn.addEventListener('click', () => {
+          s2Bloc.hidden = false;
+          s2AddBtn.hidden = true;
+          repartirSoireeEnDeux();
+        });
+        div.querySelector('.tut_s2_remove').addEventListener('click', () => {
+          s2Bloc.hidden = true;
+          s2AddBtn.hidden = false;
+          div.querySelector('.tut_matiere2').value = '';
+          s2Debut.value = '';
+          s2Fin.value = '';
+          // Retour à la séance unique de 2 h par défaut.
+          const finCalculee = calculerFinTutoratParDefaut(debutInput.value);
+          if (finCalculee) finInput.value = finCalculee;
+        });
+
         // Règle : une séance dure par défaut 2h → dès que le début d'un
         // jour est validé, sa fin se recalcule automatiquement (début + 2h).
         // La fin reste modifiable ensuite si besoin.
         debutInput.addEventListener('change', () => {
+          if (!s2Bloc.hidden) { repartirSoireeEnDeux(); return; }
           const finCalculee = calculerFinTutoratParDefaut(debutInput.value);
           if (finCalculee) {
             finInput.value = finCalculee;
@@ -7896,6 +8401,7 @@
             container.querySelectorAll('.tut_day_row').forEach((autreRow) => {
               const autreDebut = autreRow.querySelector('.tut_debut');
               if (autreDebut === debutInput) return;
+              if (autreRow.querySelector('.tut_seance2')?.hidden === false) return;
               autreDebut.value = valeur;
               autreDebut.classList.remove('tut_time_invalid');
               if (finCalculee) {
@@ -7917,6 +8423,7 @@
             container.querySelectorAll('.tut_day_row').forEach((autreRow) => {
               const autreFin = autreRow.querySelector('.tut_fin');
               if (autreFin === finInput) return;
+              if (autreRow.querySelector('.tut_seance2')?.hidden === false) return;
               autreFin.value = valeur;
               autreFin.classList.remove('tut_time_invalid');
             });
@@ -7945,11 +8452,12 @@
     function heuresParMatierePourSemaineTutorat(joursObj) {
       const result = {};
       JOURS_SEMAINE.forEach(j => {
-        const d = (joursObj || {})[j];
-        if (d && d.debut && d.fin && d.matiere) {
-          const heures = durationInHours(d.debut, d.fin);
-          if (heures > 0) result[d.matiere] = (result[d.matiere] || 0) + heures;
-        }
+        seancesDuJour((joursObj || {})[j]).forEach(d => {
+          if (d && d.debut && d.fin && d.matiere) {
+            const heures = durationInHours(d.debut, d.fin);
+            if (heures > 0) result[d.matiere] = (result[d.matiere] || 0) + heures;
+          }
+        });
       });
       return result;
     }
@@ -7962,8 +8470,12 @@
       const semaine = Number(document.getElementById("tut_week_num").value);
       const dateDebut = document.getElementById("tut_week_date").value;
 
-      if (!semaine || semaine < 1 || semaine > 14) {
-        alert('La semaine doit être comprise entre 1 et 14.');
+      if (!Number.isInteger(semaine) || semaine < 1) {
+        alert('Le numéro de semaine doit être un entier supérieur ou égal à 1.');
+        return;
+      }
+      if (index === null && totalTutoratPlanifie() >= heuresTutoratEtudiant - 1e-9) {
+        alert(`Les ${String(heuresTutoratEtudiant).replace('.', ',')} h de tutorat par étudiant sont déjà planifiées : impossible d'ajouter une semaine.`);
         return;
       }
       if (!dateDebut) {
@@ -7983,13 +8495,20 @@
       let hasAtLeastOne = false;
 
       rows.forEach((row, idx) => {
+        if (!valid) return;
         const jour = JOURS_SEMAINE[idx];
         const matiere = row.querySelector('.tut_matiere').value.trim();
         const debut = row.querySelector('.tut_debut').value;
         const fin = row.querySelector('.tut_fin').value;
+        const s2Visible = row.querySelector('.tut_seance2')?.hidden === false;
+        const matiere2 = s2Visible ? row.querySelector('.tut_matiere2').value.trim() : '';
 
         // Si la matière est vide, on ignore complètement ce jour
         if (!matiere) {
+          if (matiere2) {
+            alert(`${JOURS_LABELS[jour]} : choisissez la matière de la 1re séance (ou retirez la 2e séance).`);
+            valid = false;
+          }
           return; // on ignore
         }
 
@@ -8007,7 +8526,34 @@
           valid = false;
           return;
         }
-        jours[jour] = { matiere, debut, fin };
+        let seance2 = null;
+        if (matiere2) {
+          const debut2 = row.querySelector('.tut_debut2').value;
+          const fin2 = row.querySelector('.tut_fin2').value;
+          const start2 = timeToMinutes(debut2);
+          const end2 = timeToMinutes(fin2);
+          if (!debut2 || !fin2 || start2 === null || end2 === null || end2 <= start2) {
+            alert(`Horaires invalides pour la 2e séance de ${JOURS_LABELS[jour]}. Vérifiez le format (HH:MM) et que début < fin.`);
+            valid = false;
+            return;
+          }
+          if (start2 < end) {
+            alert(`${JOURS_LABELS[jour]} : la 2e séance doit commencer après la fin de la 1re (${fin}).`);
+            valid = false;
+            return;
+          }
+          seance2 = { matiere: matiere2, debut: debut2, fin: fin2 };
+        }
+
+        // Une soirée dure au plus TUT_MAX_SOIREE_H heures (1 ou 2 séances).
+        const totalSoiree = durationInHours(debut, fin) + (seance2 ? durationInHours(seance2.debut, seance2.fin) : 0);
+        if (totalSoiree > TUT_MAX_SOIREE_H + 1e-9) {
+          if (!confirm(`${JOURS_LABELS[jour]} : ${totalSoiree.toFixed(1)} h de tutorat dans la soirée (maximum ${TUT_MAX_SOIREE_H} h). Continuer quand même ?`)) {
+            valid = false;
+            return;
+          }
+        }
+        jours[jour] = seance2 ? { matiere, debut, fin, seance2 } : { matiere, debut, fin };
       });
 
       if (!valid) return;
@@ -8151,6 +8697,12 @@
         document.getElementById("classe_date_debut").value = c.dateDebut || "";
         document.getElementById("classe_date_fin").value = c.dateFin || "";
 
+        // Constantes d'heures par étudiant (140 h / 84 h si absentes).
+        document.getElementById("classe_heures_tutorat").value = Number(c.heuresTutoratEtudiant) > 0 ? c.heuresTutoratEtudiant : HEURES_TUTORAT_DEFAUT;
+        document.getElementById("classe_heures_reg").value = Number(c.heuresRegEtudiant) > 0 ? c.heuresRegEtudiant : HEURES_REG_DEFAUT;
+        lireConstantesDepuisFormulaire();
+        appliquerConstantesHeures();
+
         renderEtudiants();
         renderFrais();
         renderPlanTable();
@@ -8188,6 +8740,10 @@
         cycle: document.getElementById("classe_cycle")?.value || "",
         dateDebut: document.getElementById("classe_date_debut").value,
         dateFin: document.getElementById("classe_date_fin").value,
+        // Constantes d'heures par étudiant (éditées par l'admin ; le
+        // coordinateur renvoie simplement les valeurs chargées).
+        heuresTutoratEtudiant: heuresTutoratEtudiant,
+        heuresRegEtudiant: heuresRegEtudiant,
         responsableNom: document.getElementById("classe_responsable_nom").value,
         responsableFonction: document.getElementById("classe_responsable_fonction").value,
         numeroMemoire: document.getElementById("classe_numero_memoire").value,
