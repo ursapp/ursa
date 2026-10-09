@@ -1734,13 +1734,14 @@
       { value: 'g1+g2', label: 'G1 + G2' }
     ];
 
-    const JOURS_SEMAINE = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+    const JOURS_SEMAINE = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
     const JOURS_LABELS = {
       lundi: 'Lundi',
       mardi: 'Mardi',
       mercredi: 'Mercredi',
       jeudi: 'Jeudi',
-      vendredi: 'Vendredi'
+      vendredi: 'Vendredi',
+      samedi: 'Samedi'
     };
 
     // ------------------------------------------------------------
@@ -3753,15 +3754,14 @@
           // seuls les champs du formulaire sont mis à jour.
           matieres[index] = { ...matieres[index], ...m };
         }
+        setUnsavedChanges();
         closeFormModal("matiere_modal");
         renderPlanTable();
         renderEnseignants();
         renderCompteurReg();
         renderCompteurTutorat();
-        setUnsavedChanges();
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalContent;
+        setBtnSaving(submitBtn, false);
       }
     }
 
@@ -4338,15 +4338,15 @@
 
     // Dernière date planifiée toutes séances confondues (regroupement, tutorat,
     // examen) — sert à déterminer quand le bouton Facturation peut apparaître.
-    // Pour le tutorat (planifié par semaine du lundi au vendredi), on retient
-    // le vendredi (dateDebut + 4 jours) comme fin de semaine.
+    // Pour le tutorat (planifié par semaine du lundi au samedi), on retient
+    // le samedi (dateDebut + 5 jours) comme fin de semaine.
     function getDernierePlanifieeDate() {
       const dates = [];
 
       tutorat.forEach(week => {
         if (!week.dateDebut) return;
         const d = new Date(week.dateDebut);
-        d.setDate(d.getDate() + 4);
+        d.setDate(d.getDate() + 5);
         d.setHours(0, 0, 0, 0);
         dates.push(d);
       });
@@ -4477,7 +4477,7 @@
     // de masquer/afficher les blocs tutorat ET regroupement d'une même semaine
     // depuis la liste de choix des semaines (voir genererDocumentNotification).
     function rendreBlocChrono({ type, week }, semaineKey = null) {
-      const joursOrdre = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+      const joursOrdre = JOURS_SEMAINE;
       const currentWeekAttr = semaineKey !== null ? ` data-semaine="${escapeHtml(String(semaineKey))}"` : '';
 
       if (type === 'tutorat') {
@@ -6675,7 +6675,7 @@
       const heuresRealisees = {};
       const seancesParMatiere = {};
       matieresTutorat.forEach(m => { heuresRealisees[m.matiere] = 0; seancesParMatiere[m.matiere] = []; });
-      const joursList = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+      const joursList = JOURS_SEMAINE;
 
       tutorat.forEach(week => {
         const jours = week.jours || {};
@@ -6925,7 +6925,7 @@
 
       const heuresRealisees = {};
       matieresTutorat.forEach(m => { heuresRealisees[m.matiere] = 0; });
-      const joursList = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+      const joursList = JOURS_SEMAINE;
 
       tutorat.forEach(week => {
         const jours = week.jours || {};
@@ -8114,7 +8114,7 @@
       let html = '';
       sorted.forEach(({ week, index }) => {
         const jours = week.jours || {};
-        const joursList = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+        const joursList = JOURS_SEMAINE;
         let totalHeures = 0;
         joursList.forEach(j => {
           seancesDuJour(jours[j]).forEach(d => {
@@ -8156,7 +8156,7 @@
               <span class="week_label">Semaine ${week.semaine} — ${formatDateFr(week.dateDebut) || 'Date non définie'}</span>
               <span class="tut_week_stats">
                 <span>Heures : <strong>${totalHeures.toFixed(1)} h</strong></span>
-                <span>Jours : <strong>${joursList.filter(j => jours[j] && jours[j].matiere).length}/5</strong></span>
+                <span>Jours : <strong>${joursList.filter(j => jours[j] && jours[j].matiere).length}/${joursList.length}</strong></span>
               </span>
               <span class="week_actions">
                 <button type="button" class="btn_ghost tut_week_toggle" title="${isCollapsed ? 'Afficher la semaine' : 'Masquer la semaine'}" aria-label="${isCollapsed ? 'Afficher la semaine' : 'Masquer la semaine'}">
@@ -8302,7 +8302,7 @@
 
       const container = document.getElementById("tut_jours_container");
       container.innerHTML = '';
-      const joursList = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+      const joursList = JOURS_SEMAINE;
 
       let dateDebut = week?.dateDebut || '';
       if (!dateDebut) {
@@ -8391,7 +8391,7 @@
         // L'heure de début du LUNDI sert de référence pour toute la
         // semaine : dès qu'elle est modifiée (et valide), elle est
         // reportée (avec sa fin calculée, début + 2h) sur les autres
-        // jours (mardi à vendredi). Modifier un autre jour n'a aucun
+        // jours (mardi à samedi). Modifier un autre jour n'a aucun
         // effet sur les autres — seul lundi propage.
         if (jour === 'lundi') {
           debutInput.addEventListener('change', () => {
@@ -8415,7 +8415,7 @@
           // Même principe pour la fin : l'heure de fin du LUNDI (qu'elle
           // vienne du calcul automatique ou d'une saisie manuelle) sert de
           // référence et se reporte sur les autres jours (mardi à
-          // vendredi). Modifier la fin d'un autre jour n'a aucun effet sur
+          // samedi). Modifier la fin d'un autre jour n'a aucun effet sur
           // les autres — seul lundi propage.
           finInput.addEventListener('change', () => {
             const valeur = finInput.value;
