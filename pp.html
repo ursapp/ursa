@@ -173,11 +173,52 @@
        Section "Demandes" — chips cliquables de filtrage par
        spécialité (au-dessus du tableau).
        ------------------------------------------------------------ */
-    .demandes_specialite_filters {
+    /* Barre filtres + recherche et en-têtes du tableau toujours visibles :
+       les offsets (--pp_toolbar_top / --pp_thead_top) sont calculés
+       par ajusterStickyPP() à partir de la hauteur réelle de l'en-tête
+       de section, pour rester justes quel que soit le thème / la largeur. */
+    .demandes_toolbar {
       display: flex;
       flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space_3);
+      position: sticky;
+      top: var(--pp_toolbar_top, 0px);
+      z-index: 6;
+      padding: var(--space_2) 0 var(--space_3);
+      background: var(--color_paper, #fff);
+    }
+    /* Avec border-collapse, la bordure d'une cellule collante reste en place
+       quand la cellule se fige : on la remplace par une ombre interne qui,
+       elle, suit l'en-tête. */
+    #demandes .pp_table thead th,
+    #dossiers .pp_table thead th {
+      position: sticky;
+      top: var(--pp_thead_top, 0px);
+      z-index: 5;
+      border-bottom: none;
+      box-shadow: inset 0 -1px 0 var(--border_soft, #ddd);
+    }
+    .demandes_specialite_filters {
+      display: flex;
+      flex: 1 1 auto;
+      flex-wrap: wrap;
       gap: var(--space_2);
-      margin-bottom: var(--space_4);
+    }
+    /* Spécificité > .pp_search (dont le padding générique, déclaré plus bas,
+       écrasait le retrait réservé à la loupe et à la croix). */
+    .demandes_search_wrap .pp_search {
+      padding-left: calc(var(--space_3) * 2 + 12px);
+      padding-right: calc(var(--space_3) * 2 + 12px);
+    }
+    .demandes_search_wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      flex: 0 1 280px;
+      min-width: 200px;
+      margin-left: auto;
     }
     .demandes_specialite_chip {
       background: var(--color_paper_raised);
@@ -266,6 +307,43 @@
       outline-offset: 1px;
     }
 
+    /* Modale "Vers dossiers" : champs variables selon la spécialité */
+    .dossier_champs {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: var(--space_3);
+    }
+    .classe_form_grid label.dossier_check {
+      flex-direction: row;
+      align-items: center;
+      gap: var(--space_2);
+      color: var(--text_primary);
+    }
+    .classe_form_grid label.dossier_check input { padding: 0; }
+    .dossier_champs_hint { grid-column: 1 / -1; font-size: var(--fs_sm); color: var(--text_secondary); font-style: italic; }
+    .dossier_obs {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_2);
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+    }
+    .dossier_obs_options { display: flex; flex-wrap: wrap; gap: var(--space_4); }
+    .dossier_obs textarea:disabled { opacity: .55; cursor: not-allowed; }
+    .classe_form_grid label textarea {
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper_raised);
+      color: var(--text_primary);
+      min-height: 70px;
+      resize: vertical;
+    }
+
     /* Survol de la colonne Tél du tableau Demandes : affiche toutes les
        coordonnées (Tél / Tél2 / Email) en infobulle. */
     .demande_tel_tooltip {
@@ -321,6 +399,7 @@
         <a class="sidebar_module_link" href="index.html"><i class="bi bi-house"></i> Accueil</a>
         <div class="sidebar_divider"></div>
         <div class="sidebar_group_label">Sur cette page</div>
+        <a class="sidebar_section_link" href="#campagne">Campagne</a>
         <a class="sidebar_section_link is_active" href="#demandes">Demandes</a>
         <a class="sidebar_section_link" href="#dossiers">Dossiers</a>
         <a class="sidebar_section_link" href="#inscrits">Inscrits</a>
@@ -343,11 +422,87 @@
     </aside>
 
     <main class="app_content">
+      <section id="campagne" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-megaphone"></i> Campagne</h2>
+          <div class="panel_header_actions">
+            <button type="button" class="btn_seal" id="campagne_btn_nouveau">
+              <i class="bi bi-plus-lg"></i> Nouvelle campagne
+            </button>
+          </div>
+        </div>
+
+        <!-- MODALE CAMPAGNE (ajout / modif) -->
+        <div class="modal_overlay" id="campagne_modal">
+          <div class="modal_dialog">
+            <div class="modal_header">
+              <h3 id="campagne_modal_titre">Nouvelle campagne</h3>
+              <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal_body">
+              <form id="campagne_form" class="classe_form_grid">
+                <input type="hidden" name="_row" />
+                <label>Domaine
+                  <input type="text" name="المجال" dir="auto" />
+                </label>
+                <label>Désignation
+                  <input type="text" name="التسمية" dir="auto" required />
+                </label>
+                <label>Délégation
+                  <input type="text" name="المعتمدية" dir="auto" />
+                </label>
+                <label>Numérotation
+                  <input type="text" name="الترقيم" dir="auto" />
+                </label>
+                <label>Sur correspondance
+                  <select name="على المراسلة">
+                    <option value="">----</option>
+                    <option value="Oui">Oui</option>
+                    <option value="Non">Non</option>
+                  </select>
+                </label>
+                <label>Sur enveloppe
+                  <select name="على الظرف">
+                    <option value="">----</option>
+                    <option value="Oui">Oui</option>
+                    <option value="Non">Non</option>
+                  </select>
+                </label>
+                <div class="matiere_form_actions">
+                  <button type="button" class="btn_danger" id="campagne_btn_supprimer" hidden>
+                    <i class="bi bi-trash3"></i> Supprimer
+                  </button>
+                  <button type="submit" class="btn_success"><i class="bi bi-check-lg"></i> Enregistrer</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <table class="data_table pp_table">
+          <thead>
+            <tr>
+              <th>Domaine</th>
+              <th>Désignation</th>
+              <th>Délégation</th>
+              <th>Numérotation</th>
+              <th>Sur correspondance</th>
+              <th>Sur enveloppe</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="campagne_table_body"></tbody>
+        </table>
+        <div class="empty_state" id="campagne_empty" hidden>
+          <i class="bi bi-inbox"></i>Aucune campagne enregistrée.
+        </div>
+      </section>
+
       <section id="demandes" class="panel">
         <div class="panel_header">
           <h2><i class="bi bi-person-lines-fill"></i> Demandes</h2>
           <div class="panel_header_actions">
-            <button type="button" class="btn_info no_mobile" id="demande_btn_import">
+            <button type="button" class="btn_info no_mobile" id="demande_btn_import" title="En-têtes requis (1ère ligne) : CIN, Prénom, Nom, Tél, Spécialité — facultatifs : Tél2, Email">
               <i class="bi bi-file-earmark-spreadsheet"></i> Importer Excel
             </button>
             <input type="file" id="demande_import_file" accept=".xlsx,.xls" hidden />
@@ -357,7 +512,16 @@
           </div>
         </div>
 
-        <div class="demandes_specialite_filters" id="demande_specialite_filters"></div>
+        <div class="demandes_toolbar">
+          <div class="demandes_specialite_filters" id="demande_specialite_filters"></div>
+          <div class="search_wrap demandes_search_wrap">
+            <i class="bi bi-search search_icon"></i>
+            <input type="text" class="pp_search" id="demande_search" placeholder="Rechercher (CIN, prénom ou nom)…" autocomplete="off" />
+            <button type="button" class="search_clear" data-clear="demande_search" hidden aria-label="Effacer la recherche">
+              <i class="bi bi-x-circle-fill"></i>
+            </button>
+          </div>
+        </div>
 
         <!-- MODALE DEMANDE (ajout / modif) -->
         <div class="modal_overlay" id="demande_modal">
@@ -379,17 +543,9 @@
                   <input type="text" name="Nom" required />
                 </label>
                 <label>Spécialité
-                  <!-- Options de secours codées en dur : remplacées au chargement
-                       de la page par chargerSpecialitesPP() (base "paramètres",
-                       onglet "fraispp", colonne "Specialités") si disponible. -->
+                  <!-- Options chargées depuis l'onglet "specialites" (A2:A) par chargerSpecialitesPP(). -->
                   <select name="Spécialité" id="demande_specialite_select">
                     <option value="">----</option>
-                    <option value="TI">TI</option>
-                    <option value="MAF">MAF</option>
-                    <option value="TMI">TMI</option>
-                    <option value="TSIG">TSIG</option>
-                    <option value="AD">AD</option>
-                    <option value="Aucune">Aucune</option>
                   </select>
                 </label>
                 <div class="demande_coord_field">
@@ -460,7 +616,75 @@
         <div class="panel_header">
           <h2><i class="bi bi-folder2-open"></i> Dossiers</h2>
         </div>
-        <p class="panel_todo" id="dossiers_contexte">Contenu à implémenter.</p>
+
+        <div class="demandes_toolbar">
+          <div class="demandes_specialite_filters" id="dossier_specialite_filters"></div>
+          <div class="search_wrap demandes_search_wrap">
+            <i class="bi bi-search search_icon"></i>
+            <input type="text" class="pp_search" id="dossier_search" placeholder="Rechercher (CIN, prénom ou nom)…" autocomplete="off" />
+            <button type="button" class="search_clear" data-clear="dossier_search" hidden aria-label="Effacer la recherche">
+              <i class="bi bi-x-circle-fill"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- MODALE "VERS INSCRITS" : champs de l'onglet "Inscrits"
+             (CIN | Prénom | Nom | Coordonnées | Année). La validation crée
+             l'inscrit puis retire le dossier. -->
+        <div class="modal_overlay" id="vers_inscrit_modal">
+          <div class="modal_dialog">
+            <div class="modal_header">
+              <h3>Vers inscrits</h3>
+              <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal_body">
+              <form id="vers_inscrit_form" class="classe_form_grid">
+                <input type="hidden" name="_row" />
+                <label>CIN
+                  <input type="text" name="CIN" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 chiffres" />
+                </label>
+                <label>Prénom
+                  <input type="text" name="Prénom" required />
+                </label>
+                <label>Nom
+                  <input type="text" name="Nom" required />
+                </label>
+                <label>Année
+                  <input type="text" name="Année" required placeholder="ex. LATI Pr2 1ère" />
+                </label>
+                <div class="demande_coord_field">
+                  <span>Coordonnées</span>
+                  <div class="demande_coord_group">
+                    <label>Tél <input type="tel" id="vers_inscrit_coord_tel" /></label>
+                    <label>Tél2 <input type="tel" id="vers_inscrit_coord_tel2" /></label>
+                    <label>Email <input type="email" id="vers_inscrit_coord_email" /></label>
+                  </div>
+                </div>
+                <div class="matiere_form_actions">
+                  <button type="submit" class="btn_success"><i class="bi bi-check-lg"></i> Enregistrer</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <table class="data_table pp_table">
+          <thead>
+            <tr>
+              <th>CIN</th>
+              <th>Prénom</th>
+              <th>Nom</th>
+              <th>Tél</th>
+              <th>Spécialité</th>
+              <th>Observations</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="dossier_table_body"></tbody>
+        </table>
+        <div class="empty_state" id="dossier_empty" hidden>
+          <i class="bi bi-inbox"></i>Aucun dossier enregistré.
+        </div>
       </section>
 
       <section id="inscrits" class="panel">
@@ -686,6 +910,63 @@
         </div>
       </div>
 
+      <!-- MODALE DOSSIER, partagée entre les sections Demandes et Dossiers (donc
+           hors des <section>, que showPPSection masque).
+           - mode "creation" (bouton "Vers dossiers" de Demandes) : mêmes champs
+             que la demande + pièces variables selon la spécialité (voir
+             DOSSIER_REGLES) ; la validation crée la ligne dans l'onglet
+             "Dossiers" puis retire la demande.
+           - mode "edition" (bouton "Afficher" de Dossiers) : modifie la ligne. -->
+      <div class="modal_overlay" id="dossier_modal">
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3 id="dossier_modal_titre">Vers dossiers</h3>
+            <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <form id="dossier_form" class="classe_form_grid">
+              <input type="hidden" name="_row" />
+              <label>CIN
+                <input type="text" name="CIN" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 chiffres" />
+              </label>
+              <label>Prénom
+                <input type="text" name="Prénom" required />
+              </label>
+              <label>Nom
+                <input type="text" name="Nom" required />
+              </label>
+              <label>Spécialité
+                <select name="Spécialité" id="dossier_specialite_select"></select>
+              </label>
+              <div class="demande_coord_field">
+                <span>Coordonnées</span>
+                <div class="demande_coord_group">
+                  <label>Tél <input type="tel" id="dossier_coord_tel" /></label>
+                  <label>Tél2 <input type="tel" id="dossier_coord_tel2" /></label>
+                  <label>Email <input type="email" id="dossier_coord_email" /></label>
+                </div>
+              </div>
+              <div class="dossier_champs" id="dossier_champs"></div>
+              <div class="dossier_obs">
+                <span>Observations</span>
+                <div class="dossier_obs_options">
+                  <label class="dossier_check"><input type="radio" name="obs_option" value="Acceptable" /> Acceptable</label>
+                  <label class="dossier_check"><input type="radio" name="obs_option" value="Incomplet" /> Incomplet</label>
+                  <label class="dossier_check"><input type="radio" name="obs_option" value="Invalide" /> Invalide</label>
+                  <label class="dossier_check"><input type="radio" name="obs_option" value="Autre" /> Autre</label>
+                </div>
+                <textarea name="Observations" disabled placeholder="Précisez (option « Autre »)"></textarea>
+              </div>
+              <div class="matiere_form_actions">
+                <button type="button" class="btn_danger" id="dossier_btn_supprimer" hidden>
+                  <i class="bi bi-trash3"></i> Supprimer
+                </button>
+                <button type="submit" class="btn_success"><i class="bi bi-check-lg"></i> Enregistrer</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -718,6 +999,9 @@ let partenairesCache = [];
 // fiche éditée ici ne concerne que la partie signalétique + facturation).
 let editingFileId = null;
 let editingExtraData = null;
+// Constantes d'heures par étudiant (éditées depuis class.html, modale
+// "Editer") : conservées telles quelles quand la fiche est modifiée ici.
+let editingConstantesHeures = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   loadPPClasses();
@@ -725,13 +1009,30 @@ document.addEventListener("DOMContentLoaded", () => {
   renderUserBadge(document.getElementById("sidebar_user_badge"));
   injecterBoutonDeconnexion(document.getElementById("sidebar_user_badge"));
 
-  ["pp_search"].forEach(wireSearchClear);
+  ["pp_search", "demande_search", "dossier_search"].forEach(wireSearchClear);
+
+  // Sticky de la section Demandes : recalcul au redimensionnement et quand la
+  // section devient visible / change de hauteur.
+  window.addEventListener("resize", ajusterStickyPP);
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(ajusterStickyPP);
+    ["demandes", "dossiers"].forEach((id) => {
+      document.getElementById(id)?.querySelectorAll(".panel_header, .demandes_toolbar").forEach((el) => ro.observe(el));
+    });
+  }
+  ajusterStickyPP();
 
   wireNouvelleClasseModal();
+
+  wireCampagneUi();
+  loadCampagnes();
 
   wireDemandesUi();
   loadDemandes();
   chargerSpecialitesPP();
+
+  wireDossiersUi();
+  loadDossiers();
 
   wireInscritsUi();
   loadInscrits();
@@ -739,8 +1040,139 @@ document.addEventListener("DOMContentLoaded", () => {
   initSectionToggle();
 });
 
+/* ============================================================
+   SECTION "CAMPAGNE"
+   Onglet "campagne" de la Sheet PP_DEMANDES_SHEET_ID
+   (1Anm0lULkknZygdGPQXlgvClO-ctp2xSrPuzTmkBZ6oE). En-têtes :
+   المجال | التسمية | المعتمدية | الترقيم | على المراسلة | على الظرف.
+   Simple gestion CRUD (pas de filtre ni de sélection globale) —
+   nécessite côté Apps Script les actions listCampagnesPP /
+   createCampagnePP / updateCampagnePP / deleteCampagnePP, sur le
+   même modèle que les actions ...DemandePP déjà en place.
+   ============================================================ */
+
+let campagnesCache = [];
+
+function wireCampagneUi() {
+  document.getElementById("campagne_btn_nouveau")?.addEventListener("click", () => openCampagneForm(null));
+  document.getElementById("campagne_form")?.addEventListener("submit", onSubmitCampagneForm);
+
+  document.getElementById("campagne_btn_supprimer")?.addEventListener("click", async () => {
+    const rowId = document.getElementById("campagne_form")._row.value;
+    if (!rowId) return;
+    if (!confirm("Supprimer cette campagne ?")) return;
+    try {
+      await apiCallDirect("deleteCampagnePP", { _row: rowId });
+      closeFormModal("campagne_modal");
+      await loadCampagnes();
+    } catch (err) {
+      alert(`Erreur lors de la suppression : ${err.message}`);
+    }
+  });
+
+  document.getElementById("campagne_table_body")?.addEventListener("click", (e) => {
+    const btnAfficher = e.target.closest(".campagne_row_afficher");
+    if (btnAfficher) {
+      const c = campagnesCache.find((x) => String(x._row) === btnAfficher.dataset.row);
+      if (c) openCampagneForm(c);
+    }
+  });
+}
+
+async function loadCampagnes() {
+  const tbody = document.getElementById("campagne_table_body");
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr>`;
+
+  try {
+    campagnesCache = await apiCallDirect("listCampagnesPP", {});
+    renderCampagneTable();
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+  }
+}
+
+function ouiNonBadgeCampagne(val) {
+  const v = String(val || "").trim().toLowerCase();
+  if (v === "oui") return `<span class="etat_badge is_actif">Oui</span>`;
+  if (v === "non") return `<span class="etat_badge is_close">Non</span>`;
+  return "—";
+}
+
+function renderCampagneTable() {
+  const tbody = document.getElementById("campagne_table_body");
+  const emptyEl = document.getElementById("campagne_empty");
+
+  if (campagnesCache.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+  if (emptyEl) emptyEl.hidden = true;
+
+  tbody.innerHTML = campagnesCache.map((c) => `
+    <tr>
+      <td>${c["المجال"] || ""}</td>
+      <td>${c["التسمية"] || ""}</td>
+      <td>${c["المعتمدية"] || ""}</td>
+      <td>${c["الترقيم"] || ""}</td>
+      <td>${ouiNonBadgeCampagne(c["على المراسلة"])}</td>
+      <td>${ouiNonBadgeCampagne(c["على الظرف"])}</td>
+      <td>
+        <button type="button" class="btn_info campagne_row_afficher" data-row="${c._row}">
+          <i class="bi bi-eye"></i> Afficher
+        </button>
+      </td>
+    </tr>`).join("");
+}
+
+function openCampagneForm(campagne) {
+  const form = document.getElementById("campagne_form");
+  form.reset();
+
+  if (campagne) {
+    form._row.value = campagne._row;
+    Object.keys(campagne).forEach((key) => {
+      if (key === "_row") return;
+      const field = form.elements[key];
+      if (field) field.value = campagne[key] || "";
+    });
+  } else {
+    form._row.value = "";
+  }
+
+  document.getElementById("campagne_modal_titre").textContent = campagne ? "Modifier la campagne" : "Nouvelle campagne";
+  document.getElementById("campagne_btn_supprimer").hidden = !campagne;
+  openFormModal("campagne_modal", "campagne_form");
+}
+
+async function onSubmitCampagneForm(e) {
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form);
+  const record = {};
+  fd.forEach((value, key) => { if (key !== "_row") record[key] = value; });
+  record["CIN"] = normaliserCinPP(record["CIN"]);
+
+  const rowId = fd.get("_row");
+  const btn = form.querySelector('button[type="submit"]');
+  setBtnSaving(btn, true);
+  try {
+    if (rowId) {
+      await apiCallDirect("updateCampagnePP", { _row: rowId, record });
+    } else {
+      await apiCallDirect("createCampagnePP", { record });
+    }
+    closeFormModal("campagne_modal");
+    await loadCampagnes();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
 /* ---------------- Une seule section visible à la fois ---------------- */
-/* Ordre : Demandes (active par défaut) - Dossiers - Inscrits - Classes. */
+/* Ordre : Campagne - Demandes (active par défaut) - Dossiers - Inscrits - Classes. */
 
 function showPPSection(id) {
   document.querySelectorAll("main.app_content > section.panel").forEach((s) => { s.hidden = s.id !== id; });
@@ -820,10 +1252,18 @@ function wireDemandesUi() {
     const btnDossier = e.target.closest(".demande_row_vers_dossier");
     if (btnDossier) {
       const d = demandesCache.find((x) => String(x._row) === btnDossier.dataset.row);
-      if (d) allerVersDossiers(d);
+      if (d) openDossierForm(d, "creation");
+      return;
+    }
+
+    const btnArchiver = e.target.closest(".demande_row_archiver");
+    if (btnArchiver) {
+      archiverEnregistrement("demandes", btnArchiver.dataset.row);
       return;
     }
   });
+
+  document.getElementById("demande_search")?.addEventListener("input", renderDemandeTable);
 
   document.getElementById("demande_specialite_filters")?.addEventListener("click", (e) => {
     const chip = e.target.closest(".demandes_specialite_chip");
@@ -843,29 +1283,53 @@ function wireDemandesUi() {
     boxes.forEach((b) => (b.checked = !toutCoche));
   });
   document.getElementById("demande_import_form")?.addEventListener("submit", onSubmitDemandeImportForm);
+
+  // Modale "Vers dossiers"
+  document.getElementById("dossier_specialite_select")?.addEventListener("change", (e) => renderDossierChamps(e.target.value, collecterValeursDossier()));
+  document.getElementById("dossier_champs")?.addEventListener("change", majDossierConditionnels);
+  document.querySelectorAll('#dossier_form input[name="obs_option"]').forEach((r) => r.addEventListener("change", majObservationDossier));
 }
 
-// Charge la liste des spécialités depuis la base "paramètres" (onglet
-// "fraispp", colonne "Specialités") et remplace les options codées en dur
-// de la modale de demande. Non bloquant : en cas d'erreur ou de colonne
-// absente, la liste de secours du HTML reste en place.
-async function chargerSpecialitesPP() {
-  const select = document.getElementById("demande_specialite_select");
-  if (!select) return;
-  try {
-    const frais = await apiCallDirect("getFraisPP", {});
-    const specialites = Array.isArray(frais?.specialites) ? frais.specialites : [];
-    if (specialites.length === 0) return;
-    const valeurCourante = select.value;
-    select.innerHTML = `<option value="">----</option>`
-      + specialites.map((s) => `<option value="${escapeHtmlDemande(s)}">${escapeHtmlDemande(s)}</option>`).join("")
-      + `<option value="Aucune">Aucune</option>`;
-    if (valeurCourante && [...select.options].some((o) => o.value === valeurCourante)) {
-      select.value = valeurCourante;
+// Liste des spécialités : onglet "specialites" de la Sheet PP, colonne A à
+// partir de A2 (cellules non vides). Mise en cache puis recopiée dans les
+// <select> des modales (Nouvelle/Modifier demande, Vers dossiers).
+let specialitesCache = null;
+
+async function chargerSpecialitesPP(forcer) {
+  if (!specialitesCache || forcer) {
+    try {
+      const liste = await apiCallDirect("listSpecialitesPP", {});
+      specialitesCache = Array.isArray(liste) ? liste : [];
+    } catch (err) {
+      console.error("Erreur de chargement des spécialités :", err.message);
+      return;
     }
-  } catch (err) {
-    console.error("Erreur de chargement des spécialités (fraispp) :", err.message);
   }
+  remplirSelectSpecialites("demande_specialite_select");
+  remplirSelectSpecialites("dossier_specialite_select");
+}
+
+function remplirSelectSpecialites(selectId, valeurSouhaitee) {
+  const select = document.getElementById(selectId);
+  if (!select || !specialitesCache) return;
+  const valeur = valeurSouhaitee !== undefined ? valeurSouhaitee : select.value;
+  const liste = valeur && !specialitesCache.includes(valeur) ? [...specialitesCache, valeur] : specialitesCache;
+  select.innerHTML = `<option value="">----</option>`
+    + liste.map((s) => `<option value="${escapeHtmlDemande(s)}">${escapeHtmlDemande(s)}</option>`).join("");
+  select.value = valeur || "";
+}
+
+// CIN sur 8 chiffres : conserve les 0 à gauche.
+function normaliserCinPP(v) {
+  const t = String(v || "").trim();
+  return /^\d{1,8}$/.test(t) ? t.padStart(8, "0") : t;
+}
+
+// Action "Archiver" commune aux sections (Demandes, Dossiers, Inscrits...) :
+// la logique d'archivage partagée reste à implémenter. Point d'entrée unique
+// pour ne brancher qu'à un seul endroit plus tard.
+function archiverEnregistrement(section, rowId) {
+  alert("L'archivage n'est pas encore implémenté (logique commune aux sections à venir).");
 }
 
 async function loadDemandes() {
@@ -898,12 +1362,19 @@ function renderSpecialiteFilters() {
 }
 
 function renderDemandeTable() {
+  ajusterStickyPP();
   const tbody = document.getElementById("demande_table_body");
   const emptyEl = document.getElementById("demande_empty");
 
-  const filtered = !demandeSpecialiteFiltre
-    ? demandesCache
-    : demandesCache.filter((d) => (d["Spécialité"] || "").trim() === demandeSpecialiteFiltre);
+  // Filtres combinés : chip de spécialité + recherche (CIN, prénom ou nom,
+  // insensible à la casse et aux accents).
+  const norm = (v) => String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const terme = norm(document.getElementById("demande_search")?.value).trim();
+  const filtered = demandesCache.filter((d) => {
+    if (demandeSpecialiteFiltre && (d["Spécialité"] || "").trim() !== demandeSpecialiteFiltre) return false;
+    if (!terme) return true;
+    return [d["CIN"], d["Prénom"], d["Nom"]].some((v) => norm(v).includes(terme));
+  });
 
   if (filtered.length === 0) {
     tbody.innerHTML = "";
@@ -932,25 +1403,409 @@ function renderDemandeTable() {
         <button type="button" class="btn_ghost demande_row_vers_dossier" data-row="${d._row}">
           <i class="bi bi-arrow-right-circle"></i> Vers Dossiers
         </button>
+        <button type="button" class="btn_danger demande_row_archiver" data-row="${d._row}">
+          <i class="bi bi-archive"></i> Archiver
+        </button>
       </td>
     </tr>`;
   }).join("");
 }
 
-// Action "Vers Dossiers" : bascule vers la section Dossiers (contenu à
-// implémenter) en gardant le contexte de la demande d'origine, pour la
-// future création du dossier correspondant.
-function allerVersDossiers(demande) {
-  const contexte = document.getElementById("dossiers_contexte");
-  if (contexte) {
-    contexte.textContent = `Contenu à implémenter — dossier à créer pour ${demande["Prénom"] || ""} ${demande["Nom"] || ""} (CIN ${demande["CIN"] || "—"}).`;
-  }
-  showPPSection("dossiers");
+/* ---------------- "Vers dossiers" ----------------
+   Règles des pièces par spécialité (d'après le tableau des pièces à fournir).
+   Valeurs : true = case à cocher ; "text" = champ texte ; pour "diplome",
+   la chaîne est le diplôme exigé (affiché dans le libellé) ;
+   "siPasDiplome" / "siPasAffSS" = case affichée seulement si le Diplôme /
+   l'Affiliation SS n'est pas coché. Champ absent = non demandé. */
+const DOSSIER_REGLES = {
+  BTPTMI:  { photos: true, cin: true, travail: true, profession: "text", diplome: "CAP", attScol: "siPasDiplome", affSS: true, expPro: "siPasAffSS" },
+  BTPTSIG: { photos: true, cin: true, travail: true, profession: "text", diplome: "CAP", attScol: "siPasDiplome", affSS: true, expPro: "siPasAffSS" },
+  BTSAD:   { photos: true, cin: true, travail: true, profession: "text", diplome: "Baccalauréat ou BTP", affSS: true, expPro: "siPasAffSS" },
+  LTI:     { photos: true, cin: true, travail: true, diplome: "Baccalauréat" },
+  LTI3:    { photos: true, cin: true, travail: true, diplome: "Baccalauréat et TS" },
+  LMAF:    { photos: true, cin: true, travail: true, diplome: "Baccalauréat" },
+  LMAF3:   { photos: true, cin: true, travail: true, diplome: "Baccalauréat et TS" }
+};
+
+// Ordre des champs et en-têtes de l'onglet "Dossiers".
+const DOSSIER_CHAMPS = [
+  { regle: "photos", header: "Photos", label: "Photos" },
+  { regle: "cin", header: "Copies CIN", label: "Copies CIN" },
+  { regle: "travail", header: "Attestation travail", label: "Attestation travail" },
+  { regle: "profession", header: "Profession", label: "Profession" },
+  { regle: "diplome", header: "Diplôme", label: "Diplôme" },
+  { regle: "attScol", header: "Attestation scolaire", label: "Attestation scolaire" },
+  { regle: "affSS", header: "Affiliation SS", label: "Affiliation SS" },
+  { regle: "expPro", header: "Expérience PROF", label: "Expérience PROF" }
+];
+
+function cleSpecialiteDossier(s) {
+  return String(s || "").toUpperCase().replace(/[\s\-_]/g, "");
 }
 
-function openDemandeForm(demande) {
+// Construit les champs spécifiques à la spécialité choisie. "valeurs"
+// pré-remplit les cases/champs (objet header -> valeur).
+function renderDossierChamps(specialite, valeurs) {
+  const wrap = document.getElementById("dossier_champs");
+  if (!wrap) return;
+  const regles = DOSSIER_REGLES[cleSpecialiteDossier(specialite)];
+
+  if (!regles) {
+    wrap.innerHTML = `<p class="dossier_champs_hint">${specialite ? "Aucune pièce spécifique définie pour cette spécialité." : "Choisissez une spécialité pour afficher les pièces du dossier."}</p>`;
+    return;
+  }
+
+  wrap.innerHTML = DOSSIER_CHAMPS.filter((c) => regles[c.regle]).map((c) => {
+    const regle = regles[c.regle];
+    const val = valeurs[c.header] || "";
+    const dep = (regle === "siPasDiplome" || regle === "siPasAffSS") ? regle : "";
+    const attrDep = dep ? ` data-si-pas="${dep === "siPasDiplome" ? "Diplôme" : "Affiliation SS"}"` : "";
+    if (regle === "text") {
+      return `<label>${c.label} <input type="text" name="${c.header}" value="${escapeHtmlDemande(val)}" /></label>`;
+    }
+    const libelle = c.regle === "diplome" ? `Diplôme : ${escapeHtmlDemande(regle)}` : c.label;
+    return `<label class="dossier_check"${attrDep}><input type="checkbox" name="${c.header}"${val ? " checked" : ""} /> ${libelle}</label>`;
+  }).join("");
+
+  majDossierConditionnels();
+}
+
+// Masque (et désactive) les cases "si pas de diplôme / si pas d'affiliation
+// SS" tant que la case dont elles dépendent est cochée.
+function majDossierConditionnels() {
+  const form = document.getElementById("dossier_form");
+  document.querySelectorAll("#dossier_champs [data-si-pas]").forEach((lbl) => {
+    const cible = form.elements[lbl.dataset.siPas];
+    const masquer = !!(cible && cible.checked);
+    lbl.hidden = masquer;
+    const input = lbl.querySelector("input");
+    if (input) {
+      if (masquer) input.checked = false;
+      input.disabled = masquer;
+    }
+  });
+}
+
+// Observations : 4 choix ; le champ texte n'est actif que pour "Autre".
+function majObservationDossier() {
+  const form = document.getElementById("dossier_form");
+  const choix = form.querySelector('input[name="obs_option"]:checked');
+  const ta = form.elements["Observations"];
+  ta.disabled = !(choix && choix.value === "Autre");
+  if (ta.disabled) ta.value = "";
+  else ta.focus();
+}
+
+function valeurObservationDossier() {
+  const form = document.getElementById("dossier_form");
+  const choix = form.querySelector('input[name="obs_option"]:checked');
+  if (!choix) return "";
+  return choix.value === "Autre" ? form.elements["Observations"].value.trim() : choix.value;
+}
+
+// Valeurs actuellement saisies dans les champs variables de la modale
+// (header -> "Oui" / texte), pour les conserver quand la spécialité change.
+function collecterValeursDossier() {
+  const form = document.getElementById("dossier_form");
+  const valeurs = {};
+  DOSSIER_CHAMPS.forEach((c) => {
+    const el = form.elements[c.header];
+    if (!el) return;
+    valeurs[c.header] = el.type === "checkbox" ? (el.checked ? "Oui" : "") : el.value;
+  });
+  return valeurs;
+}
+
+const OBSERVATIONS_STANDARD = ["Acceptable", "Incomplet", "Invalide"];
+
+// Ouvre la modale dossier (dans la section courante) :
+//  - mode "creation" : "src" = demande d'origine (bouton "Vers dossiers")
+//  - mode "edition"  : "src" = ligne de l'onglet Dossiers (bouton "Afficher")
+async function openDossierForm(src, mode) {
+  mode = mode || "creation";
+  const form = document.getElementById("dossier_form");
+  form.reset();
+  form.dataset.mode = mode;
+  await chargerSpecialitesPP();
+
+  document.getElementById("dossier_modal_titre").textContent = mode === "edition" ? "Modifier le dossier" : "Vers dossiers";
+  document.getElementById("dossier_btn_supprimer").hidden = mode !== "edition";
+
+  form.elements["_row"].value = src._row;
+  form.elements["CIN"].value = normaliserCinPP(src["CIN"]);
+  form.elements["Prénom"].value = src["Prénom"] || "";
+  form.elements["Nom"].value = src["Nom"] || "";
+  const spec = src["Spécialité"] || "";
+  remplirSelectSpecialites("dossier_specialite_select", spec);
+
+  const coord = src["Coordonnées"] || "";
+  document.getElementById("dossier_coord_tel").value = getCoordField(coord, "Tél");
+  document.getElementById("dossier_coord_tel2").value = getCoordField(coord, "Tél2");
+  document.getElementById("dossier_coord_email").value = getCoordField(coord, "Email");
+
+  renderDossierChamps(spec, mode === "edition" ? src : {});
+
+  // Observations : l'une des 3 valeurs standard, sinon "Autre" + texte libre.
+  const obs = mode === "edition" ? String(src["Observations"] || "").trim() : "";
+  const valeurRadio = !obs ? "" : (OBSERVATIONS_STANDARD.includes(obs) ? obs : "Autre");
+  form.querySelectorAll('input[name="obs_option"]').forEach((r) => { r.checked = r.value === valeurRadio; });
+  majObservationDossier();
+  if (valeurRadio === "Autre") form.elements["Observations"].value = obs;
+
+  openFormModal("dossier_modal", "dossier_form");
+}
+
+// Validation de la modale dossier. En-têtes de l'onglet "Dossiers" : CIN,
+// Prénom, Nom, Coordonnées, Spécialité, Photos, Copies CIN, Attestation
+// travail, Profession, Diplôme, Attestation scolaire, Affiliation SS,
+// Expérience PROF, Observations. Cases cochées -> "Oui".
+//  - creation : crée la ligne puis retire la demande d'origine
+//  - edition  : met à jour la ligne existante
+async function onSubmitDossierForm(e) {
+  e.preventDefault();
+  const form = e.target;
+  const mode = form.dataset.mode || "creation";
+  const record = {
+    "CIN": normaliserCinPP(form.elements["CIN"].value),
+    "Prénom": form.elements["Prénom"].value.trim(),
+    "Nom": form.elements["Nom"].value.trim(),
+    "Coordonnées": buildCoordText(DEMANDE_COORD_LABELS, {
+      "Tél": document.getElementById("dossier_coord_tel").value.trim(),
+      "Tél2": document.getElementById("dossier_coord_tel2").value.trim(),
+      "Email": document.getElementById("dossier_coord_email").value.trim()
+    }),
+    "Spécialité": form.elements["Spécialité"].value,
+    "Observations": valeurObservationDossier()
+  };
+  DOSSIER_CHAMPS.forEach((c) => {
+    const el = form.elements[c.header];
+    if (!el) { record[c.header] = ""; return; }
+    record[c.header] = el.type === "checkbox" ? (el.checked ? "Oui" : "") : el.value.trim();
+  });
+
+  const rowId = form.elements["_row"].value;
+  const btn = form.querySelector('button[type="submit"]');
+  setBtnSaving(btn, true);
+  try {
+    if (mode === "edition") {
+      await apiCallDirect("updateDossierPP", { _row: rowId, record });
+      closeFormModal("dossier_modal");
+    } else {
+      await apiCallDirect("createDossierPP", { record });
+      closeFormModal("dossier_modal");
+      // Transfert : la demande quitte "Demandes" une fois le dossier créé.
+      try {
+        if (rowId) await apiCallDirect("deleteDemandePP", { _row: rowId });
+      } catch (errSuppr) {
+        alert(`Dossier créé, mais la demande n'a pas pu être retirée de la liste : ${errSuppr.message}`);
+      }
+      await loadDemandes();
+    }
+    await loadDossiers();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+/* ============================================================
+   SECTION "DOSSIERS"
+   Onglet "Dossiers" de la Sheet PP_DEMANDES_SHEET_ID (voir Code.gs).
+   Mêmes principes que "Demandes" : chips de spécialité, recherche
+   (CIN / prénom / nom), modale "Afficher" (modification) et bouton
+   "Vers inscrits" qui crée l'inscrit puis retire le dossier.
+   ============================================================ */
+
+let dossiersCache = [];
+let dossierSpecialiteFiltre = "";
+
+function wireDossiersUi() {
+  document.getElementById("dossier_form")?.addEventListener("submit", onSubmitDossierForm);
+
+  document.getElementById("dossier_btn_supprimer")?.addEventListener("click", async () => {
+    const rowId = document.getElementById("dossier_form")._row.value;
+    if (!rowId) return;
+    if (!confirm("Supprimer ce dossier ?")) return;
+    try {
+      await apiCallDirect("deleteDossierPP", { _row: rowId });
+      closeFormModal("dossier_modal");
+      await loadDossiers();
+    } catch (err) {
+      alert(`Erreur lors de la suppression : ${err.message}`);
+    }
+  });
+
+  document.getElementById("dossier_table_body")?.addEventListener("click", (e) => {
+    const find = (btn) => dossiersCache.find((x) => String(x._row) === btn.dataset.row);
+
+    const btnAfficher = e.target.closest(".dossier_row_afficher");
+    if (btnAfficher) {
+      const d = find(btnAfficher);
+      if (d) openDossierForm(d, "edition");
+      return;
+    }
+    const btnInscrit = e.target.closest(".dossier_row_vers_inscrit");
+    if (btnInscrit) {
+      const d = find(btnInscrit);
+      if (d) openVersInscritForm(d);
+      return;
+    }
+    const btnArchiver = e.target.closest(".dossier_row_archiver");
+    if (btnArchiver) {
+      archiverEnregistrement("dossiers", btnArchiver.dataset.row);
+      return;
+    }
+  });
+
+  document.getElementById("dossier_specialite_filters")?.addEventListener("click", (e) => {
+    const chip = e.target.closest(".demandes_specialite_chip");
+    if (!chip) return;
+    dossierSpecialiteFiltre = chip.dataset.specialite || "";
+    renderDossierFilters();
+    renderDossierTable();
+  });
+  document.getElementById("dossier_search")?.addEventListener("input", renderDossierTable);
+
+  document.getElementById("vers_inscrit_form")?.addEventListener("submit", onSubmitVersInscritForm);
+}
+
+async function loadDossiers() {
+  const tbody = document.getElementById("dossier_table_body");
+  if (!tbody) return;
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr>`;
+  try {
+    dossiersCache = await apiCallDirect("listDossiersPP", {});
+    renderDossierFilters();
+    renderDossierTable();
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+  }
+}
+
+function renderDossierFilters() {
+  const wrap = document.getElementById("dossier_specialite_filters");
+  if (!wrap) return;
+  const specialites = [...new Set(dossiersCache.map((d) => (d["Spécialité"] || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "fr"));
+  if (dossierSpecialiteFiltre && !specialites.includes(dossierSpecialiteFiltre)) dossierSpecialiteFiltre = "";
+
+  const chip = (label, val) => `
+    <span class="demandes_specialite_chip${dossierSpecialiteFiltre === val ? " is_active" : ""}" data-specialite="${escapeHtmlDemande(val)}">${escapeHtmlDemande(label)}</span>`;
+  wrap.innerHTML = chip("Toutes", "") + specialites.map((sp) => chip(sp, sp)).join("");
+}
+
+function badgeObservationDossier(obs) {
+  const classes = { "Acceptable": "is_actif", "Incomplet": "is_prevue", "Invalide": "is_close" };
+  const txt = escapeHtmlDemande(obs);
+  return classes[obs] ? `<span class="etat_badge ${classes[obs]}">${txt}</span>` : txt;
+}
+
+function renderDossierTable() {
+  ajusterStickyPP();
+  const tbody = document.getElementById("dossier_table_body");
+  const emptyEl = document.getElementById("dossier_empty");
+  if (!tbody) return;
+
+  const norm = (v) => String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const terme = norm(document.getElementById("dossier_search")?.value).trim();
+  const filtered = dossiersCache.filter((d) => {
+    if (dossierSpecialiteFiltre && (d["Spécialité"] || "").trim() !== dossierSpecialiteFiltre) return false;
+    if (!terme) return true;
+    return [d["CIN"], d["Prénom"], d["Nom"]].some((v) => norm(v).includes(terme));
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+  if (emptyEl) emptyEl.hidden = true;
+
+  tbody.innerHTML = filtered.map((d) => {
+    const coord = d["Coordonnées"] || "";
+    const tel = getCoordField(coord, "Tél");
+    const tooltip = DEMANDE_COORD_LABELS
+      .map((l) => `${l} : ${getCoordField(coord, l) || "—"}`)
+      .join("\n");
+    return `
+    <tr>
+      <td>${escapeHtmlDemande(normaliserCinPP(d["CIN"]))}</td>
+      <td>${escapeHtmlDemande(d["Prénom"])}</td>
+      <td>${escapeHtmlDemande(d["Nom"])}</td>
+      <td><span class="demande_tel_tooltip" tabindex="0" data-tooltip="${escapeHtmlDemande(tooltip)}">${escapeHtmlDemande(tel) || "—"}</span></td>
+      <td>${escapeHtmlDemande(d["Spécialité"])}</td>
+      <td>${badgeObservationDossier(d["Observations"] || "")}</td>
+      <td>
+        <button type="button" class="btn_info dossier_row_afficher" data-row="${d._row}">
+          <i class="bi bi-eye"></i> Afficher
+        </button>
+        <button type="button" class="btn_ghost dossier_row_vers_inscrit" data-row="${d._row}">
+          <i class="bi bi-arrow-right-circle"></i> Vers Inscrits
+        </button>
+        <button type="button" class="btn_danger dossier_row_archiver" data-row="${d._row}">
+          <i class="bi bi-archive"></i> Archiver
+        </button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+// "Vers inscrits" : modale dans la section Dossiers, pré-remplie avec le
+// dossier ; Année à saisir (ex. "LATI Pr2 1ère", voir Inscrits).
+function openVersInscritForm(dossier) {
+  const form = document.getElementById("vers_inscrit_form");
+  form.reset();
+  form.elements["_row"].value = dossier._row;
+  form.elements["CIN"].value = normaliserCinPP(dossier["CIN"]);
+  form.elements["Prénom"].value = dossier["Prénom"] || "";
+  form.elements["Nom"].value = dossier["Nom"] || "";
+  const coord = dossier["Coordonnées"] || "";
+  document.getElementById("vers_inscrit_coord_tel").value = getCoordField(coord, "Tél");
+  document.getElementById("vers_inscrit_coord_tel2").value = getCoordField(coord, "Tél2");
+  document.getElementById("vers_inscrit_coord_email").value = getCoordField(coord, "Email");
+  openFormModal("vers_inscrit_modal", "vers_inscrit_form");
+}
+
+// Validation : crée l'inscrit (onglet "Inscrits") puis retire le dossier.
+async function onSubmitVersInscritForm(e) {
+  e.preventDefault();
+  const form = e.target;
+  const record = {
+    "CIN": normaliserCinPP(form.elements["CIN"].value),
+    "Prénom": form.elements["Prénom"].value.trim(),
+    "Nom": form.elements["Nom"].value.trim(),
+    "Coordonnées": buildCoordText(DEMANDE_COORD_LABELS, {
+      "Tél": document.getElementById("vers_inscrit_coord_tel").value.trim(),
+      "Tél2": document.getElementById("vers_inscrit_coord_tel2").value.trim(),
+      "Email": document.getElementById("vers_inscrit_coord_email").value.trim()
+    }),
+    "Année": form.elements["Année"].value.trim()
+  };
+  const rowId = form.elements["_row"].value;
+  const btn = form.querySelector('button[type="submit"]');
+  setBtnSaving(btn, true);
+  try {
+    await apiCallDirect("createInscritPP", { record });
+    closeFormModal("vers_inscrit_modal");
+    try {
+      if (rowId) await apiCallDirect("deleteDossierPP", { _row: rowId });
+    } catch (errSuppr) {
+      alert(`Inscrit créé, mais le dossier n'a pas pu être retiré de la liste : ${errSuppr.message}`);
+    }
+    await loadDossiers();
+    await loadInscrits();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+async function openDemandeForm(demande) {
   const form = document.getElementById("demande_form");
   form.reset();
+  await chargerSpecialitesPP();
 
   if (demande) {
     form._row.value = demande._row;
@@ -959,6 +1814,7 @@ function openDemandeForm(demande) {
       const field = form.elements[key];
       if (field) field.value = demande[key] || "";
     });
+    remplirSelectSpecialites("demande_specialite_select", demande["Spécialité"] || "");
   } else {
     form._row.value = "";
   }
@@ -1010,17 +1866,25 @@ function normaliserEnTeteDemande(h) {
   return String(h || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 }
 
+// En-têtes attendus dans le fichier Excel (1ère ligne). Comparaison stricte
+// mais insensible à la casse, aux accents et aux espaces autour.
+// requis = true : le fichier est refusé s'il manque.
+const DEMANDE_IMPORT_ENTETES = [
+  { cle: "cin", libelle: "CIN", alias: ["cin"], requis: true },
+  { cle: "prenom", libelle: "Prénom", alias: ["prenom"], requis: true },
+  { cle: "nom", libelle: "Nom", alias: ["nom"], requis: true },
+  { cle: "telephone", libelle: "Tél", alias: ["tel"], requis: true },
+  { cle: "specialite", libelle: "Spécialité", alias: ["specialite"], requis: true },
+  { cle: "telephone2", libelle: "Tél2", alias: ["tel2"], requis: false },
+  { cle: "email", libelle: "Email", alias: ["email"], requis: false }
+];
+
 function detecterColonnesDemandes(headers) {
   const mapping = {};
   headers.forEach((h) => {
     const n = normaliserEnTeteDemande(h);
-    if (!mapping.cin && n.includes("cin")) mapping.cin = h;
-    else if (!mapping.prenom && n.includes("prenom")) mapping.prenom = h;
-    else if (!mapping.nom && (n === "nom" || (n.includes("nom") && !n.includes("prenom")))) mapping.nom = h;
-    else if (!mapping.specialite && n.includes("special")) mapping.specialite = h;
-    else if (!mapping.telephone2 && (n.includes("tel") || n.includes("gsm") || n.includes("phone")) && /2/.test(n)) mapping.telephone2 = h;
-    else if (!mapping.telephone && (n.includes("tel") || n.includes("gsm") || n.includes("phone"))) mapping.telephone = h;
-    else if (!mapping.email && n.includes("mail")) mapping.email = h;
+    const def = DEMANDE_IMPORT_ENTETES.find((d) => d.alias.includes(n));
+    if (def && !mapping[def.cle]) mapping[def.cle] = h;
   });
   return mapping;
 }
@@ -1034,25 +1898,36 @@ function onFichierExcelDemandesChoisi(e) {
     try {
       const wb = XLSX.read(evt.target.result, { type: "array" });
       const feuille = wb.Sheets[wb.SheetNames[0]];
-      const lignes = XLSX.utils.sheet_to_json(feuille, { defval: "" });
+      const lignes = XLSX.utils.sheet_to_json(feuille, { defval: "", raw: false });
       if (lignes.length === 0) {
         alert("Ce fichier Excel ne contient aucune ligne exploitable.");
         return;
       }
       const headers = Object.keys(lignes[0]);
       const mapping = detecterColonnesDemandes(headers);
+
+      const manquants = DEMANDE_IMPORT_ENTETES.filter((d) => d.requis && !mapping[d.cle]).map((d) => d.libelle);
+      if (manquants.length > 0) {
+        const requis = DEMANDE_IMPORT_ENTETES.filter((d) => d.requis).map((d) => d.libelle).join(", ");
+        const optionnels = DEMANDE_IMPORT_ENTETES.filter((d) => !d.requis).map((d) => d.libelle).join(", ");
+        alert(`Import impossible : en-tête(s) requis manquant(s) : ${manquants.join(", ")}.\n\n`
+          + `La 1ère ligne du fichier doit contenir : ${requis}.\nEn-têtes facultatifs : ${optionnels}.`);
+        return;
+      }
+
+      const val = (ligne, cle) => String(mapping[cle] ? ligne[mapping[cle]] : "").trim();
       const candidats = lignes.map((ligne) => ({
-        cin: String(mapping.cin ? ligne[mapping.cin] : "").trim(),
-        prenom: String(mapping.prenom ? ligne[mapping.prenom] : "").trim(),
-        nom: String(mapping.nom ? ligne[mapping.nom] : "").trim(),
-        telephone: String(mapping.telephone ? ligne[mapping.telephone] : "").trim(),
-        telephone2: String(mapping.telephone2 ? ligne[mapping.telephone2] : "").trim(),
-        email: String(mapping.email ? ligne[mapping.email] : "").trim(),
-        specialite: String(mapping.specialite ? ligne[mapping.specialite] : "").trim()
+        cin: normaliserCinPP(val(ligne, "cin")),
+        prenom: val(ligne, "prenom"),
+        nom: val(ligne, "nom"),
+        telephone: val(ligne, "telephone"),
+        telephone2: val(ligne, "telephone2"),
+        email: val(ligne, "email"),
+        specialite: val(ligne, "specialite")
       })).filter((d) => d.nom || d.prenom);
 
       if (candidats.length === 0) {
-        alert("Aucune colonne Nom/Prénom reconnue dans ce fichier. Vérifiez les en-têtes de colonnes.");
+        alert("Aucune ligne avec un Nom ou un Prénom dans ce fichier.");
         return;
       }
       ouvrirModaleImportDemandes(candidats);
@@ -1504,6 +2379,7 @@ function wireNouvelleClasseModal() {
     document.getElementById("classe_niveau").innerHTML = `<option value="">----</option>`;
     editingFileId = null;
     editingExtraData = null;
+    editingConstantesHeures = null;
     document.getElementById("classe_fiche_modal_titre").textContent = "Nouvelle classe";
     updateDateVisibility();
     updateFacturationVisibility();
@@ -1714,6 +2590,10 @@ async function ouvrirEditionClasse(fileId) {
     const c = data.classe || {};
 
     editingFileId = fileId;
+    editingConstantesHeures = {
+      heuresTutoratEtudiant: c.heuresTutoratEtudiant,
+      heuresRegEtudiant: c.heuresRegEtudiant
+    };
     editingExtraData = {
       matieres: data.matieres || [],
       regroupements: data.regroupements || [],
@@ -1766,7 +2646,10 @@ async function ouvrirEditionClasse(fileId) {
 
 async function onSubmitNouvelleClasse(e) {
   e.preventDefault();
-  const classe = lireFicheDepuisFormulaire();
+  // En édition, on renvoie telles quelles les constantes d'heures par
+  // étudiant (modifiables depuis class.html seulement) pour ne pas les
+  // écraser ; en création, class.html applique 140 h / 84 h par défaut.
+  const classe = { ...lireFicheDepuisFormulaire(), ...(editingFileId ? editingConstantesHeures : {}) };
   if (!classe.partenairePP || !classe.classe || !classe.specialite || !classe.promotion || !classe.niveau) {
     alert("Merci de compléter la fiche signalétique.");
     return;
@@ -1798,6 +2681,7 @@ async function onSubmitNouvelleClasse(e) {
     closeFormModal("classe_fiche_modal");
     editingFileId = null;
     editingExtraData = null;
+    editingConstantesHeures = null;
     await loadPPClasses();
   } catch (err) {
     alert(`Erreur : ${err.message}`);
@@ -1819,6 +2703,23 @@ function setBtnSaving(btn, saving, savingLabel = "Enregistrement...") {
     btn.classList.remove("btn_saving");
     btn.disabled = false;
   }
+}
+
+// Calcule les offsets sticky des sections à barre de filtres (Demandes,
+// Dossiers) : la barre se cale sous l'en-tête de section, les en-têtes du
+// tableau sous la barre.
+function ajusterStickyPP() {
+  ["demandes", "dossiers"].forEach((id) => {
+    const section = document.getElementById(id);
+    const ph = section?.querySelector(".panel_header");
+    const toolbar = section?.querySelector(".demandes_toolbar");
+    if (!section || !ph || !toolbar || !section.offsetParent) return;
+    const cs = getComputedStyle(ph);
+    const sticky = cs.position === "sticky" || cs.position === "fixed";
+    const base = sticky ? (parseFloat(cs.top) || 0) + ph.offsetHeight : 0;
+    section.style.setProperty("--pp_toolbar_top", base + "px");
+    section.style.setProperty("--pp_thead_top", (base + toolbar.offsetHeight) + "px");
+  });
 }
 
 function wireSearchClear(inputId) {
@@ -1955,3 +2856,8 @@ async function apiCallDirect(action, payload = {}) {
   </script>
 </body>
 </html>
+
+
+
+
+
