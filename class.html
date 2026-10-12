@@ -347,6 +347,36 @@
       animation: seq_matiere_flash 1.5s ease;
     }
 
+    /* Modale regroupement : colonne Jour (samedi facultatif / dimanche) en plus */
+    /* Modale regroupement : un bouton coloré par jour (samedi à gauche, dimanche
+       à droite) et une section par jour, au fond de la même teinte en plus clair. */
+    .reg_days_bar { display: flex; gap: var(--space_2); margin-bottom: var(--space_3); }
+    .reg_day_btn {
+      flex: 1;
+      display: inline-flex; align-items: center; justify-content: center; gap: var(--space_2);
+      padding: var(--space_2) var(--space_3);
+      border-radius: var(--radius_md, 8px);
+      border: 2px solid var(--reg_day_color);
+      background: transparent;
+      color: var(--reg_day_color);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .reg_day_btn.is_on { background: var(--reg_day_color); color: #fff; }
+    .reg_day_btn.is_samedi, .reg_day_section.is_samedi { --reg_day_color: #d97706; --reg_day_bg: rgba(217, 119, 6, 0.10); }
+    .reg_day_btn.is_dimanche, .reg_day_section.is_dimanche { --reg_day_color: #2563eb; --reg_day_bg: rgba(37, 99, 235, 0.10); }
+    .reg_day_section {
+      background: var(--reg_day_bg);
+      border: 1px solid var(--reg_day_color);
+      border-left-width: 5px;
+      border-radius: var(--radius_md, 8px);
+      padding: var(--space_3);
+      margin-bottom: var(--space_3);
+    }
+    .reg_day_section[hidden] { display: none; }
+    .reg_day_header { display: flex; align-items: baseline; gap: var(--space_2); margin-bottom: var(--space_2); color: var(--reg_day_color); }
+    .reg_day_header .reg_day_date { font-size: var(--fs_sm); font-weight: 400; }
+
     /* Modale examen : une colonne enseignant en plus (select G2 / info G1) */
     .exam_seq_row {
       grid-template-columns: 0.6fr 0.55fr 0.55fr 1.1fr 1.3fr 40px;
@@ -443,6 +473,7 @@
       flex-wrap: wrap;
       gap: var(--space_3);
     }
+    .seq_ctrl_jour { display: flex; flex-wrap: wrap; gap: var(--space_3); margin-bottom: var(--space_1); }
     .seq_controls .ctrl_group {
       display: flex;
       align-items: center;
@@ -789,7 +820,7 @@
               <input type="number" id="classe_heures_tutorat" min="0" step="0.5" value="140" />
             </label>
             <label>Heures de regroupement par étudiant
-              <input type="number" id="classe_heures_reg" min="0" step="0.5" value="84" />
+              <input type="number" id="classe_heures_reg" min="84" step="0.5" value="84" title="84 h minimum ; au-delà, le compteur global s'adapte à cette valeur" />
             </label>
             <label>Nom du premier responsable
               <input type="text" id="classe_responsable_nom" placeholder="Rempli automatiquement depuis la base" disabled />
@@ -1428,6 +1459,9 @@
             <p class="seq_time_hint">
               <i class="bi bi-info-circle"></i> séance de 2 h par défaut — une soirée peut durer jusqu'à 3 h : 1 séance de 3 h, ou 2 séances (bouton +) dont le total ne dépasse pas 3 h
             </p>
+            <p class="seq_time_hint">
+              <i class="bi bi-info-circle"></i> * le samedi est facultatif : laissez sa matière vide pour ne pas le planifier ; s'il est rempli, il s'affiche au tableau et dans la notification
+            </p>
             <div id="tut_jours_container"></div>
 
             <div class="matiere_form_actions">
@@ -1477,35 +1511,50 @@
         <div class="modal_body">
           <form id="reg_week_form">
             <input type="hidden" id="reg_week_edit_index" />
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space_3); margin-bottom: var(--space_3);">
-              <label style="display:flex; flex-direction:column; gap:var(--space_1); font-size:var(--fs_sm); color:var(--text_secondary);">
-                Semaine
-                <input type="number" id="reg_week_num" min="1" step="1" required />
-              </label>
-              <label style="display:flex; flex-direction:column; gap:var(--space_1); font-size:var(--fs_sm); color:var(--text_secondary);">
-                Date (samedi ou dimanche)
-                <input type="date" id="reg_week_date" required />
-                <span id="reg_week_date_warning" class="tut_time_hint_warning" hidden>
-                  <i class="bi bi-exclamation-triangle"></i> Un regroupement a normalement lieu un samedi ou un dimanche.
-                </span>
-              </label>
+            <!-- Numéro de semaine : attribué automatiquement (pas de champ). -->
+            <input type="hidden" id="reg_week_num" />
+            <label style="display:flex; flex-direction:column; gap:var(--space_1); font-size:var(--fs_sm); color:var(--text_secondary); margin-bottom: var(--space_3);">
+              Date de référence (dimanche)
+              <input type="date" id="reg_week_date" required />
+              <span id="reg_week_date_warning" class="tut_time_hint_warning" hidden>
+                <i class="bi bi-exclamation-triangle"></i> Un regroupement a normalement lieu un samedi ou un dimanche.
+              </span>
+            </label>
+
+            <div class="reg_days_bar" role="group" aria-label="Jours du regroupement">
+              <button type="button" class="reg_day_btn is_samedi" id="reg_day_btn_samedi" aria-pressed="false" title="Afficher le samedi">
+                <i class="bi bi-calendar-day"></i> Samedi
+              </button>
+              <button type="button" class="reg_day_btn is_dimanche is_on" id="reg_day_btn_dimanche" aria-pressed="true" title="Afficher le dimanche">
+                <i class="bi bi-calendar-day"></i> Dimanche
+              </button>
             </div>
-
-            <h4 style="margin: var(--space_3) 0 var(--space_2) 0;">Séquences</h4>
             <p class="seq_time_hint">
-              <i class="bi bi-info-circle"></i> saisir heure hhmm sans les deux points (:) — changer heure par flèches ↑ / ↓ : +/- 15 min (↑ / ↓ + Maj : +/- 1 h)
+              <i class="bi bi-info-circle"></i> saisir heure hhmm sans les deux points (:) — changer heure par flèches ↑ / ↓ : +/- 15 min (↑ / ↓ + Maj : +/- 1 h) — dimanche par défaut ; un jour sans séquence n’est pas pris en compte
             </p>
-            <div id="reg_seq_list"></div>
-            <button type="button" class="btn_ghost seq_add_btn" id="reg_seq_add">
-              <i class="bi bi-plus-lg"></i> Ajouter une séquence
-            </button>
 
-            <div class="seq_controls" id="reg_seq_controls">
-              <span class="ctrl_group"><strong>G1 :</strong> <span id="reg_ctrl_g1">0</span> h / 6 h <span id="reg_ctrl_g1_badge"></span></span>
-              <span class="ctrl_group"><strong>G2 :</strong> <span id="reg_ctrl_g2">0</span> h / 6 h <span id="reg_ctrl_g2_badge"></span></span>
-              <span class="ctrl_group"><strong>G1 + G2 :</strong> <span id="reg_ctrl_classe">0</span> h</span>
-              <span class="ctrl_group"><strong>Étudiant :</strong> <span id="reg_ctrl_etudiant">0</span> h / 6 h</span>
-              <span class="ctrl_group" id="reg_ctrl_matiere" aria-live="polite"></span>
+            <div id="reg_seq_wrap">
+              <section class="reg_day_section is_samedi" id="reg_day_section_samedi" hidden>
+                <h4 class="reg_day_header">Samedi <span class="reg_day_date" id="reg_day_date_samedi"></span></h4>
+                <div id="reg_seq_list_samedi"></div>
+                <button type="button" class="btn_ghost seq_add_btn" id="reg_seq_add_samedi" data-jour="samedi">
+                  <i class="bi bi-plus-lg"></i> Ajouter une séquence
+                </button>
+                <div class="seq_controls"><div id="reg_ctrl_samedi"></div></div>
+              </section>
+
+              <section class="reg_day_section is_dimanche" id="reg_day_section_dimanche">
+                <h4 class="reg_day_header">Dimanche <span class="reg_day_date" id="reg_day_date_dimanche"></span></h4>
+                <div id="reg_seq_list_dimanche"></div>
+                <button type="button" class="btn_ghost seq_add_btn" id="reg_seq_add_dimanche" data-jour="dimanche">
+                  <i class="bi bi-plus-lg"></i> Ajouter une séquence
+                </button>
+                <div class="seq_controls"><div id="reg_ctrl_dimanche"></div></div>
+              </section>
+
+              <div class="seq_controls">
+                <span class="ctrl_group" id="reg_ctrl_matiere" aria-live="polite"></span>
+              </div>
             </div>
 
             <div class="matiere_form_actions">
@@ -1652,7 +1701,9 @@
       const t = parseFloat(document.getElementById("classe_heures_tutorat")?.value);
       const r = parseFloat(document.getElementById("classe_heures_reg")?.value);
       heuresTutoratEtudiant = (isFinite(t) && t > 0) ? t : HEURES_TUTORAT_DEFAUT;
-      heuresRegEtudiant = (isFinite(r) && r > 0) ? r : HEURES_REG_DEFAUT;
+      // Compteur global de regroupement : 84 h minimum ; le champ « Editer »
+      // ne le remplace que s'il est supérieur à 84 (le samedi peut ajouter des heures).
+      heuresRegEtudiant = (isFinite(r) && r > HEURES_REG_DEFAUT) ? r : HEURES_REG_DEFAUT;
     }
 
     // Reporte les constantes sur tout ce qui les affiche ou les utilise.
@@ -1952,6 +2003,18 @@
 
       document.getElementById("class_btn_enregistrer")?.addEventListener("click", () => enregistrerClasse(false));
       document.getElementById("class_btn_editer")?.addEventListener("click", () => openFormModal("classe_fiche_modal", "classe_fiche_form"));
+      // Heures de regroupement : jamais en dessous de 84 h (valeur corrigée à la sortie du champ).
+      document.getElementById("classe_heures_reg")?.addEventListener("change", (e) => {
+        const v = parseFloat(e.target.value);
+        if (!isFinite(v) || v < HEURES_REG_DEFAUT) {
+          e.target.value = HEURES_REG_DEFAUT;
+          lireConstantesDepuisFormulaire();
+          appliquerConstantesHeures();
+          renderPlanTable();
+          renderCompteurReg();
+          setUnsavedChanges();
+        }
+      });
       ["classe_heures_tutorat", "classe_heures_reg"].forEach(id => {
         document.getElementById(id)?.addEventListener("input", () => {
           lireConstantesDepuisFormulaire();
@@ -1961,7 +2024,7 @@
           setUnsavedChanges();
         });
       });
-      document.getElementById("reg_week_date")?.addEventListener("input", majAvertissementDateReg);
+      document.getElementById("reg_week_date")?.addEventListener("input", () => { majAvertissementDateReg(); majDatesJoursReg(); });
       document.getElementById("classe_fiche_btn_inscrits")?.addEventListener("click", () => {
         closeFormModal("classe_fiche_modal");
         fermerAutresSections("liste_inscrits");
@@ -2369,8 +2432,9 @@
       });
       document.getElementById("reg_week_form")?.addEventListener("submit", onSubmitRegWeekForm);
       document.getElementById("reg_week_btn_supprimer")?.addEventListener("click", onSupprimerRegWeek);
-      document.getElementById("reg_seq_add")?.addEventListener("click", () => {
-        addSequenceRow(null);
+      ['samedi', 'dimanche'].forEach(j => {
+        document.getElementById(`reg_seq_add_${j}`)?.addEventListener("click", () => addSequenceRow(null, j));
+        document.getElementById(`reg_day_btn_${j}`)?.addEventListener("click", () => basculerJourReg(j));
       });
 
       // Examens
@@ -3811,14 +3875,17 @@
       return html;
     }
 
-    function getOverlappingMatieres(debut, fin, excludeRow) {
+    function getOverlappingMatieres(debut, fin, excludeRow, jour) {
       const start = timeToMinutes(debut);
       const end = timeToMinutes(fin);
       if (start === null || end === null || end <= start) return [];
 
       const result = new Map();
-      document.querySelectorAll('#reg_seq_list .seq_form_row').forEach(row => {
+      document.querySelectorAll('#reg_seq_wrap .seq_form_row').forEach(row => {
         if (row === excludeRow) return;
+        // Le samedi et le dimanche sont deux jours distincts : pas de chevauchement entre eux.
+        const rJour = row.dataset.jour;
+        if (jour && rJour && rJour !== jour) return;
         const rMatiere = row.querySelector('.seq_matiere').value;
         if (!rMatiere) return;
         const rStart = timeToMinutes(row.querySelector('.seq_debut').value);
@@ -3844,7 +3911,7 @@
       for (let i = rows.length - 1; i >= 1; i--) {
         const a = readRowData(rows[i]);
         const b = readRowData(rows[i - 1]);
-        const samePlage = a.debut && a.fin && a.debut === b.debut && a.fin === b.fin;
+        const samePlage = a.debut && a.fin && a.debut === b.debut && a.fin === b.fin && a.jour === b.jour;
         const diffPublic = a.public !== b.public && ['g1', 'g2'].includes(a.public) && ['g1', 'g2'].includes(b.public);
         const diffMatiere = a.matiere && b.matiere && a.matiere !== b.matiere;
         if (samePlage && diffPublic && diffMatiere) {
@@ -3861,6 +3928,7 @@
 
     function readRowData(row) {
       return {
+        jour: row.dataset.jour || '',
         public: row.querySelector('.seq_public').value,
         debut: row.querySelector('.seq_debut').value,
         fin: row.querySelector('.seq_fin').value,
@@ -3882,13 +3950,13 @@
     }
 
     function refreshSeqHints() {
-      const rows = Array.from(document.querySelectorAll('#reg_seq_list .seq_form_row'));
+      const rows = Array.from(document.querySelectorAll('#reg_seq_wrap .seq_form_row'));
       rows.forEach(row => {
         const select = row.querySelector('.seq_matiere');
         const debut = row.querySelector('.seq_debut').value;
         const fin = row.querySelector('.seq_fin').value;
         const current = select.value;
-        const excludedInfo = getOverlappingMatieres(debut, fin, row);
+        const excludedInfo = getOverlappingMatieres(debut, fin, row, row.dataset.jour);
         const excludedNames = excludedInfo.map(e => e.matiere);
         const stillValid = current && !excludedNames.includes(current);
         const keep = stillValid ? current : '';
@@ -3949,6 +4017,60 @@
     // TUT_MAX_SOIREE_H. Les anciennes données (sans seance2) restent valides.
     function seancesDuJour(d) {
       return d ? [d, d.seance2].filter(Boolean) : [];
+    }
+
+    // Tutorat : la semaine va du lundi au samedi, le SAMEDI est facultatif.
+    // Lundi-vendredi sont toujours affichés ; le samedi n'est affiché (tableau,
+    // notification, impressions) que s'il est rempli (au moins une matière).
+    function samediTutoratRempli(week) {
+      return seancesDuJour((week?.jours || {}).samedi).some(d => d && d.matiere);
+    }
+    function joursTutoratAffiches(week) {
+      return JOURS_SEMAINE.filter(j => j !== 'samedi' || samediTutoratRempli(week));
+    }
+
+    // Regroupement : la semaine finit par des regroupements le samedi et/ou le
+    // dimanche (samedi facultatif). Chaque séquence porte un `jour`
+    // ('samedi' | 'dimanche') ; week.date reste la date de référence (le
+    // dimanche par défaut) et la date de chaque séquence en est déduite.
+    // Anciennes données (sans `jour`) : la séquence suit week.date.
+    function regDateDeSeq(week, seq) {
+      if (!week || !week.date) return '';
+      const jour = seq && (seq.jour === 'samedi' || seq.jour === 'dimanche') ? seq.jour : null;
+      if (!jour) return week.date;
+      const base = new Date(week.date);
+      if (isNaN(base)) return week.date;
+      const dow = base.getUTCDay();
+      let delta = 0;
+      if (jour === 'samedi' && dow === 0) delta = -1;
+      else if (jour === 'dimanche' && dow === 6) delta = 1;
+      if (!delta) return week.date;
+      base.setUTCDate(base.getUTCDate() + delta);
+      return base.toISOString().slice(0, 10);
+    }
+    function regJourDeSeq(week, seq) {
+      if (seq && (seq.jour === 'samedi' || seq.jour === 'dimanche')) return seq.jour;
+      const d = week?.date ? new Date(week.date) : null;
+      return d && !isNaN(d) && d.getUTCDay() === 6 ? 'samedi' : 'dimanche';
+    }
+    function regLibelleJour(iso) {
+      const d = iso ? new Date(iso) : null;
+      return d && !isNaN(d) ? capitaliserPremiereLettre(d.toLocaleDateString('fr-FR', { weekday: 'long' })) : '—';
+    }
+    // Séquences d'une semaine triées par date (samedi avant dimanche), ordre
+    // de saisie conservé à l'intérieur d'un même jour.
+    function regSequencesTriees(week) {
+      return (week?.sequences || [])
+        .map((s, i) => ({ s, i, k: regDateDeSeq(week, s) }))
+        .sort((a, b) => (a.k < b.k ? -1 : a.k > b.k ? 1 : a.i - b.i))
+        .map(x => x.s);
+    }
+    function regDatesSemaine(week) {
+      const dates = [...new Set((week?.sequences || []).map(s => regDateDeSeq(week, s)).filter(Boolean))].sort();
+      return dates.length ? dates : (week?.date ? [week.date] : []);
+    }
+    function regLibelleDates(week) {
+      return regDatesSemaine(week).map(formatDateFr).join(' et ');
     }
 
     function applyPublicSuggestion(row) {
@@ -4046,19 +4168,15 @@
 
       const subHeaderInfo = `Classe : ${classeVal || '----'} &nbsp; Spécialité : ${specVal || '----'} &nbsp; Promotion : ${promoVal ? 'Pr' + promoVal : '----'} &nbsp; Niveau : ${niveauVal || '----'} &nbsp; Semestre : ${(semNum && semAnnee) ? `${semNum}-${semAnnee}` : '----'}`;
 
-      let dateFormatted = week.date || '';
-      if (dateFormatted.includes('-')) {
-        const parts = dateFormatted.split('-');
-        if (parts.length === 3) {
-          dateFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
-      }
+      const dateFormatted = regLibelleDates(week);
+      const deuxJours = regDatesSemaine(week).length > 1;
 
       const columns = [];
-      (week.sequences || []).forEach(seq => {
+      regSequencesTriees(week).forEach(seq => {
         const teacher = getEnseignantForMatiere(seq.matiere) || '—';
+        const prefJour = deuxJours ? `${regLibelleJour(regDateDeSeq(week, seq)).slice(0, 3)}. ` : '';
         columns.push({
-          horaire: `De ${seq.debut || ''} à ${seq.fin || ''}`,
+          horaire: `${prefJour}De ${seq.debut || ''} à ${seq.fin || ''}`,
           matiere: seq.matiere || '—',
           enseignant: teacher,
           public: seq.public,
@@ -4338,24 +4456,26 @@
 
     // Dernière date planifiée toutes séances confondues (regroupement, tutorat,
     // examen) — sert à déterminer quand le bouton Facturation peut apparaître.
-    // Pour le tutorat (planifié par semaine du lundi au samedi), on retient
-    // le samedi (dateDebut + 5 jours) comme fin de semaine.
+    // Pour le tutorat (planifié du lundi au samedi, samedi facultatif), on retient
+    // le samedi s'il est rempli, sinon le vendredi comme fin de semaine.
     function getDernierePlanifieeDate() {
       const dates = [];
 
       tutorat.forEach(week => {
         if (!week.dateDebut) return;
         const d = new Date(week.dateDebut);
-        d.setDate(d.getDate() + 5);
+        // Samedi (+5) seulement s'il est rempli, sinon vendredi (+4).
+        d.setDate(d.getDate() + (samediTutoratRempli(week) ? 5 : 4));
         d.setHours(0, 0, 0, 0);
         dates.push(d);
       });
 
       regroupements.forEach(week => {
-        if (!week.date) return;
-        const d = new Date(week.date);
-        d.setHours(0, 0, 0, 0);
-        dates.push(d);
+        regDatesSemaine(week).forEach(iso => {
+          const d = new Date(iso);
+          d.setHours(0, 0, 0, 0);
+          dates.push(d);
+        });
       });
 
       examens.forEach(exam => {
@@ -4482,9 +4602,10 @@
 
       if (type === 'tutorat') {
         const jours = week.jours || {};
-        const rows = joursOrdre.map((j, idx) => {
+        // Samedi facultatif : affiché seulement s'il est rempli.
+        const rows = joursTutoratAffiches(week).map((j) => {
           const date = new Date(week.dateDebut);
-          date.setDate(date.getDate() + idx);
+          date.setDate(date.getDate() + JOURS_SEMAINE.indexOf(j));
           const dateStr = date.toLocaleDateString('fr-FR');
           const seances = seancesDuJour(jours[j]);
           // Une ligne par séance (2 lignes si la soirée compte 2 séances).
@@ -4517,25 +4638,25 @@
         `;
       }
 
-      const seqs = week.sequences || [];
-      const regDate = week.date ? new Date(week.date) : null;
-      const regDateStr = regDate ? regDate.toLocaleDateString('fr-FR') : '—';
-      const regJourLabel = regDate ? capitaliserPremiereLettre(regDate.toLocaleDateString('fr-FR', { weekday: 'long' })) : '—';
-      const rows = seqs.length > 0 ? seqs.map(s => `
+      const seqs = regSequencesTriees(week);
+      const rows = seqs.length > 0 ? seqs.map(s => {
+        const sDate = regDateDeSeq(week, s);
+        return `
         <tr>
-          <td>${escapeHtml(regJourLabel)}</td>
-          <td>${escapeHtml(regDateStr)}</td>
+          <td>${escapeHtml(regLibelleJour(sDate))}</td>
+          <td>${escapeHtml(sDate ? formatDateFr(sDate) : '—')}</td>
           <td>${escapeHtml(getPublicLabel(s.public))}</td>
           <td>${escapeHtml(s.debut || '')}</td>
           <td>${escapeHtml(s.fin || '')}</td>
           <td>${escapeHtml(s.matiere || '')}</td>
           <td>${escapeHtml(getEnseignantForMatiere(s.matiere) || '—')}</td>
         </tr>
-      `).join('') : `<tr><td colspan="7">Aucune séquence</td></tr>`;
+      `;
+      }).join('') : `<tr><td colspan="7">Aucune séquence</td></tr>`;
 
       return `
         <div class="week-block"${currentWeekAttr}>
-          <div class="week-block-title">Regroupement — Semaine ${escapeHtml(week.semaine ?? '?')} — ${escapeHtml(formatDateFr(week.date) || 'Date non définie')}</div>
+          <div class="week-block-title">Regroupement — Semaine ${escapeHtml(week.semaine ?? '?')} — ${escapeHtml(regLibelleDates(week) || 'Date non définie')}</div>
           <table class="notif-table">
             <thead><tr><th>Jour</th><th>Date</th><th>Groupes</th><th>Début</th><th>Fin</th><th>Matière</th><th>Enseignant</th></tr></thead>
             <tbody>${rows}</tbody>
@@ -6004,7 +6125,7 @@
 
         for (let sem = 1; sem <= derniereSemaineReg(); sem++) {
           const week = weekByNum[sem];
-          const seqs = week ? (week.sequences || []) : [];
+          const seqs = week ? regSequencesTriees(week) : [];
           const dateStr = formatDateFr(week?.date) || '—';
 
           if (seqs.length === 0) {
@@ -6019,7 +6140,7 @@
               totalParEnseignant[enseignant] += h;
             }
             lignes.push({
-              semaine: sem, date: dateStr,
+              semaine: sem, date: formatDateFr(regDateDeSeq(week, s)) || dateStr,
               debut: s.debut || '', fin: s.fin || '',
               groupes: getPublicLabel(s.public), matiere: s.matiere || '',
               enseignant, heures: h
@@ -6185,7 +6306,7 @@
 
         const feuillesPresence = [...regroupements]
           .sort((a, b) => (a.semaine || 0) - (b.semaine || 0))
-          .map(w => `Feuille de présence — Semaine ${w.semaine}${w.date ? ' (' + formatDateFr(w.date) + ')' : ''}`);
+          .map(w => `Feuille de présence — Semaine ${w.semaine}${w.date ? ' (' + regLibelleDates(w) + ')' : ''}`);
 
         const feuillesPresenceExamens = [...examens]
           .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0))
@@ -6408,13 +6529,11 @@
         const stats = getSequenceStats(seqs);
         const explicit = regWeekCollapseState[week.semaine];
         const isCollapsed = explicit !== undefined ? explicit : (week.semaine !== prochaineSemaine);
-        const regDate = week.date ? new Date(week.date) : null;
-        const regDateStr = regDate ? regDate.toLocaleDateString('fr-FR') : '—';
-        const regJourLabel = regDate ? capitaliserPremiereLettre(regDate.toLocaleDateString('fr-FR', { weekday: 'long' })) : '—';
+        const regDatesLabel = regLibelleDates(week);
         html += `
           <div class="reg_week_group${isCollapsed ? ' is_collapsed' : ''}" data-week-index="${index}" data-semaine="${week.semaine}">
             <div class="reg_week_header">
-              <span class="week_label">Semaine ${week.semaine} — ${regDateStr !== '—' ? regDateStr : 'Date non définie'}</span>
+              <span class="week_label">Semaine ${week.semaine} — ${regDatesLabel || 'Date non définie'}</span>
               <span class="reg_week_stats">
                 <span>G1 : <strong>${stats.g1.toFixed(1)} h</strong></span>
                 <span>G2 : <strong>${stats.g2.toFixed(1)} h</strong></span>
@@ -6451,12 +6570,13 @@
                     </tr>
                   </thead>
                   <tbody>
-                    ${seqs.map(s => {
+                    ${regSequencesTriees(week).map(s => {
                       const ens = getEnseignantForMatiere(s.matiere);
+                      const sDate = regDateDeSeq(week, s);
                       return `
                         <tr>
-                          <td>${regJourLabel}</td>
-                          <td>${regDateStr}</td>
+                          <td>${regLibelleJour(sDate)}</td>
+                          <td>${sDate ? formatDateFr(sDate) : '—'}</td>
                           <td>${getPublicLabel(s.public)}</td>
                           <td>${s.debut || ''}</td>
                           <td>${s.fin || ''}</td>
@@ -6541,9 +6661,9 @@
       let rowsHtml = '';
       for (let sem = 1; sem <= derniereSemaineReg(); sem++) {
         const week = weekByNum[sem];
-        const seqs = week ? (week.sequences || []) : [];
+        const seqs = week ? regSequencesTriees(week) : [];
         const rowCount = Math.max(seqs.length, 1);
-        const dateStr = formatDateFr(week?.date) || '—';
+        const dateStr = (week ? regLibelleDates(week) : '') || '—';
 
         if (seqs.length === 0) {
           rowsHtml += `
@@ -6566,9 +6686,18 @@
           const teacherCellsHtml = teachers.map(t =>
             t === enseignant ? `<td class="cr_hour_cell">${h.toFixed(1)}</td>` : `<td></td>`
           ).join('');
+          // Date en rowspan par jour (samedi / dimanche) au sein de la semaine.
+          const dStr = formatDateFr(regDateDeSeq(week, s)) || '—';
+          const dPrec = i > 0 ? (formatDateFr(regDateDeSeq(week, seqs[i - 1])) || '—') : null;
+          let dateCellHtml = '';
+          if (dStr !== dPrec) {
+            let span = 1;
+            for (let k = i + 1; k < seqs.length && (formatDateFr(regDateDeSeq(week, seqs[k])) || '—') === dStr; k++) span++;
+            dateCellHtml = `<td rowspan="${span}">${escapeHtml(dStr)}</td>`;
+          }
           rowsHtml += `
             <tr>
-              ${i === 0 ? `<td rowspan="${rowCount}">${sem}</td><td rowspan="${rowCount}">${escapeHtml(dateStr)}</td>` : ''}
+              ${i === 0 ? `<td rowspan="${rowCount}">${sem}</td>` : ''}${dateCellHtml}
               <td>${escapeHtml(s.debut || '')}</td>
               <td>${escapeHtml(s.fin || '')}</td>
               <td>${escapeHtml(getPublicLabel(s.public))}</td>
@@ -7047,8 +7176,12 @@
       return String(Math.round((dateUtc - excelEpochUtc) / 86400000));
     }
 
-    function addSequenceRow(data, index) {
-      const container = document.getElementById("reg_seq_list");
+    // Séquence d'un jour donné ('samedi' | 'dimanche') : chaque jour a sa propre
+    // liste et ses propres valeurs par défaut (paires G1/G2, 5e séance G1+G2...).
+    function addSequenceRow(data, jourParam) {
+      const jour = (jourParam === 'samedi' || jourParam === 'dimanche') ? jourParam
+        : (data?.jour === 'samedi' ? 'samedi' : 'dimanche');
+      const container = regListeJour(jour);
       const existingRows = Array.from(container.querySelectorAll('.seq_form_row'));
 
       let defaultPublic = 'g1';
@@ -7107,8 +7240,9 @@
       const div = document.createElement('div');
       div.className = 'seq_form_row';
       div.dataset.rowId = rowId;
+      div.dataset.jour = jour;
 
-      const excludedInfo = data?.matiere ? [] : getOverlappingMatieres(defaultDebut, defaultFin, null);
+      const excludedInfo = data?.matiere ? [] : getOverlappingMatieres(defaultDebut, defaultFin, null, jour);
       const excludedNames = excludedInfo.map(e => e.matiere);
 
       let suggested = '';
@@ -7134,7 +7268,7 @@
       container.appendChild(div);
 
       div.querySelector('.seq_remove').addEventListener('click', () => {
-        if (container.querySelectorAll('.seq_form_row').length <= 1) {
+        if (document.querySelectorAll('#reg_seq_wrap .seq_form_row').length <= 1) {
           alert('Il faut au moins une séquence.');
           return;
         }
@@ -7167,6 +7301,41 @@
       }
     }
 
+    // ---- Modale regroupement : un bouton + une section par jour ----
+    const REG_JOURS = ['samedi', 'dimanche'];
+    function regListeJour(jour) { return document.getElementById(`reg_seq_list_${jour}`); }
+    function regRowsJour(jour) { return Array.from(regListeJour(jour).querySelectorAll('.seq_form_row')); }
+    function regJourActif(jour) { return !document.getElementById(`reg_day_section_${jour}`).hidden; }
+
+    function majBoutonsJoursReg() {
+      REG_JOURS.forEach(j => {
+        const actif = regJourActif(j);
+        const btn = document.getElementById(`reg_day_btn_${j}`);
+        btn.classList.toggle('is_on', actif);
+        btn.setAttribute('aria-pressed', actif ? 'true' : 'false');
+      });
+    }
+
+    // Date affichée sur chaque section : le samedi se déduit de la date de référence.
+    function majDatesJoursReg() {
+      const ref = document.getElementById("reg_week_date").value;
+      REG_JOURS.forEach(j => {
+        const iso = ref ? regDateDeSeq({ date: ref }, { jour: j }) : '';
+        document.getElementById(`reg_day_date_${j}`).textContent = iso ? `— ${formatDateFr(iso)}` : '';
+      });
+    }
+
+    // Bouton Samedi / Dimanche : une seule section visible à la fois (l'autre
+    // disparaît). Les séquences de l'autre jour sont conservées ; un jour
+    // sans séquence complète n'est pas pris en compte à l'enregistrement.
+    function basculerJourReg(jour) {
+      REG_JOURS.forEach(j => {
+        document.getElementById(`reg_day_section_${j}`).hidden = (j !== jour);
+      });
+      if (regRowsJour(jour).length === 0) addSequenceRow(null, jour);
+      updateSeqControls();
+    }
+
     function bindTimeInputBehavior(input) {
       input.addEventListener('input', () => {
         const digits = input.value.replace(/\D/g, '').slice(0, 4);
@@ -7197,16 +7366,18 @@
     }
 
     function collectSequencesFromForm() {
-      const rows = document.querySelectorAll('#reg_seq_list .seq_form_row');
       const seqs = [];
-      rows.forEach(row => {
-        const debut = row.querySelector('.seq_debut').value;
-        const fin = row.querySelector('.seq_fin').value;
-        const publicVal = row.querySelector('.seq_public').value;
-        const matiere = row.querySelector('.seq_matiere').value;
-        if (debut && fin && publicVal && matiere) {
-          seqs.push({ debut, fin, public: publicVal, matiere });
-        }
+      // Samedi d'abord, puis dimanche.
+      REG_JOURS.forEach(jour => {
+        regRowsJour(jour).forEach(row => {
+          const debut = row.querySelector('.seq_debut').value;
+          const fin = row.querySelector('.seq_fin').value;
+          const publicVal = row.querySelector('.seq_public').value;
+          const matiere = row.querySelector('.seq_matiere').value;
+          if (debut && fin && publicVal && matiere) {
+            seqs.push({ jour, debut, fin, public: publicVal, matiere });
+          }
+        });
       });
       return seqs;
     }
@@ -7244,36 +7415,37 @@
       });
     }
 
+    const REG_JOUR_LABELS = { samedi: 'Samedi', dimanche: 'Dimanche' };
+
     function updateSeqControls() {
       const seqs = collectSequencesFromForm();
-      const stats = getSequenceStats(seqs);
 
-      document.getElementById("reg_ctrl_g1").textContent = stats.g1.toFixed(1);
-      document.getElementById("reg_ctrl_g2").textContent = stats.g2.toFixed(1);
-      document.getElementById("reg_ctrl_classe").textContent = stats.classe.toFixed(1);
-      document.getElementById("reg_ctrl_etudiant").textContent = stats.etudiant.toFixed(1);
+      // Les heures du samedi et du dimanche se comptent indépendamment :
+      // chaque section a ses propres compteurs (G1 / G2 / étudiant, 6 h)
+      // et son propre bouton « Ajouter une séquence ».
+      const badgeHtml = (val, target) => val >= target - 1e-9
+        ? '<span class="badge_ok">✔</span>'
+        : `<span class="badge_warn">⚠ ${(target - val).toFixed(1)}h manquante</span>`;
+      REG_JOURS.forEach(j => {
+        const st = getSequenceStats(seqs.filter(q => q.jour === j));
+        const limite = (st.g1 + st.classe) >= 6 && (st.g2 + st.classe) >= 6;
+        document.getElementById(`reg_ctrl_${j}`).innerHTML = `<div class="seq_ctrl_jour">
+          <span class="ctrl_group"><strong>G1 :</strong> ${st.g1.toFixed(1)} h / 6 h ${badgeHtml(st.g1 + st.classe, 6)}</span>
+          <span class="ctrl_group"><strong>G2 :</strong> ${st.g2.toFixed(1)} h / 6 h ${badgeHtml(st.g2 + st.classe, 6)}</span>
+          <span class="ctrl_group"><strong>G1 + G2 :</strong> ${st.classe.toFixed(1)} h</span>
+          <span class="ctrl_group"><strong>Étudiant :</strong> ${st.etudiant.toFixed(1)} h / 6 h</span>
+        </div>`;
 
-      const setBadge = (id, val, target) => {
-        const el = document.getElementById(id);
-        if (val >= target) {
-          el.innerHTML = '✔';
-          el.className = 'badge_ok';
-        } else {
-          el.innerHTML = `⚠ ${(target - val).toFixed(1)}h manquante`;
-          el.className = 'badge_warn';
-        }
-      };
-      setBadge('reg_ctrl_g1_badge', stats.g1 + stats.classe, 6);
-      setBadge('reg_ctrl_g2_badge', stats.g2 + stats.classe, 6);
-
-      const lastRow = document.querySelector('#reg_seq_list .seq_form_row:last-child');
-      const lastMatiere = lastRow?.querySelector('.seq_matiere').value;
-      const limitReached = (stats.g1 + stats.classe) >= 6 && (stats.g2 + stats.classe) >= 6;
-      const addButton = document.getElementById('reg_seq_add');
-      addButton.disabled = limitReached || !lastMatiere;
-      addButton.title = limitReached
-        ? 'Les 6 h prévues par étudiant sont atteintes.'
-        : !lastMatiere ? 'Sélectionnez une matière avant d’ajouter une séquence.' : '';
+        const rows = regRowsJour(j);
+        const lastRow = rows[rows.length - 1];
+        const lastMatiere = lastRow?.querySelector('.seq_matiere').value;
+        const addButton = document.getElementById(`reg_seq_add_${j}`);
+        addButton.disabled = limite || (!!lastRow && !lastMatiere);
+        addButton.title = limite
+          ? `Les 6 h prévues par étudiant sont atteintes le ${j}.`
+          : (lastRow && !lastMatiere) ? 'Sélectionnez une matière avant d’ajouter une séquence.' : '';
+      });
+      majBoutonsJoursReg();
 
       const budgetWarnings = getMatiereBudgetWarnings(seqs);
       const budgetControl = document.getElementById('reg_ctrl_matiere');
@@ -7297,12 +7469,12 @@
         if (!s.enseignant) return;
         const key = s.enseignant;
         if (!ensSlots[key]) ensSlots[key] = [];
-        ensSlots[key].push({ index: i, debut: s.debut, fin: s.fin });
+        ensSlots[key].push({ index: i, jour: s.jour || '', debut: s.debut, fin: s.fin });
       });
       for (const [ens, slots] of Object.entries(ensSlots)) {
         for (let i = 0; i < slots.length; i++) {
           for (let j = i + 1; j < slots.length; j++) {
-            if (slots[i].debut < slots[j].fin && slots[j].debut < slots[i].fin) {
+            if (slots[i].jour === slots[j].jour && slots[i].debut < slots[j].fin && slots[j].debut < slots[i].fin) {
               errors.push(`Enseignant ${ens} : chevauchement entre séquence ${slots[i].index+1} et ${slots[j].index+1}`);
             }
           }
@@ -7314,13 +7486,13 @@
         const groups = s.public === 'g1+g2' ? ['g1', 'g2'] : [s.public];
         groups.forEach(g => {
           if (!groupSlots[g]) groupSlots[g] = [];
-          groupSlots[g].push({ index: i, debut: s.debut, fin: s.fin });
+          groupSlots[g].push({ index: i, jour: s.jour || '', debut: s.debut, fin: s.fin });
         });
       });
       for (const [group, slots] of Object.entries(groupSlots)) {
         for (let i = 0; i < slots.length; i++) {
           for (let j = i + 1; j < slots.length; j++) {
-            if (slots[i].debut < slots[j].fin && slots[j].debut < slots[i].fin) {
+            if (slots[i].jour === slots[j].jour && slots[i].debut < slots[j].fin && slots[j].debut < slots[i].fin) {
               errors.push(`Groupe ${group} : chevauchement entre séquence ${slots[i].index+1} et ${slots[j].index+1}`);
             }
           }
@@ -7338,31 +7510,42 @@
       const week = (index !== null && index !== undefined) ? regroupements[index] : null;
       const editIdx = (index !== null && index !== undefined) ? index : '';
       document.getElementById("reg_week_edit_index").value = editIdx;
+      REG_JOURS.forEach(j => { regListeJour(j).innerHTML = ''; });
 
+      let joursActifs;
       if (week) {
+        // Numéro de semaine conservé tel quel (aucun champ de saisie).
         document.getElementById("reg_week_num").value = week.semaine || '';
         document.getElementById("reg_week_date").value = week.date || '';
         document.getElementById("reg_week_modal_num").textContent = week.semaine || '?';
-        const seqs = week.sequences || [];
-        document.getElementById("reg_seq_list").innerHTML = '';
-        seqs.forEach((s, i) => {
-          addSequenceRow(s, i);
-        });
-        if (seqs.length === 0) addSequenceRow(null);
+        (week.sequences || []).forEach(s => addSequenceRow({ ...s }, regJourDeSeq(week, s)));
+        joursActifs = REG_JOURS.filter(j => regRowsJour(j).length > 0);
+        if (joursActifs.length === 0) {
+          addSequenceRow(null, 'dimanche');
+          joursActifs = ['dimanche'];
+        }
       } else {
         const nextSunday = getNextSundayAfterLast();
         const defaultNum = regroupements.length + 1;
         document.getElementById("reg_week_num").value = defaultNum;
         document.getElementById("reg_week_date").value = formatDateForInput(nextSunday);
         document.getElementById("reg_week_modal_num").textContent = defaultNum;
-        document.getElementById("reg_seq_list").innerHTML = '';
-        addSequenceRow(null);
+        // Dimanche par défaut ; le samedi (facultatif) s'ajoute via son bouton.
+        addSequenceRow(null, 'dimanche');
+        joursActifs = ['dimanche'];
       }
+      // Une seule section visible : dimanche s'il contient des séquences (ou par
+      // défaut), sinon samedi.
+      const jourAffiche = joursActifs.includes('dimanche') ? 'dimanche' : joursActifs[0];
+      REG_JOURS.forEach(j => {
+        document.getElementById(`reg_day_section_${j}`).hidden = (j !== jourAffiche);
+      });
 
+      majDatesJoursReg();
       updateSeqControls();
       majAvertissementDateReg();
       openFormModal("reg_week_modal", "reg_week_form");
-      requestAnimationFrame(() => document.querySelector('#reg_seq_list .seq_fin')?.focus());
+      requestAnimationFrame(() => document.querySelector('#reg_seq_wrap .seq_form_row:not([hidden]) .seq_fin')?.focus());
     }
 
     function onSubmitRegWeekForm(e) {
@@ -7404,19 +7587,17 @@
         return;
       }
 
-      let g1Total = 0, g2Total = 0;
-      sequences.forEach(s => {
-        const d = durationInHours(s.debut, s.fin);
-        if (!d) return;
-        if (s.public === 'g1') g1Total += d;
-        else if (s.public === 'g2') g2Total += d;
-        else if (s.public === 'g1+g2') { g1Total += d; g2Total += d; }
+      // Samedi et dimanche comptent indépendamment : contrôle des 6 h par jour présent.
+      const manques = [];
+      ['samedi', 'dimanche'].forEach(j => {
+        const seqsJour = sequences.filter(q => q.jour === j);
+        if (!seqsJour.length) return;
+        const st = getSequenceStats(seqsJour);
+        const g1 = st.g1 + st.classe, g2 = st.g2 + st.classe;
+        if (g1 < 6 || g2 < 6) manques.push(`${REG_JOUR_LABELS[j]} — G1: ${g1.toFixed(1)}h / 6h, G2: ${g2.toFixed(1)}h / 6h`);
       });
-
-      if (g1Total < 6 || g2Total < 6) {
-        if (!confirm(`G1: ${g1Total.toFixed(1)}h / 6h, G2: ${g2Total.toFixed(1)}h / 6h. Continuer quand même ?`)) {
-          return;
-        }
+      if (manques.length && !confirm(`${manques.join('\n')}\nContinuer quand même ?`)) {
+        return;
       }
 
       const weekData = { semaine, date, sequences };
@@ -8114,7 +8295,7 @@
       let html = '';
       sorted.forEach(({ week, index }) => {
         const jours = week.jours || {};
-        const joursList = JOURS_SEMAINE;
+        const joursList = joursTutoratAffiches(week); // samedi seulement s'il est rempli
         let totalHeures = 0;
         joursList.forEach(j => {
           seancesDuJour(jours[j]).forEach(d => {
@@ -8126,9 +8307,9 @@
         const isCollapsed = explicit !== undefined ? explicit : true;
 
         let rows = '';
-        joursList.forEach((j, idx) => {
+        joursList.forEach((j) => {
           const date = new Date(week.dateDebut);
-          date.setDate(date.getDate() + idx);
+          date.setDate(date.getDate() + JOURS_SEMAINE.indexOf(j));
           const dateStr = date.toLocaleDateString('fr-FR');
           const seances = seancesDuJour(jours[j]);
           // Une ligne par séance (2 lignes si la soirée compte 2 séances).
@@ -8324,7 +8505,7 @@
         div.className = 'tut_day_row';
         const s2 = data.seance2 || null;
         div.innerHTML = `
-          <label>${JOURS_LABELS[jour]}</label>
+          <label${jour === 'samedi' ? ' title="Facultatif : laissez la matière vide pour ne pas planifier le samedi"' : ''}>${JOURS_LABELS[jour]}${jour === 'samedi' ? '*' : ''}</label>
           <span class="tut_date">${dateStr}</span>
           <input type="text" class="tut_debut tut_time_input" placeholder="19:00" value="${defaultDebut}" maxlength="5" />
           <input type="text" class="tut_fin tut_time_input" placeholder="21:00" value="${defaultFin}" maxlength="5" />
