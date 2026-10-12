@@ -4637,8 +4637,12 @@
       const seqs = regSequencesTriees(week);
       const rows = seqs.length > 0 ? seqs.map(s => {
         const sDate = regDateDeSeq(week, s);
+        // Classe de ligne (samedi / dimanche) : permet à la notification de
+        // colorer séparément les deux jours de regroupement.
+        const jourDow = sDate ? new Date(sDate).getUTCDay() : -1;
+        const classeJour = jourDow === 6 ? ' class="reg-sam"' : jourDow === 0 ? ' class="reg-dim"' : '';
         return `
-        <tr>
+        <tr${classeJour}>
           <td>${escapeHtml(regLibelleJour(sDate))}</td>
           <td>${escapeHtml(sDate ? formatDateFr(sDate) : '—')}</td>
           <td>${escapeHtml(getPublicLabel(s.public))}</td>
@@ -4884,15 +4888,35 @@
       background-color: #f8f8f8;
       font-weight: bold;
     }
-    /* Regroupements : fond gris pour les distinguer des tutorats (fond blanc). */
-    .week-block-reg table.notif-table td { background-color: #e3e3e3; }
-    .week-block-reg table.notif-table th { background-color: #cfcfcf; }
+    /* Tous les tableaux (tutorat, regroupements) : mêmes couleurs par défaut
+       (police noire, fond blanc). */
+    .week-block table.notif-table td { background-color: #fff; color: #000; }
+    /* Panneau "Couleurs" (hors impression) */
+    .notif-colors-wrap { position: relative; }
+    /* Bouton "Couleurs" : bordure épaisse multicolore */
+    .notif-actions .notif-colors-wrap > button {
+      border: 4px solid transparent;
+      background: linear-gradient(#fff, #fff) padding-box,
+                  linear-gradient(90deg, #e53935, #fb8c00, #fdd835, #43a047, #1e88e5, #8e24aa) border-box;
+      color: #000;
+    }
+    .notif-colors-panel {
+      display: none; position: absolute; z-index: 20; top: 100%; left: 0; margin-top: 4px;
+      background: #fff; border: 1px solid #999; border-radius: 6px; padding: 10px 12px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.2); font-size: 13px; min-width: 300px;
+    }
+    .notif-colors-panel.is_open { display: block; }
+    .notif-colors-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+    .notif-colors-row .lbl { flex: 1; font-weight: bold; }
+    .notif-colors-row label { display: flex; align-items: center; gap: 4px; font-weight: normal; }
+    .notif-colors-row input[type=color] { width: 34px; height: 24px; padding: 0; border: 1px solid #999; cursor: pointer; }
     @media print {
       body { -webkit-print-color-adjust: exact; }
       .notif-actions { display: none; }
       .notif-modal-overlay { display: none !important; }
     }
   </style>
+  <style id="notif_colors"></style>
 </head>
 <body>
   ${etablissementNom ? `<div class="header-title">${escapeHtml(etablissementNom)}</div>` : ''}
@@ -4900,6 +4924,21 @@
   <div class="notif-title">Séances de tutorat et regroupement planifiées</div>
 
   <div class="notif-actions">
+    <div class="notif-colors-wrap" style="margin-right:auto;">
+      <button type="button" onclick="basculerPanneauCouleurs()">Couleurs</button>
+      <div class="notif-colors-panel" id="notif_colors_panel">
+        <div class="notif-colors-row"><span class="lbl">Tutorat</span>
+          <label>Police <input type="color" id="col_tut_fg" onchange="majCouleurs()"></label>
+          <label>Fond <input type="color" id="col_tut_bg" onchange="majCouleurs()"></label></div>
+        <div class="notif-colors-row"><span class="lbl">Regroupement samedi</span>
+          <label>Police <input type="color" id="col_sam_fg" onchange="majCouleurs()"></label>
+          <label>Fond <input type="color" id="col_sam_bg" onchange="majCouleurs()"></label></div>
+        <div class="notif-colors-row"><span class="lbl">Regroupement dimanche</span>
+          <label>Police <input type="color" id="col_dim_fg" onchange="majCouleurs()"></label>
+          <label>Fond <input type="color" id="col_dim_bg" onchange="majCouleurs()"></label></div>
+        <div class="notif-colors-row"><button type="button" onclick="reinitialiserCouleurs()">Réinitialiser</button></div>
+      </div>
+    </div>
     <div class="notif-weeks-wrap">
       <button type="button" onclick="basculerModaleSemaines()">Choisir les semaines <span class="notif-weeks-count" id="notif_weeks_count">(${nbSemaines}/${nbSemaines})</span></button>
       <div class="notif-modal-overlay" id="notif_modal_weeks">
@@ -4944,6 +4983,58 @@
       document.querySelectorAll('.notif-week-check').forEach(function (c) { c.checked = valeur; });
       majSemaines();
     }
+    // Couleurs (police + fond) des tableaux tutorat / regroupement samedi /
+    // regroupement dimanche, au choix de l'utilisateur. Les règles sont écrites
+    // dans <style id="notif_colors"> (reprise par le PDF et par "Obtenir
+    // image"), et mémorisées dans le navigateur quand c'est possible.
+    var COULEURS_DEFAUT = {
+      tut: { fg: '#000000', bg: '#ffffff' },
+      sam: { fg: '#000000', bg: '#ffffff' },
+      dim: { fg: '#000000', bg: '#ffffff' }
+    };
+    var COULEURS_CLE = 'class_notif_couleurs';
+    var couleurs = JSON.parse(JSON.stringify(COULEURS_DEFAUT));
+    try {
+      var sauve = JSON.parse(localStorage.getItem(COULEURS_CLE) || 'null');
+      if (sauve) Object.keys(couleurs).forEach(function (k) { if (sauve[k]) couleurs[k] = { fg: sauve[k].fg || couleurs[k].fg, bg: sauve[k].bg || couleurs[k].bg }; });
+    } catch (e) {}
+    function appliquerCouleurs() {
+      var sel = {
+        tut: '.week-block:not(.week-block-reg) table.notif-table td',
+        sam: '.week-block-reg table.notif-table tr.reg-sam td',
+        dim: '.week-block-reg table.notif-table tr.reg-dim td'
+      };
+      var css = Object.keys(sel).map(function (k) {
+        return sel[k] + ' { color: ' + couleurs[k].fg + '; background-color: ' + couleurs[k].bg + '; }';
+      }).join(' ');
+      document.getElementById('notif_colors').textContent = css;
+    }
+    function majCouleurs() {
+      Object.keys(couleurs).forEach(function (k) {
+        couleurs[k].fg = document.getElementById('col_' + k + '_fg').value;
+        couleurs[k].bg = document.getElementById('col_' + k + '_bg').value;
+      });
+      try { localStorage.setItem(COULEURS_CLE, JSON.stringify(couleurs)); } catch (e) {}
+      appliquerCouleurs();
+    }
+    function remplirSelecteursCouleurs() {
+      Object.keys(couleurs).forEach(function (k) {
+        document.getElementById('col_' + k + '_fg').value = couleurs[k].fg;
+        document.getElementById('col_' + k + '_bg').value = couleurs[k].bg;
+      });
+    }
+    function reinitialiserCouleurs() {
+      couleurs = JSON.parse(JSON.stringify(COULEURS_DEFAUT));
+      try { localStorage.removeItem(COULEURS_CLE); } catch (e) {}
+      remplirSelecteursCouleurs();
+      appliquerCouleurs();
+    }
+    function basculerPanneauCouleurs() {
+      document.getElementById('notif_colors_panel').classList.toggle('is_open');
+    }
+    remplirSelecteursCouleurs();
+    appliquerCouleurs();
+
     // "Avoir PDF" est désactivé tant que la liste des semaines est affichée.
     function syncBoutonPdf() {
       var ouverte = document.getElementById('notif_modal_weeks').classList.contains('is_open');
@@ -5024,6 +5115,9 @@
       var styleEl = document.createElement('style');
       styleEl.textContent = document.querySelector('style').textContent;
       wrap.appendChild(styleEl);
+      var couleursEl = document.createElement('style');
+      couleursEl.textContent = document.getElementById('notif_colors').textContent;
+      wrap.appendChild(couleursEl);
       if (premiere) clonerEntete(wrap);
       blocsPage.forEach(function (b) { wrap.appendChild(b.cloneNode(true)); });
       var xhtml = new XMLSerializer().serializeToString(wrap);
@@ -5100,6 +5194,7 @@
     // Un appui en dehors de la liste (ou la touche Échap) la referme.
     document.addEventListener('pointerdown', function (e) {
       if (!e.target.closest('.notif-weeks-wrap')) fermerModaleSemaines();
+      if (!e.target.closest('.notif-colors-wrap')) document.getElementById('notif_colors_panel').classList.remove('is_open');
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') fermerModaleSemaines();
