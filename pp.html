@@ -111,6 +111,25 @@
        fiche signalétique de class.html (mêmes styles, mêmes id de
        champs, pour rester cohérent avec la fiche éditée là-bas).
        ------------------------------------------------------------ */
+    /* "Vers inscrits" : le champ Classe clignote à l'ouverture pour attirer
+       l'attention ; s'arrête après 4 clignotements, au focus ou au choix. */
+    @keyframes vers_inscrit_blink {
+      0%, 100% { border-color: var(--border_soft); box-shadow: 0 0 0 0 transparent; }
+      50%      { border-color: var(--color_teal_light); box-shadow: 0 0 0 3px var(--color_teal_light); }
+    }
+    #vers_inscrit_classe.is_blink { animation: vers_inscrit_blink .8s ease-in-out 4; }
+    @media (prefers-reduced-motion: reduce) {
+      #vers_inscrit_classe.is_blink { animation: none; border-color: var(--color_teal_light); box-shadow: 0 0 0 3px var(--color_teal_light); }
+    }
+    .modal_titre_type { display: flex; align-items: center; gap: var(--space_3); flex-wrap: wrap; min-width: 0; }
+    .modal_titre_type select {
+      font-family: inherit; font-size: var(--fs_sm);
+      padding: var(--space_1) var(--space_2);
+      border: 1px solid var(--border_soft); border-radius: var(--radius_sm);
+      background: var(--color_paper_raised); color: var(--text_primary);
+    }
+    .classe_form_grid.is_loading { opacity: .55; pointer-events: none; }
+    .classe_form_grid.is_loading::before { content: "Chargement…"; grid-column: 1 / -1; font-size: .85rem; color: var(--text_muted, #666); }
     .classe_form_grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -193,7 +212,8 @@
        quand la cellule se fige : on la remplace par une ombre interne qui,
        elle, suit l'en-tête. */
     #demandes .pp_table thead th,
-    #dossiers .pp_table thead th {
+    #dossiers .pp_table thead th,
+    #inscrits .pp_table thead th {
       position: sticky;
       top: var(--pp_thead_top, 0px);
       z-index: 5;
@@ -310,9 +330,23 @@
     /* Modale "Vers dossiers" : champs variables selon la spécialité */
     .dossier_champs {
       grid-column: 1 / -1;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      display: flex;
+      flex-direction: column;
       gap: var(--space_3);
+    }
+    /* Une ligne du formulaire dossier : N champs côte à côte (cols_1/2/3). */
+    .dossier_ligne {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: var(--space_3);
+      align-items: end;
+    }
+    .dossier_ligne.cols_1 { grid-template-columns: 1fr; }
+    .dossier_ligne.cols_2 { grid-template-columns: repeat(2, 1fr); }
+    .dossier_ligne.cols_3 { grid-template-columns: repeat(3, 1fr); }
+    #dossier_form .demande_coord_group { grid-template-columns: repeat(3, 1fr); }
+    @media (max-width: 560px) {
+      .dossier_ligne.cols_2, .dossier_ligne.cols_3, #dossier_form .demande_coord_group { grid-template-columns: 1fr; }
     }
     .classe_form_grid label.dossier_check {
       flex-direction: row;
@@ -321,6 +355,33 @@
       color: var(--text_primary);
     }
     .classe_form_grid label.dossier_check input { padding: 0; }
+    /* Modale "en-têtes attendus" des imports Excel */
+    .entetes_liste { display: flex; flex-wrap: wrap; gap: var(--space_2); margin: var(--space_2) 0 var(--space_4); }
+    .entetes_chip {
+      border: 1px dashed var(--border_soft);
+      border-radius: var(--radius_sm);
+      padding: var(--space_1) var(--space_3);
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+    }
+    .entetes_chip.is_requis {
+      border-style: solid;
+      border-color: var(--color_teal_light);
+      color: var(--text_primary);
+      font-weight: 600;
+    }
+    .entetes_legende { font-size: var(--fs_sm); color: var(--text_secondary); margin: 0 0 var(--space_3); }
+    #dossier_btn_liste[hidden] { display: none !important; }
+    .dossier_liste_manquants { color: var(--color_danger); font-size: var(--fs_sm); }
+    .dossier_liste_ok { color: var(--color_teal); font-weight: 700; }
+    .dossier_radio {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_1);
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+    }
+    .dossier_radio_options { display: flex; gap: var(--space_4); }
     .dossier_champs_hint { grid-column: 1 / -1; font-size: var(--fs_sm); color: var(--text_secondary); font-style: italic; }
     .dossier_obs {
       grid-column: 1 / -1;
@@ -502,7 +563,7 @@
         <div class="panel_header">
           <h2><i class="bi bi-person-lines-fill"></i> Demandes</h2>
           <div class="panel_header_actions">
-            <button type="button" class="btn_info no_mobile" id="demande_btn_import" title="En-têtes requis (1ère ligne) : CIN, Prénom, Nom, Tél, Spécialité — facultatifs : Tél2, Email">
+            <button type="button" class="btn_info no_mobile" id="demande_btn_import">
               <i class="bi bi-file-earmark-spreadsheet"></i> Importer Excel
             </button>
             <input type="file" id="demande_import_file" accept=".xlsx,.xls" hidden />
@@ -615,6 +676,14 @@
       <section id="dossiers" class="panel">
         <div class="panel_header">
           <h2><i class="bi bi-folder2-open"></i> Dossiers</h2>
+          <div class="panel_header_actions">
+            <button type="button" class="btn_seal no_mobile" id="dossier_btn_nouveau">
+              <i class="bi bi-plus-lg"></i> Nouveau dossier
+            </button>
+            <button type="button" class="btn_info no_mobile" id="dossier_btn_liste" hidden title="Liste des dossiers de la spécialité affichée">
+              <i class="bi bi-list-check"></i> Liste
+            </button>
+          </div>
         </div>
 
         <div class="demandes_toolbar">
@@ -628,9 +697,32 @@
           </div>
         </div>
 
+        <!-- MODALE "LISTE" (dossiers d'une spécialité) : filtres Tous / Complets /
+             Incomplets, chacun suivi de son nombre. Un dossier est complet quand
+             toutes les pièces demandées par la spécialité sont fournies. -->
+        <div class="modal_overlay" id="dossier_liste_modal">
+          <div class="modal_dialog modal_lg">
+            <div class="modal_header">
+              <h3 id="dossier_liste_titre">Liste des dossiers</h3>
+              <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+            </div>
+            <form class="modal_body" id="dossier_liste_form">
+              <div class="demandes_specialite_filters" id="dossier_liste_filtres" style="margin-bottom: var(--space_3);"></div>
+              <div class="inscrits_check_list">
+                <table>
+                  <thead><tr><th>CIN</th><th>Prénom</th><th>Nom</th><th>Tél</th><th>Pièces manquantes</th></tr></thead>
+                  <tbody id="dossier_liste_body"></tbody>
+                </table>
+              </div>
+              <p class="empty_state" id="dossier_liste_vide" hidden>Aucun dossier.</p>
+            </form>
+          </div>
+        </div>
+
         <!-- MODALE "VERS INSCRITS" : champs de l'onglet "Inscrits"
-             (CIN | Prénom | Nom | Coordonnées | Année). La validation crée
-             l'inscrit puis retire le dossier. -->
+             (CIN | Prénom | Nom | Coordonnées | Année). La classe se choisit
+             parmi les classes Prévues / En cours ; l'Année s'en déduit (modifiable).
+             La validation crée l'inscrit puis retire le dossier. -->
         <div class="modal_overlay" id="vers_inscrit_modal">
           <div class="modal_dialog">
             <div class="modal_header">
@@ -649,8 +741,13 @@
                 <label>Nom
                   <input type="text" name="Nom" required />
                 </label>
+                <label>Classe
+                  <select id="vers_inscrit_classe" required>
+                    <option value="">----</option>
+                  </select>
+                </label>
                 <label>Année
-                  <input type="text" name="Année" required placeholder="ex. LATI Pr2 1ère" />
+                  <input type="text" name="Année" required placeholder="rempli selon la classe choisie" />
                 </label>
                 <div class="demande_coord_field">
                   <span>Coordonnées</span>
@@ -708,6 +805,17 @@
             </button>
             <button type="button" class="btn_ghost" id="inscrit_btn_bulk_annuler">
               <i class="bi bi-x-lg"></i> Annuler
+            </button>
+          </div>
+        </div>
+
+        <div class="demandes_toolbar">
+          <div class="demandes_specialite_filters" id="inscrit_classe_filters"></div>
+          <div class="search_wrap demandes_search_wrap">
+            <i class="bi bi-search search_icon"></i>
+            <input type="text" class="pp_search" id="inscrit_search" placeholder="Rechercher (CIN, prénom ou nom)…" autocomplete="off" />
+            <button type="button" class="search_clear" data-clear="inscrit_search" hidden aria-label="Effacer la recherche">
+              <i class="bi bi-x-circle-fill"></i>
             </button>
           </div>
         </div>
@@ -770,8 +878,10 @@
 
       <section id="classes" class="panel">
         <div class="panel_header">
-          <h2><i class="bi bi-book"></i> Classes</h2>
-          <button type="button" id="pp_btn_nouvelle_classe" class="btn_seal no_mobile"><i class="bi bi-plus-lg"></i> Nouvelle classe</button>
+          <h2><i class="bi bi-book"></i> Classes et modules</h2>
+          <span class="panel_header_actions">
+            <button type="button" id="pp_btn_nouvelle_classe" class="btn_seal no_mobile"><i class="bi bi-plus-lg"></i> Nouvelle classe</button>
+          </span>
             <!--
             <div class="search_wrap">
               <i class="bi bi-search search_icon"></i>
@@ -804,11 +914,16 @@
           <tbody id="pp_classe_table_body"></tbody>
         </table>
         <div class="empty_state" id="pp_classe_empty" hidden>
-          <i class="bi bi-inbox"></i>Aucune classe enregistrée.
+          <i class="bi bi-inbox"></i>Aucune classe ni module enregistré.
         </div>
       </section>
 
-      <!-- MODALE "NOUVELLE CLASSE" — reprend la fiche signalétique de
+      <!-- MODALE UNIQUE "NOUVELLE CLASSE" (bouton unique) : le select de
+           l'en-tête (classe_type_formation) choisit le type, "----" par
+           défaut ; "Formation à distance" affiche la fiche classe
+           (classe_fiche_form), "Formation modulaire" la fiche module
+           (module_pp_form). En modification, le type est imposé et verrouillé.
+           Fiche classe — reprend la fiche signalétique de
            class.html (mêmes id de champs, même logique de génération du
            nom de fichier), sans les boutons Inscrits / Frais de
            coordination : une classe fraîchement créée n'a ni l'un ni
@@ -817,11 +932,18 @@
       <div class="modal_overlay" id="classe_fiche_modal">
         <div class="modal_dialog">
           <div class="modal_header">
-            <h3 id="classe_fiche_modal_titre">Nouvelle classe</h3>
+            <div class="modal_titre_type">
+              <h3 id="classe_fiche_modal_titre">Nouvelle classe</h3>
+              <select id="classe_type_formation" aria-label="Type de formation">
+                <option value="">----</option>
+                <option value="fad">Formation à distance</option>
+                <option value="modulaire">Formation modulaire</option>
+              </select>
+            </div>
             <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
           </div>
           <div class="modal_body">
-            <form id="classe_fiche_form" class="classe_form_grid">
+            <form id="classe_fiche_form" class="classe_form_grid" hidden>
               <label>Etablissement
                 <select id="classe_partenaire" required>
                   <option value="">----</option>
@@ -906,6 +1028,48 @@
                 <button type="submit" class="btn_success" id="classe_fiche_btn_enregistrer"><i class="bi bi-check-lg"></i> Enregistrer</button>
               </div>
             </form>
+            <form id="module_pp_form" class="classe_form_grid" hidden>
+              <label>Etablissement
+                <select id="mpp_partenaire" required>
+                  <option value="">----</option>
+                </select>
+              </label>
+              <label>Module
+                <input type="text" id="mpp_nom" placeholder="saisir le module" required />
+              </label>
+              <label>Abréviation
+                <input type="text" id="mpp_abreviation" placeholder="ex. BD, Réseaux… (nom du fichier Drive)" />
+              </label>
+              <label>Promotion
+                <input type="text" id="mpp_promotion" placeholder="insérer numéro de la promotion" required />
+              </label>
+              <label>Semestre
+                <span class="classe_semestre_group">
+                  <select id="mpp_semestre_num">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                  </select>
+                  <input type="number" id="mpp_semestre_annee" placeholder="Année (ex: 2026)" min="2000" max="2100" />
+                </span>
+              </label>
+              <label>État
+                <select id="mpp_etat">
+                  <option value="Prévue">Prévue</option>
+                  <option value="En cours">En cours</option>
+                  <option value="Close">Clôturée</option>
+                  <option value="Facturée">Facturée</option>
+                </select>
+              </label>
+              <label id="mpp_label_date_debut" hidden>Date début
+                <input type="date" id="mpp_date_debut" />
+              </label>
+              <label id="mpp_label_date_fin" hidden>Date fin
+                <input type="date" id="mpp_date_fin" />
+              </label>
+              <div class="matiere_form_actions">
+                <button type="submit" class="btn_success" id="mpp_btn_enregistrer"><i class="bi bi-check-lg"></i> Enregistrer</button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -926,18 +1090,17 @@
           <div class="modal_body">
             <form id="dossier_form" class="classe_form_grid">
               <input type="hidden" name="_row" />
-              <label>CIN
-                <input type="text" name="CIN" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 chiffres" />
-              </label>
-              <label>Prénom
-                <input type="text" name="Prénom" required />
-              </label>
-              <label>Nom
-                <input type="text" name="Nom" required />
-              </label>
-              <label>Spécialité
-                <select name="Spécialité" id="dossier_specialite_select"></select>
-              </label>
+              <div class="dossier_ligne cols_3">
+                <label>CIN
+                  <input type="text" name="CIN" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 chiffres" />
+                </label>
+                <label>Prénom
+                  <input type="text" name="Prénom" required />
+                </label>
+                <label>Nom
+                  <input type="text" name="Nom" required />
+                </label>
+              </div>
               <div class="demande_coord_field">
                 <span>Coordonnées</span>
                 <div class="demande_coord_group">
@@ -945,6 +1108,11 @@
                   <label>Tél2 <input type="tel" id="dossier_coord_tel2" /></label>
                   <label>Email <input type="email" id="dossier_coord_email" /></label>
                 </div>
+              </div>
+              <div class="dossier_ligne cols_1">
+                <label>Spécialité
+                  <select name="Spécialité" id="dossier_specialite_select"></select>
+                </label>
               </div>
               <div class="dossier_champs" id="dossier_champs"></div>
               <div class="dossier_obs">
@@ -962,6 +1130,49 @@
                   <i class="bi bi-trash3"></i> Supprimer
                 </button>
                 <button type="submit" class="btn_success"><i class="bi bi-check-lg"></i> Enregistrer</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <!-- MODALE "EN-TÊTES ATTENDUS" de l'import Excel (Demandes) : affiche les
+           en-têtes à mettre en 1ère ligne du fichier, puis ouvre le choix du
+           fichier. Voir ouvrirModaleEntetes(). -->
+      <div class="modal_overlay" id="entetes_modal">
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3 id="entetes_titre">Importer un fichier Excel</h3>
+            <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+          </div>
+          <form class="modal_body" id="entetes_form">
+            <p class="entetes_legende">La 1ère ligne du fichier doit contenir ces en-têtes (en gras : obligatoires, en pointillé : facultatifs) :</p>
+            <div class="entetes_liste" id="entetes_liste"></div>
+            <div class="matiere_form_actions">
+              <button type="button" class="btn_info" id="entetes_btn_fichier">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Choisir le fichier Excel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODALE "ARCHIVER" partagée (Dossiers / Inscrits) : choix du motif
+           puis copie vers l'onglet "Archives" et suppression de la liste.
+           Les motifs de chaque section sont dans ARCHIVE_MOTIFS (extensible). -->
+      <div class="modal_overlay" id="archive_modal">
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3>Archiver</h3>
+            <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <form id="archive_form" class="classe_form_grid">
+              <p class="inscrits_import_hint" id="archive_texte" style="grid-column: 1 / -1;"></p>
+              <label style="grid-column: 1 / -1;">Motif
+                <select id="archive_motif" required></select>
+              </label>
+              <div class="matiere_form_actions">
+                <button type="submit" class="btn_danger"><i class="bi bi-archive"></i> Archiver</button>
               </div>
             </form>
           </div>
@@ -991,6 +1202,10 @@
    ============================================================ */
 
 let ppClasseListCache = [];
+// Les classes sont chargées une seule fois au DOMContentLoaded (loadPPClasses) ;
+// la modale "Vers inscrits" réutilise ce cache au lieu de rappeler le serveur.
+let ppClassesLoaded = false;
+let ppClassesPromise = null;
 let partenairesCache = [];
 // État d'édition : fileId de la classe en cours de modification (null =
 // création). editingExtraData conserve les listes (matières, inscrits,
@@ -1002,27 +1217,30 @@ let editingExtraData = null;
 // Constantes d'heures par étudiant (éditées depuis class.html, modale
 // "Editer") : conservées telles quelles quand la fiche est modifiée ici.
 let editingConstantesHeures = null;
+let editionToken = 0; // invalide un chargement d'édition devenu obsolète
 
 document.addEventListener("DOMContentLoaded", () => {
   loadPPClasses();
+  loadPartenaireOptions(); // préchargé : les modales "Editer" s'ouvrent sans attendre
   document.getElementById("pp_search")?.addEventListener("input", (e) => renderPPClasseTable(e.target.value));
   renderUserBadge(document.getElementById("sidebar_user_badge"));
   injecterBoutonDeconnexion(document.getElementById("sidebar_user_badge"));
 
-  ["pp_search", "demande_search", "dossier_search"].forEach(wireSearchClear);
+  ["pp_search", "demande_search", "dossier_search", "inscrit_search"].forEach(wireSearchClear);
 
   // Sticky de la section Demandes : recalcul au redimensionnement et quand la
   // section devient visible / change de hauteur.
   window.addEventListener("resize", ajusterStickyPP);
   if (window.ResizeObserver) {
     const ro = new ResizeObserver(ajusterStickyPP);
-    ["demandes", "dossiers"].forEach((id) => {
+    ["demandes", "dossiers", "inscrits"].forEach((id) => {
       document.getElementById(id)?.querySelectorAll(".panel_header, .demandes_toolbar").forEach((el) => ro.observe(el));
     });
   }
   ajusterStickyPP();
 
   wireNouvelleClasseModal();
+  wireModulesUi();
 
   wireCampagneUi();
   loadCampagnes();
@@ -1256,9 +1474,14 @@ function wireDemandesUi() {
       return;
     }
 
-    const btnArchiver = e.target.closest(".demande_row_archiver");
-    if (btnArchiver) {
-      archiverEnregistrement("demandes", btnArchiver.dataset.row);
+    const btnSupprimer = e.target.closest(".demande_row_supprimer");
+    if (btnSupprimer) {
+      const d = demandesCache.find((x) => String(x._row) === btnSupprimer.dataset.row);
+      if (!d) return;
+      if (!confirm(`Supprimer la demande de ${d["Prénom"] || ""} ${d["Nom"] || ""} ?`)) return;
+      apiCallDirect("deleteDemandePP", { _row: d._row })
+        .then(() => loadDemandes())
+        .catch((err) => alert(`Erreur lors de la suppression : ${err.message}`));
       return;
     }
   });
@@ -1274,7 +1497,11 @@ function wireDemandesUi() {
 
   // Import Excel
   document.getElementById("demande_btn_import")?.addEventListener("click", () => {
-    document.getElementById("demande_import_file").click();
+    ouvrirModaleEntetes({
+      titre: "Importer des demandes (Excel)",
+      entetes: () => DEMANDE_IMPORT_ENTETES.map((d) => ({ libelle: d.libelle, requis: d.requis })),
+      choisirFichier: () => document.getElementById("demande_import_file").click()
+    });
   });
   document.getElementById("demande_import_file")?.addEventListener("change", onFichierExcelDemandesChoisi);
   document.getElementById("demande_import_toggle_all")?.addEventListener("click", () => {
@@ -1286,7 +1513,6 @@ function wireDemandesUi() {
 
   // Modale "Vers dossiers"
   document.getElementById("dossier_specialite_select")?.addEventListener("change", (e) => renderDossierChamps(e.target.value, collecterValeursDossier()));
-  document.getElementById("dossier_champs")?.addEventListener("change", majDossierConditionnels);
   document.querySelectorAll('#dossier_form input[name="obs_option"]').forEach((r) => r.addEventListener("change", majObservationDossier));
 }
 
@@ -1294,19 +1520,61 @@ function wireDemandesUi() {
 // partir de A2 (cellules non vides). Mise en cache puis recopiée dans les
 // <select> des modales (Nouvelle/Modifier demande, Vers dossiers).
 let specialitesCache = null;
+let specialitesReglesCache = {};   // règles de pièces lues dans l'onglet (clé = cleSpecialiteDossier)
+
+// Convertit une ligne de l'onglet "specialites" (cellules "oui" / diplôme exigé /
+// "si pas de diplôme" / "si pas d'affiliation SS") en règle de pièces, au même
+// format que DOSSIER_REGLES. Renvoie null si la ligne ne décrit aucune pièce
+// (on garde alors la règle codée en dur éventuelle).
+function regleDepuisLigneSpecialite(l) {
+  const v = (h) => String(l[h] || "").trim();
+  const norm = (x) => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const regle = {};
+  if (v("Photos")) regle.photos = true;
+  if (v("Copies CIN")) regle.cin = true;
+  if (v("Attestation travail")) regle.travail = true;
+  if (v("Profession")) regle.profession = "text";
+  if (v("Diplôme")) regle.diplome = norm(v("Diplôme")) === "oui" ? true : v("Diplôme");
+  if (v("Affiliation SS")) regle.affSS = true;
+  return Object.keys(regle).length ? regle : null;
+}
 
 async function chargerSpecialitesPP(forcer) {
   if (!specialitesCache || forcer) {
     try {
-      const liste = await apiCallDirect("listSpecialitesPP", {});
-      specialitesCache = Array.isArray(liste) ? liste : [];
+      let lignes;
+      try {
+        lignes = await apiCallDirect("listSpecialitesDetailPP", {});
+      } catch (errDetail) {
+        // Backend pas encore redéployé : on se rabat sur la simple liste de noms.
+        lignes = (await apiCallDirect("listSpecialitesPP", {})).map((nom) => ({ "Spécialité": nom }));
+      }
+      lignes = Array.isArray(lignes) ? lignes : [];
+      specialitesCache = lignes.map((l) => l["Spécialité"]);
+      specialitesReglesCache = {};
+      lignes.forEach((l) => {
+        const r = regleDepuisLigneSpecialite(l);
+        if (r) specialitesReglesCache[cleSpecialiteDossier(l["Spécialité"])] = r;
+      });
     } catch (err) {
       console.error("Erreur de chargement des spécialités :", err.message);
       return;
     }
   }
+  // "Modulaire" : spécialité toujours proposée (formation modulaire), même si
+  // elle ne figure pas dans l'onglet "specialites".
+  if (specialitesCache && !specialitesCache.some((x) => String(x || "").trim().toLowerCase() === "modulaire")) {
+    specialitesCache.push("Modulaire");
+  }
   remplirSelectSpecialites("demande_specialite_select");
   remplirSelectSpecialites("dossier_specialite_select");
+}
+
+// Règles de pièces d'une spécialité : onglet "specialites" en priorité, sinon
+// DOSSIER_REGLES (valeurs par défaut codées en dur).
+function reglesDossierSpecialite(specialite) {
+  const cle = cleSpecialiteDossier(specialite);
+  return specialitesReglesCache[cle] || DOSSIER_REGLES[cle];
 }
 
 function remplirSelectSpecialites(selectId, valeurSouhaitee) {
@@ -1325,11 +1593,52 @@ function normaliserCinPP(v) {
   return /^\d{1,8}$/.test(t) ? t.padStart(8, "0") : t;
 }
 
-// Action "Archiver" commune aux sections (Demandes, Dossiers, Inscrits...) :
-// la logique d'archivage partagée reste à implémenter. Point d'entrée unique
-// pour ne brancher qu'à un seul endroit plus tard.
-function archiverEnregistrement(section, rowId) {
-  alert("L'archivage n'est pas encore implémenté (logique commune aux sections à venir).");
+// Archivage commun Dossiers / Inscrits : ouvre la modale de choix du motif
+// puis appelle archiverDossierPP / archiverInscritPP (copie dans l'onglet
+// "Archives" + suppression de la liste d'origine). Les motifs sont listés
+// ici : en ajouter un = ajouter une chaîne au tableau de la section.
+const ARCHIVE_MOTIFS = {
+  Dossiers: ["Renoncement", "Dossier Rejeté"],
+  Inscrits: ["Abandon", "Redoublement"]
+};
+let archiveContexte = null;
+
+function ouvrirArchivage(source, items, apresArchivage) {
+  archiveContexte = { source, items, apresArchivage };
+  const nom = items.length === 1
+    ? `${items[0]["Prénom"] || ""} ${items[0]["Nom"] || ""}`.trim()
+    : `${items.length} ${source === "Inscrits" ? "inscrits" : "dossiers"}`;
+  document.getElementById("archive_texte").textContent = `Archiver ${nom} ?`;
+  document.getElementById("archive_motif").innerHTML = `<option value="">----</option>`
+    + ARCHIVE_MOTIFS[source].map((m) => `<option value="${escapeHtmlDemande(m)}">${escapeHtmlDemande(m)}</option>`).join("");
+  openFormModal("archive_modal", "archive_form");
+}
+
+async function onSubmitArchiveForm(e) {
+  e.preventDefault();
+  if (!archiveContexte) return;
+  const { source, items, apresArchivage } = archiveContexte;
+  const motif = document.getElementById("archive_motif").value;
+  if (!motif) return;
+  const action = source === "Dossiers" ? "archiverDossierPP" : "archiverInscritPP";
+
+  const btn = e.target.querySelector('button[type="submit"]');
+  setBtnSaving(btn, true);
+  try {
+    // Ordre décroissant des numéros de ligne : chaque archivage supprime une
+    // ligne de la Sheet, ce qui décalerait les numéros des lignes suivantes.
+    const tries = [...items].sort((x, y) => Number(y._row) - Number(x._row));
+    for (const it of tries) {
+      await apiCallDirect(action, { _row: it._row, motif });
+    }
+    closeFormModal("archive_modal");
+    archiveContexte = null;
+    if (apresArchivage) await apresArchivage();
+  } catch (err) {
+    alert(`Erreur lors de l'archivage : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
 }
 
 async function loadDemandes() {
@@ -1403,8 +1712,8 @@ function renderDemandeTable() {
         <button type="button" class="btn_ghost demande_row_vers_dossier" data-row="${d._row}">
           <i class="bi bi-arrow-right-circle"></i> Vers Dossiers
         </button>
-        <button type="button" class="btn_danger demande_row_archiver" data-row="${d._row}">
-          <i class="bi bi-archive"></i> Archiver
+        <button type="button" class="btn_danger demande_row_supprimer" data-row="${d._row}">
+          <i class="bi bi-trash3"></i> Supprimer
         </button>
       </td>
     </tr>`;
@@ -1413,14 +1722,18 @@ function renderDemandeTable() {
 
 /* ---------------- "Vers dossiers" ----------------
    Règles des pièces par spécialité (d'après le tableau des pièces à fournir).
-   Valeurs : true = case à cocher ; "text" = champ texte ; pour "diplome",
-   la chaîne est le diplôme exigé (affiché dans le libellé) ;
-   "siPasDiplome" / "siPasAffSS" = case affichée seulement si le Diplôme /
-   l'Affiliation SS n'est pas coché. Champ absent = non demandé. */
+   Valeurs : true = case à cocher ; "text" = champ texte ;
+   diplome = groupe de boutons radio : un bouton par diplôme accepté (la chaîne
+   les sépare par " ou ", ex. "CAP ou Certificat de scolarité") + "Non" ;
+   affSS = groupe de boutons radio "Oui | Expérience PROF | Non".
+   Pour ces deux groupes : une seule colonne, "Non" par défaut.
+   Champ absent = non demandé. */
+// Valeurs par défaut : les règles de l'onglet "specialites" (réglage "Spécialités PP"
+// de l'accueil) les remplacent spécialité par spécialité (voir reglesDossierSpecialite).
 const DOSSIER_REGLES = {
-  BTPTMI:  { photos: true, cin: true, travail: true, profession: "text", diplome: "CAP", attScol: "siPasDiplome", affSS: true, expPro: "siPasAffSS" },
-  BTPTSIG: { photos: true, cin: true, travail: true, profession: "text", diplome: "CAP", attScol: "siPasDiplome", affSS: true, expPro: "siPasAffSS" },
-  BTSAD:   { photos: true, cin: true, travail: true, profession: "text", diplome: "Baccalauréat ou BTP", affSS: true, expPro: "siPasAffSS" },
+  BTPTMI:  { photos: true, cin: true, travail: true, profession: "text", diplome: "CAP ou Certificat de scolarité", affSS: true },
+  BTPTSIG: { photos: true, cin: true, travail: true, profession: "text", diplome: "CAP ou Certificat de scolarité", affSS: true },
+  BTSAD:   { photos: true, cin: true, travail: true, profession: "text", diplome: "Baccalauréat ou BTP", affSS: true },
   LTI:     { photos: true, cin: true, travail: true, diplome: "Baccalauréat" },
   LTI3:    { photos: true, cin: true, travail: true, diplome: "Baccalauréat et TS" },
   LMAF:    { photos: true, cin: true, travail: true, diplome: "Baccalauréat" },
@@ -1433,10 +1746,8 @@ const DOSSIER_CHAMPS = [
   { regle: "cin", header: "Copies CIN", label: "Copies CIN" },
   { regle: "travail", header: "Attestation travail", label: "Attestation travail" },
   { regle: "profession", header: "Profession", label: "Profession" },
-  { regle: "diplome", header: "Diplôme", label: "Diplôme" },
-  { regle: "attScol", header: "Attestation scolaire", label: "Attestation scolaire" },
-  { regle: "affSS", header: "Affiliation SS", label: "Affiliation SS" },
-  { regle: "expPro", header: "Expérience PROF", label: "Expérience PROF" }
+  { regle: "diplome", header: "Diplôme", label: "Diplôme", groupe: true },
+  { regle: "affSS", header: "Affiliation SS", label: "Affiliation SS", groupe: true }
 ];
 
 function cleSpecialiteDossier(s) {
@@ -1448,42 +1759,43 @@ function cleSpecialiteDossier(s) {
 function renderDossierChamps(specialite, valeurs) {
   const wrap = document.getElementById("dossier_champs");
   if (!wrap) return;
-  const regles = DOSSIER_REGLES[cleSpecialiteDossier(specialite)];
+  const regles = reglesDossierSpecialite(specialite);
 
   if (!regles) {
     wrap.innerHTML = `<p class="dossier_champs_hint">${specialite ? "Aucune pièce spécifique définie pour cette spécialité." : "Choisissez une spécialité pour afficher les pièces du dossier."}</p>`;
     return;
   }
 
-  wrap.innerHTML = DOSSIER_CHAMPS.filter((c) => regles[c.regle]).map((c) => {
+  // HTML de chaque pièce demandée par la spécialité.
+  const html = {};
+  DOSSIER_CHAMPS.filter((c) => regles[c.regle]).forEach((c) => {
     const regle = regles[c.regle];
     const val = valeurs[c.header] || "";
-    const dep = (regle === "siPasDiplome" || regle === "siPasAffSS") ? regle : "";
-    const attrDep = dep ? ` data-si-pas="${dep === "siPasDiplome" ? "Diplôme" : "Affiliation SS"}"` : "";
-    if (regle === "text") {
-      return `<label>${c.label} <input type="text" name="${c.header}" value="${escapeHtmlDemande(val)}" /></label>`;
-    }
-    const libelle = c.regle === "diplome" ? `Diplôme : ${escapeHtmlDemande(regle)}` : c.label;
-    return `<label class="dossier_check"${attrDep}><input type="checkbox" name="${c.header}"${val ? " checked" : ""} /> ${libelle}</label>`;
-  }).join("");
-
-  majDossierConditionnels();
-}
-
-// Masque (et désactive) les cases "si pas de diplôme / si pas d'affiliation
-// SS" tant que la case dont elles dépendent est cochée.
-function majDossierConditionnels() {
-  const form = document.getElementById("dossier_form");
-  document.querySelectorAll("#dossier_champs [data-si-pas]").forEach((lbl) => {
-    const cible = form.elements[lbl.dataset.siPas];
-    const masquer = !!(cible && cible.checked);
-    lbl.hidden = masquer;
-    const input = lbl.querySelector("input");
-    if (input) {
-      if (masquer) input.checked = false;
-      input.disabled = masquer;
+    if (c.groupe) {
+      // Diplôme et Affiliation SS : groupe de boutons radio exclusifs, un par
+      // choix possible + "Non" (une seule colonne ; "Non" si pas de choix).
+      const options = optionsGroupeDossier(c, regles);
+      const choix = normaliserChoixDossier(val, options) || "Non";
+      const radio = (v) => `<label class="dossier_check"><input type="radio" name="grp_${c.regle}" value="${escapeHtmlDemande(v)}"${choix === v ? " checked" : ""} /> ${escapeHtmlDemande(v)}</label>`;
+      html[c.regle] = `<div class="dossier_radio">
+        <span>${c.label}</span>
+        <span class="dossier_radio_options">${[...options, "Non"].map(radio).join("")}</span>
+      </div>`;
+    } else if (regle === "text") {
+      html[c.regle] = `<label>${c.label} <input type="text" name="${c.header}" value="${escapeHtmlDemande(val)}" /></label>`;
+    } else {
+      html[c.regle] = `<label class="dossier_check"><input type="checkbox" name="${c.header}"${val ? " checked" : ""} /> ${c.label}</label>`;
     }
   });
+
+  // Disposition : Photos | Copies CIN ; Attestation travail | Profession ;
+  // Diplôme ; Affiliation SS (une ligne n'apparaît que si elle a un champ).
+  const LIGNES = [["photos", "cin"], ["travail", "profession"], ["diplome"], ["affSS"]];
+  wrap.innerHTML = LIGNES
+    .map((l) => l.filter((k) => html[k]))
+    .filter((l) => l.length)
+    .map((l) => `<div class="dossier_ligne cols_${Math.min(l.length, 2)}">${l.map((k) => html[k]).join("")}</div>`)
+    .join("");
 }
 
 // Observations : 4 choix ; le champ texte n'est actif que pour "Autre".
@@ -1508,30 +1820,78 @@ function valeurObservationDossier() {
 function collecterValeursDossier() {
   const form = document.getElementById("dossier_form");
   const valeurs = {};
-  DOSSIER_CHAMPS.forEach((c) => {
-    const el = form.elements[c.header];
-    if (!el) return;
-    valeurs[c.header] = el.type === "checkbox" ? (el.checked ? "Oui" : "") : el.value;
-  });
+  DOSSIER_CHAMPS.forEach((c) => { valeurs[c.header] = valeurChampDossier(form, c); });
   return valeurs;
+}
+
+// Choix de chaque groupe de boutons radio (hors "Non", toujours ajouté en dernier).
+const OPTIONS_AFFILIATION = ["Oui", "Expérience PROF"];
+
+// Diplômes acceptés d'après la règle de la spécialité : "CAP ou Certificat de
+// scolarité" -> ["CAP", "Certificat de scolarité"] ("Baccalauréat et TS" reste
+// un seul choix) ; règle sans précision (true) -> ["Oui"].
+function optionsDiplome(regle) {
+  if (typeof regle !== "string") return ["Oui"];
+  const liste = regle.split(/\s+ou\s+/i).map((x) => x.trim()).filter(Boolean);
+  return liste.length ? liste : ["Oui"];
+}
+
+function optionsGroupeDossier(c, regles) {
+  return c.regle === "affSS" ? OPTIONS_AFFILIATION : optionsDiplome(regles[c.regle]);
+}
+
+// Normalise une valeur enregistrée vers l'un des choix du groupe ou "Non"
+// ("" si vide) — tolère casse, accents et abréviations ("exp", "certificat"...) ;
+// un "oui" générique correspond au 1er choix.
+function normaliserChoixDossier(v, options) {
+  const n = (x) => String(x || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const t = n(v);
+  if (!t) return "";
+  if (t === "non" || t === "no") return "Non";
+  const exact = options.find((o) => n(o) === t);
+  if (exact) return exact;
+  if (["oui", "x", "1", "true", "vrai", "ok"].includes(t)) return options[0];
+  const proche = options.find((o) => t.length >= 3 && (n(o).startsWith(t) || t.startsWith(n(o))));
+  return proche || "Non";
+}
+
+// Affiliation SS : "Oui" | "Expérience PROF" | "Non" ("" si vide).
+function valeurAffiliationSS(v) {
+  return normaliserChoixDossier(v, OPTIONS_AFFILIATION);
+}
+
+// Valeur enregistrée d'un champ de pièce : "Oui" pour une case cochée, texte
+// pour Profession ; Diplôme et Affiliation SS viennent de leur groupe radio
+// (choix ou "Non").
+function valeurChampDossier(form, c) {
+  if (c.groupe) {
+    const choix = form.querySelector(`input[name="grp_${c.regle}"]:checked`);
+    return choix ? choix.value : "";
+  }
+  const el = form.elements[c.header];
+  if (!el) return "";
+  return el.type === "checkbox" ? (el.checked ? "Oui" : "") : String(el.value).trim();
 }
 
 const OBSERVATIONS_STANDARD = ["Acceptable", "Incomplet", "Invalide"];
 
 // Ouvre la modale dossier (dans la section courante) :
+//  - mode "nouveau"  : "src" = null, formulaire vide (bouton "Nouveau dossier")
 //  - mode "creation" : "src" = demande d'origine (bouton "Vers dossiers")
 //  - mode "edition"  : "src" = ligne de l'onglet Dossiers (bouton "Afficher")
 async function openDossierForm(src, mode) {
   mode = mode || "creation";
+  src = src || {};
   const form = document.getElementById("dossier_form");
   form.reset();
   form.dataset.mode = mode;
   await chargerSpecialitesPP();
 
-  document.getElementById("dossier_modal_titre").textContent = mode === "edition" ? "Modifier le dossier" : "Vers dossiers";
+  document.getElementById("dossier_modal_titre").textContent =
+    mode === "edition" ? "Modifier le dossier" : mode === "nouveau" ? "Nouveau dossier" : "Vers dossiers";
   document.getElementById("dossier_btn_supprimer").hidden = mode !== "edition";
 
-  form.elements["_row"].value = src._row;
+  form.elements["_row"].value = src._row || "";
   form.elements["CIN"].value = normaliserCinPP(src["CIN"]);
   form.elements["Prénom"].value = src["Prénom"] || "";
   form.elements["Nom"].value = src["Nom"] || "";
@@ -1557,8 +1917,9 @@ async function openDossierForm(src, mode) {
 
 // Validation de la modale dossier. En-têtes de l'onglet "Dossiers" : CIN,
 // Prénom, Nom, Coordonnées, Spécialité, Photos, Copies CIN, Attestation
-// travail, Profession, Diplôme, Attestation scolaire, Affiliation SS,
-// Expérience PROF, Observations. Cases cochées -> "Oui".
+// travail, Profession, Diplôme, Affiliation SS, Observations. Cases cochées
+// -> "Oui" ; Diplôme -> le diplôme choisi ou "Non" ; Affiliation SS -> "Oui" /
+// "Expérience PROF" / "Non".
 //  - creation : crée la ligne puis retire la demande d'origine
 //  - edition  : met à jour la ligne existante
 async function onSubmitDossierForm(e) {
@@ -1577,11 +1938,7 @@ async function onSubmitDossierForm(e) {
     "Spécialité": form.elements["Spécialité"].value,
     "Observations": valeurObservationDossier()
   };
-  DOSSIER_CHAMPS.forEach((c) => {
-    const el = form.elements[c.header];
-    if (!el) { record[c.header] = ""; return; }
-    record[c.header] = el.type === "checkbox" ? (el.checked ? "Oui" : "") : el.value.trim();
-  });
+  DOSSIER_CHAMPS.forEach((c) => { record[c.header] = valeurChampDossier(form, c); });
 
   const rowId = form.elements["_row"].value;
   const btn = form.querySelector('button[type="submit"]');
@@ -1607,6 +1964,30 @@ async function onSubmitDossierForm(e) {
   } finally {
     setBtnSaving(btn, false);
   }
+}
+
+/* ---------------- Modale "en-têtes attendus" (imports Excel) ---------------- */
+
+let entetesContexte = null;
+
+// Ouvre la modale qui liste les en-têtes attendus en 1ère ligne du fichier.
+//   titre          : titre de la modale
+//   entetes()      : renvoie [{ libelle, requis }]
+//   choisirFichier : appelée au clic sur "Choisir le fichier Excel"
+function ouvrirModaleEntetes(ctx) {
+  entetesContexte = ctx;
+  document.getElementById("entetes_titre").textContent = ctx.titre;
+  document.getElementById("entetes_liste").innerHTML = ctx.entetes()
+    .map((h) => `<span class="entetes_chip${h.requis ? " is_requis" : ""}">${escapeHtmlDemande(h.libelle)}</span>`)
+    .join("");
+  openFormModal("entetes_modal", "entetes_form");
+}
+
+function onChoisirFichierEntetes() {
+  if (!entetesContexte) return;
+  const ctx = entetesContexte;
+  closeFormModal("entetes_modal");
+  ctx.choisirFichier();
 }
 
 /* ============================================================
@@ -1653,7 +2034,8 @@ function wireDossiersUi() {
     }
     const btnArchiver = e.target.closest(".dossier_row_archiver");
     if (btnArchiver) {
-      archiverEnregistrement("dossiers", btnArchiver.dataset.row);
+      const d = find(btnArchiver);
+      if (d) ouvrirArchivage("Dossiers", [d], loadDossiers);
       return;
     }
   });
@@ -1667,7 +2049,23 @@ function wireDossiersUi() {
   });
   document.getElementById("dossier_search")?.addEventListener("input", renderDossierTable);
 
+  document.getElementById("dossier_btn_nouveau")?.addEventListener("click", () => openDossierForm(null, "nouveau"));
+  document.getElementById("dossier_btn_liste")?.addEventListener("click", ouvrirListeDossiers);
+  document.getElementById("dossier_liste_form")?.addEventListener("submit", (e) => e.preventDefault());
+  document.getElementById("dossier_liste_filtres")?.addEventListener("click", (e) => {
+    const chip = e.target.closest(".demandes_specialite_chip");
+    if (!chip) return;
+    dossierListeFiltre = chip.dataset.filtre || "tous";
+    renderListeDossiers();
+  });
+  document.getElementById("entetes_btn_fichier")?.addEventListener("click", onChoisirFichierEntetes);
+  document.getElementById("entetes_form")?.addEventListener("submit", (e) => e.preventDefault());
+
   document.getElementById("vers_inscrit_form")?.addEventListener("submit", onSubmitVersInscritForm);
+  document.getElementById("vers_inscrit_classe")?.addEventListener("change", majAnneeVersInscrit);
+  ["change", "focus", "animationend"].forEach((evt) =>
+    document.getElementById("vers_inscrit_classe")?.addEventListener(evt, (e) => e.target.classList.remove("is_blink")));
+  document.getElementById("archive_form")?.addEventListener("submit", onSubmitArchiveForm);
 }
 
 async function loadDossiers() {
@@ -1695,6 +2093,85 @@ function renderDossierFilters() {
   wrap.innerHTML = chip("Toutes", "") + specialites.map((sp) => chip(sp, sp)).join("");
 }
 
+/* ---------------- Liste des dossiers d'une spécialité ----------------
+   Bouton "Liste" : visible seulement quand les dossiers affichés (filtre de
+   spécialité, recherche) appartiennent à une seule spécialité. La modale liste
+   tous les dossiers de cette spécialité, filtrables : Tous (défaut) /
+   Complets / Incomplets, chaque filtre suivi de son nombre. */
+
+let dossierListeSpecialite = "";
+let dossierListeFiltre = "tous";
+
+function majBoutonListeDossiers(affiches) {
+  const btn = document.getElementById("dossier_btn_liste");
+  if (!btn) return;
+  const specs = [...new Set(affiches.map((d) => (d["Spécialité"] || "").trim()))];
+  const unique = specs.length === 1 && specs[0] ? specs[0] : "";
+  dossierListeSpecialite = unique;
+  btn.hidden = !unique;
+}
+
+// Pièces demandées par la spécialité du dossier qui ne sont pas fournies
+// (libellés). Diplôme est satisfait par l'un des diplômes proposés, Affiliation
+// SS par "Oui" ou "Expérience PROF" ("Non" = manquante).
+function piecesManquantesDossier(d) {
+  const regles = reglesDossierSpecialite(d["Spécialité"]);
+  if (!regles) return [];
+  const rempli = (h) => { const v = String(d[h] || "").trim().toLowerCase(); return v !== "" && v !== "non"; };
+  const manquantes = [];
+  DOSSIER_CHAMPS.forEach((c) => {
+    const regle = regles[c.regle];
+    if (!regle) return;
+    const ok = c.regle === "affSS"
+      ? ["Oui", "Expérience PROF"].includes(valeurAffiliationSS(d[c.header]))
+      : rempli(c.header);
+    if (!ok) manquantes.push(c.label);
+  });
+  return manquantes;
+}
+
+async function ouvrirListeDossiers() {
+  if (!dossierListeSpecialite) return;
+  await chargerSpecialitesPP();
+  dossierListeFiltre = "tous";
+  document.getElementById("dossier_liste_titre").textContent = `Dossiers — ${dossierListeSpecialite}`;
+  renderListeDossiers();
+  openFormModal("dossier_liste_modal", "dossier_liste_form");
+}
+
+function renderListeDossiers() {
+  const spec = dossierListeSpecialite;
+  const lignes = dossiersCache
+    .filter((d) => (d["Spécialité"] || "").trim() === spec)
+    .map((d) => ({ d, manquantes: piecesManquantesDossier(d) }))
+    .sort((a, b) => String(a.d["Nom"] || "").localeCompare(String(b.d["Nom"] || ""), "fr")
+      || String(a.d["Prénom"] || "").localeCompare(String(b.d["Prénom"] || ""), "fr"));
+
+  const nbComplets = lignes.filter((l) => l.manquantes.length === 0).length;
+  const compteurs = { tous: lignes.length, complets: nbComplets, incomplets: lignes.length - nbComplets };
+  const chip = (cle, libelle) => `
+    <span class="demandes_specialite_chip${dossierListeFiltre === cle ? " is_active" : ""}" data-filtre="${cle}">${libelle} <strong>${compteurs[cle]}</strong></span>`;
+  document.getElementById("dossier_liste_filtres").innerHTML =
+    chip("tous", "Tous") + chip("complets", "Complets") + chip("incomplets", "Incomplets");
+
+  const visibles = lignes.filter((l) =>
+    dossierListeFiltre === "complets" ? l.manquantes.length === 0
+      : dossierListeFiltre === "incomplets" ? l.manquantes.length > 0
+      : true);
+
+  document.getElementById("dossier_liste_vide").hidden = visibles.length > 0;
+  document.getElementById("dossier_liste_body").innerHTML = visibles.map(({ d, manquantes }) => `
+    <tr>
+      <td>${escapeHtmlDemande(normaliserCinPP(d["CIN"]))}</td>
+      <td>${escapeHtmlDemande(d["Prénom"])}</td>
+      <td>${escapeHtmlDemande(d["Nom"])}</td>
+      <td>${escapeHtmlDemande(getCoordField(d["Coordonnées"] || "", "Tél")) || "—"}</td>
+      <td>${manquantes.length
+        ? `<span class="dossier_liste_manquants">${escapeHtmlDemande(manquantes.join(", "))}</span>`
+        : `<span class="dossier_liste_ok">✓ Complet</span>`}</td>
+    </tr>`).join("");
+}
+
 function badgeObservationDossier(obs) {
   const classes = { "Acceptable": "is_actif", "Incomplet": "is_prevue", "Invalide": "is_close" };
   const txt = escapeHtmlDemande(obs);
@@ -1714,6 +2191,8 @@ function renderDossierTable() {
     if (!terme) return true;
     return [d["CIN"], d["Prénom"], d["Nom"]].some((v) => norm(v).includes(terme));
   });
+
+  majBoutonListeDossiers(filtered);
 
   if (filtered.length === 0) {
     tbody.innerHTML = "";
@@ -1751,20 +2230,122 @@ function renderDossierTable() {
   }).join("");
 }
 
+// Libellé d'une classe (nom du fichier Drive, "_" -> espace, "4-6" -> "4/6"),
+// identique à celui du tableau des classes.
+function libelleClassePP(c) {
+  return (c.name || "").replace(/\.html?$/i, "").replace(/_/g, " ").replace(/(\d)-(\d)(?=\s|$)/, "$1/$2");
+}
+
+// Année d'un inscrit pour une classe : "<Classe><Spécialité> Pr<promotion>
+// <ordinal>", ex. "LATI Pr2 2ème". L'ordinal se déduit du niveau (semestre
+// i/N -> année ceil(i/2), plafonnée à 3ème) ; 1ère à défaut de niveau.
+function anneeInscritDepuisClasse(c) {
+  const spec = c["Spécialité"] && c["Spécialité"] !== "Aucune" ? c["Spécialité"] : "";
+  const base = `${c["Classe"] || ""}${spec}`.trim();
+  const promo = c["Promotion"] ? `Pr${c["Promotion"]}` : "";
+  const m = String(c["Niveau"] || "").match(/^(\d+)\s*[\/-]\s*\d+/);
+  const rang = m ? Math.min(Math.ceil(Number(m[1]) / 2), INSCRIT_ORDINAUX.length) : 1;
+  return [base, promo, INSCRIT_ORDINAUX[rang - 1]].filter(Boolean).join(" ");
+}
+
+let versInscritClasses = [];
+let versInscritSpecialite = "";   // spécialité du dossier en cours de passage en inscrit
+const VERS_INSCRIT_NOUVELLE = "__nouvelle__";
+
+const normaliserSpecPP = (v) => String(v || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+const estSpecialiteModulaire = (v) => normaliserSpecPP(v) === "modulaire";
+
+// Année d'un inscrit dans un module : "Modulaire <abréviation|module> Pr<promotion>".
+function anneeInscritDepuisModule(m) {
+  const promo = m["Promotion"] ? `Pr${m["Promotion"]}` : "";
+  return ["Modulaire", m["Abréviation"] || m["Module"] || "", promo].filter(Boolean).join(" ");
+}
+
+// Fait clignoter le champ Classe (relance l'animation à chaque ouverture).
+function clignoterClasseVersInscrit() {
+  const sel = document.getElementById("vers_inscrit_classe");
+  sel.classList.remove("is_blink");
+  void sel.offsetWidth; // force le recalcul pour rejouer l'animation
+  sel.classList.add("is_blink");
+}
+
+function majAnneeVersInscrit() {
+  const select = document.getElementById("vers_inscrit_classe");
+  if (select.value === VERS_INSCRIT_NOUVELLE) {
+    // Aucune classe/module pour cette spécialité : création directe, avec le
+    // type de formation déjà choisi dans la modale unique "Nouvelle classe".
+    const type = estSpecialiteModulaire(versInscritSpecialite) ? "modulaire" : "fad";
+    select.value = "";
+    closeFormModal("vers_inscrit_modal");
+    ouvrirNouvelleClasse(type);
+    return;
+  }
+  const c = versInscritClasses.find((x) => x.id === select.value);
+  if (!c) return;
+  document.getElementById("vers_inscrit_form").elements["Année"].value =
+    estSpecialiteModulaire(versInscritSpecialite) ? anneeInscritDepuisModule(c) : anneeInscritDepuisClasse(c);
+}
+
 // "Vers inscrits" : modale dans la section Dossiers, pré-remplie avec le
-// dossier ; Année à saisir (ex. "LATI Pr2 1ère", voir Inscrits).
-function openVersInscritForm(dossier) {
+// dossier ; la classe se choisit parmi celles "Prévue" ou "En cours".
+async function openVersInscritForm(dossier) {
   const form = document.getElementById("vers_inscrit_form");
   form.reset();
   form.elements["_row"].value = dossier._row;
   form.elements["CIN"].value = normaliserCinPP(dossier["CIN"]);
   form.elements["Prénom"].value = dossier["Prénom"] || "";
   form.elements["Nom"].value = dossier["Nom"] || "";
+  versInscritSpecialite = String(dossier["Spécialité"] || "").trim();
   const coord = dossier["Coordonnées"] || "";
   document.getElementById("vers_inscrit_coord_tel").value = getCoordField(coord, "Tél");
   document.getElementById("vers_inscrit_coord_tel2").value = getCoordField(coord, "Tél2");
   document.getElementById("vers_inscrit_coord_email").value = getCoordField(coord, "Email");
+
+  const select = document.getElementById("vers_inscrit_classe");
+  // Classes déjà chargées au démarrage de la page : liste prête immédiatement.
+  if (ppClassesLoaded) {
+    remplirClassesVersInscrit();
+    openFormModal("vers_inscrit_modal", "vers_inscrit_form");
+    clignoterClasseVersInscrit();
+    return;
+  }
+  select.innerHTML = `<option value="">Chargement...</option>`;
   openFormModal("vers_inscrit_modal", "vers_inscrit_form");
+  try {
+    // Chargement initial encore en cours : on l'attend plutôt que de relancer
+    // le même appel ; repli sur un appel direct s'il a échoué.
+    if (ppClassesPromise) await ppClassesPromise.catch(() => {});
+    if (!ppClassesLoaded) await loadPPClasses();
+    if (!ppClassesLoaded) throw new Error("classes non chargées");
+    remplirClassesVersInscrit();
+    openFormModal("vers_inscrit_modal", "vers_inscrit_form");
+    clignoterClasseVersInscrit();
+  } catch (err) {
+    select.innerHTML = `<option value="">Erreur de chargement</option>`;
+  }
+}
+
+// Classes (ou modules) "Prévue" / "En cours" proposés dans "Vers inscrits",
+// d'après la spécialité du dossier :
+//  - spécialité "Modulaire" -> les modules ;
+//  - sinon -> les classes dont le nom contient la spécialité (ex. BTPTSIG).
+// Sans correspondance : seule l'option "Nouvelle classe" est proposée.
+// Dossier sans spécialité : toutes les classes (comportement d'avant).
+function remplirClassesVersInscrit() {
+  const select = document.getElementById("vers_inscrit_classe");
+  const modulaire = estSpecialiteModulaire(versInscritSpecialite);
+  const source = modulaire ? ppModuleListCache : ppClasseListCache;
+  const spec = normaliserSpecPP(versInscritSpecialite);
+  versInscritClasses = (Array.isArray(source) ? source : []).filter((c) => {
+    const etat = String(c.etat || c["État"] || "").trim() || "Prévue";
+    if (etat !== "Prévue" && etat !== "En cours") return false;
+    if (modulaire || !spec) return true;
+    return normaliserSpecPP(`${c.name || ""} ${c["Classe"] || ""}${c["Spécialité"] || ""}`).includes(spec);
+  }).sort((a, b) => libelleClassePP(a).localeCompare(libelleClassePP(b), "fr"));
+  select.innerHTML = `<option value="">----</option>`
+    + (versInscritClasses.length
+      ? versInscritClasses.map((c) => `<option value="${escapeHtmlDemande(c.id)}">${escapeHtmlDemande(libelleClassePP(c))}</option>`).join("")
+      : `<option value="${VERS_INSCRIT_NOUVELLE}">Nouvelle classe</option>`);
 }
 
 // Validation : crée l'inscrit (onglet "Inscrits") puis retire le dossier.
@@ -2053,6 +2634,7 @@ function anneeSuivanteInscrit(anneeStr) {
 }
 
 let inscritsCache = [];
+let inscritClasseFiltre = "";   // filtre par classe ("Année" sans l'ordinal : "LATI Pr2")
 
 // Mode de sélection groupée : null (mode normal) | "suivante" | "archiver".
 let inscritBulkMode = null;
@@ -2062,6 +2644,14 @@ function wireInscritsUi() {
   document.getElementById("inscrit_form")?.addEventListener("submit", onSubmitInscritForm);
 
   document.getElementById("inscrit_btn_nouveau")?.addEventListener("click", () => openInscritForm(null));
+  document.getElementById("inscrit_search")?.addEventListener("input", renderInscritTable);
+  document.getElementById("inscrit_classe_filters")?.addEventListener("click", (e) => {
+    const chip = e.target.closest(".demandes_specialite_chip");
+    if (!chip) return;
+    inscritClasseFiltre = chip.dataset.specialite || "";
+    renderInscritFilters();
+    renderInscritTable();
+  });
   document.getElementById("inscrit_btn_bulk_suivante")?.addEventListener("click", () => enterInscritBulkMode("suivante"));
   document.getElementById("inscrit_btn_bulk_archiver")?.addEventListener("click", () => enterInscritBulkMode("archiver"));
   document.getElementById("inscrit_btn_bulk_annuler")?.addEventListener("click", () => exitInscritBulkMode());
@@ -2124,13 +2714,7 @@ function wireInscritsUi() {
     if (btnArchiver) {
       const insc = inscritsCache.find((x) => String(x._row) === btnArchiver.dataset.row);
       if (!insc) return;
-      if (!confirm(`Archiver ${insc["Prénom"] || ""} ${insc["Nom"] || ""} ?`)) return;
-      try {
-        await apiCallDirect("archiverInscritPP", { _row: insc._row });
-        await loadInscrits();
-      } catch (err) {
-        alert(`Erreur lors de l'archivage : ${err.message}`);
-      }
+      ouvrirArchivage("Inscrits", [insc], loadInscrits);
       return;
     }
   });
@@ -2212,20 +2796,11 @@ async function onValiderInscritBulk() {
       setBtnSaving(btn, false);
     }
   } else if (inscritBulkMode === "archiver") {
-    if (!confirm(`Archiver ${selection.length} inscrit(s) ?`)) return;
-
-    setBtnSaving(btn, true);
-    try {
-      for (const insc of selection) {
-        await apiCallDirect("archiverInscritPP", { _row: insc._row });
-      }
+    // Même motif pour toute la sélection (choisi dans la modale d'archivage).
+    ouvrirArchivage("Inscrits", selection, async () => {
       exitInscritBulkMode();
       await loadInscrits();
-    } catch (err) {
-      alert(`Erreur lors de l'archivage groupé : ${err.message}`);
-    } finally {
-      setBtnSaving(btn, false);
-    }
+    });
   }
 }
 
@@ -2235,24 +2810,48 @@ async function loadInscrits() {
 
   try {
     inscritsCache = await apiCallDirect("listInscritsPP", {});
+    renderInscritFilters();
     renderInscritTable();
   } catch (err) {
     tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
   }
 }
 
+// Chips de filtre : une par classe présente (préfixe de "Année", ex. "LATI Pr2").
+function renderInscritFilters() {
+  const wrap = document.getElementById("inscrit_classe_filters");
+  if (!wrap) return;
+  const classes = [...new Set(inscritsCache.map((i) => parseAnneeInscrit(i["Année"]).prefixe).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "fr", { numeric: true }));
+  if (inscritClasseFiltre && !classes.includes(inscritClasseFiltre)) inscritClasseFiltre = "";
+  const chip = (label, val) => `
+    <span class="demandes_specialite_chip${inscritClasseFiltre === val ? " is_active" : ""}" data-specialite="${escapeHtmlDemande(val)}">${escapeHtmlDemande(label)}</span>`;
+  wrap.innerHTML = chip("Toutes", "") + classes.map((c) => chip(c, c)).join("");
+}
+
 function renderInscritTable() {
+  ajusterStickyPP();
   const tbody = document.getElementById("inscrit_table_body");
   const emptyEl = document.getElementById("inscrit_empty");
 
-  if (inscritsCache.length === 0) {
+  // Filtres combinés : chip de classe + recherche (CIN, prénom ou nom,
+  // insensible à la casse et aux accents).
+  const norm = (v) => String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const terme = norm(document.getElementById("inscrit_search")?.value).trim();
+  const liste = inscritsCache.filter((i) => {
+    if (inscritClasseFiltre && parseAnneeInscrit(i["Année"]).prefixe !== inscritClasseFiltre) return false;
+    if (!terme) return true;
+    return [i["CIN"], i["Prénom"], i["Nom"]].some((v) => norm(v).includes(terme));
+  });
+
+  if (liste.length === 0) {
     tbody.innerHTML = "";
     if (emptyEl) emptyEl.hidden = false;
     return;
   }
   if (emptyEl) emptyEl.hidden = true;
 
-  tbody.innerHTML = inscritsCache.map((insc) => {
+  tbody.innerHTML = liste.map((insc) => {
     const coord = insc["Coordonnées"] || "";
     const tel = getCoordField(coord, "Tél");
     const tooltip = DEMANDE_COORD_LABELS
@@ -2371,21 +2970,50 @@ async function onSubmitInscritForm(e) {
    intervenants/examens (listes vides) : le reste se complète ensuite
    depuis class.html une fois la classe ouverte. */
 
+// Type de formation de la modale unique : "" (rien affiché), "fad" (fiche
+// classe) ou "modulaire" (fiche module). verrouille = true en modification.
+function afficherFormulaireType(type, verrouille) {
+  const sel = document.getElementById("classe_type_formation");
+  sel.value = type;
+  sel.disabled = !!verrouille;
+  document.getElementById("classe_fiche_form").hidden = type !== "fad";
+  document.getElementById("module_pp_form").hidden = type !== "modulaire";
+}
+
+// Ouvre la modale unique de création. type : "" (choix dans le select de
+// l'en-tête), "fad" ou "modulaire" (présélectionné, ex. depuis "Vers inscrits").
+async function ouvrirNouvelleClasse(type = "") {
+  const form = document.getElementById("classe_fiche_form");
+  editionToken++;
+  form.classList.remove("is_loading");
+  form.reset();
+  document.getElementById("module_pp_form").classList.remove("is_loading");
+  document.getElementById("module_pp_form").reset();
+  editingModuleFileId = null;
+  editingModuleData = null;
+  afficherFormulaireType(type, false);
+  updateModuleDateVisibility();
+  document.getElementById("classe_specialite").innerHTML = `<option value="">----</option>`;
+  document.getElementById("classe_niveau").innerHTML = `<option value="">----</option>`;
+  editingFileId = null;
+  editingExtraData = null;
+  editingConstantesHeures = null;
+  document.getElementById("classe_fiche_modal_titre").textContent = "Nouvelle classe";
+  updateDateVisibility();
+  updateFacturationVisibility();
+  if (!partenairesCache.length) await loadPartenaireOptions();
+  await loadModulePartenaireOptions();
+  openFormModal("classe_fiche_modal", type === "modulaire" ? "module_pp_form" : "classe_fiche_form");
+}
+
 function wireNouvelleClasseModal() {
-  document.getElementById("pp_btn_nouvelle_classe")?.addEventListener("click", async () => {
-    const form = document.getElementById("classe_fiche_form");
-    form.reset();
-    document.getElementById("classe_specialite").innerHTML = `<option value="">----</option>`;
-    document.getElementById("classe_niveau").innerHTML = `<option value="">----</option>`;
-    editingFileId = null;
-    editingExtraData = null;
-    editingConstantesHeures = null;
-    document.getElementById("classe_fiche_modal_titre").textContent = "Nouvelle classe";
-    updateDateVisibility();
-    updateFacturationVisibility();
-    if (!partenairesCache.length) await loadPartenaireOptions();
-    openFormModal("classe_fiche_modal", "classe_fiche_form");
+  document.getElementById("classe_type_formation")?.addEventListener("change", (e) => {
+    afficherFormulaireType(e.target.value, false);
+    // Nouvel instantané sur le formulaire affiché (détection de modifications non enregistrées).
+    openFormModal("classe_fiche_modal", e.target.value === "modulaire" ? "module_pp_form" : "classe_fiche_form");
   });
+
+  document.getElementById("pp_btn_nouvelle_classe")?.addEventListener("click", () => ouvrirNouvelleClasse(""));
 
   document.getElementById("pp_classe_table_body")?.addEventListener("click", (e) => {
     const btn = e.target.closest(".pp_btn_editer");
@@ -2453,7 +3081,7 @@ function wireNouvelleClasseModal() {
 async function loadPartenaireOptions(valeurActuelle) {
   const select = document.getElementById("classe_partenaire");
   try {
-    partenairesCache = await apiCallDirect("listPartPP", {});
+    if (!partenairesCache.length) partenairesCache = await apiCallDirect("listPartPP", {});
     select.innerHTML = `<option value="">----</option>` + partenairesCache
       .map((p) => {
         const sigle = p["Sigle"] || "";
@@ -2576,17 +3204,27 @@ function lireFicheDepuisFormulaire() {
 // la fiche et la facturation, pas le contenu pédagogique de la classe).
 async function ouvrirEditionClasse(fileId) {
   const form = document.getElementById("classe_fiche_form");
+  const token = ++editionToken;
   form.reset();
   document.getElementById("classe_specialite").innerHTML = `<option value="">----</option>`;
   document.getElementById("classe_niveau").innerHTML = `<option value="">----</option>`;
   updateDateVisibility();
   updateFacturationVisibility();
   document.getElementById("classe_fiche_modal_titre").textContent = "Modifier la classe";
+  afficherFormulaireType("fad", true);
+  editingFileId = null; editingExtraData = null; editingConstantesHeures = null;
 
-  if (!partenairesCache.length) await loadPartenaireOptions();
+  // La modale s'affiche tout de suite (formulaire grisé) ; le fichier Drive
+  // complet — lent à lire — est chargé ensuite, en parallèle des partenaires.
+  form.classList.add("is_loading");
+  openFormModal("classe_fiche_modal", "classe_fiche_form");
 
   try {
-    const data = await apiCallDirect("chargerClasse", { fileId });
+    const [data] = await Promise.all([
+      apiCallDirect("chargerClasse", { fileId }),
+      partenairesCache.length ? null : loadPartenaireOptions()
+    ]);
+    if (token !== editionToken || !document.getElementById("classe_fiche_modal").classList.contains("is_visible")) { form.classList.remove("is_loading"); return; } // modale fermée / autre édition
     const c = data.classe || {};
 
     editingFileId = fileId;
@@ -2605,13 +3243,10 @@ async function ouvrirEditionClasse(fileId) {
       soutenances: data.soutenances || []
     };
 
-    await loadPartenaireOptions(c.partenairePP);
-
-    // Le listener "change" de classe_partenaire (re)construit la liste
-    // d'options de classe_classe selon le domaine du partenaire ; sans ce
-    // dispatch, classe_classe reste avec sa seule option "----" et
-    // l'affectation de .value juste après échoue silencieusement (aucune
-    // option ne correspond), laissant le champ vide.
+    document.getElementById("classe_partenaire").value = c.partenairePP || "";
+    // Le listener "change" reconstruit la liste d'options de classe_classe
+    // selon le domaine du partenaire ; sans ce dispatch l'affectation de
+    // .value juste après échouerait silencieusement.
     document.getElementById("classe_partenaire").dispatchEvent(new Event('change'));
 
     document.getElementById("classe_classe").value = c.classe || "";
@@ -2638,8 +3273,14 @@ async function ouvrirEditionClasse(fileId) {
     document.getElementById("classe_date_memoire").value = c.dateMemoire || "";
     updateFacturationVisibility();
 
+    form.classList.remove("is_loading");
+    // Nouvel instantané : la détection de modifications non enregistrées
+    // doit partir du formulaire rempli, pas du formulaire vide.
     openFormModal("classe_fiche_modal", "classe_fiche_form");
   } catch (err) {
+    if (token !== editionToken) return;
+    form.classList.remove("is_loading");
+    closeFormModal("classe_fiche_modal");
     alert(`Erreur de chargement : ${err.message}`);
   }
 }
@@ -2709,7 +3350,7 @@ function setBtnSaving(btn, saving, savingLabel = "Enregistrement...") {
 // Dossiers) : la barre se cale sous l'en-tête de section, les en-têtes du
 // tableau sous la barre.
 function ajusterStickyPP() {
-  ["demandes", "dossiers"].forEach((id) => {
+  ["demandes", "dossiers", "inscrits"].forEach((id) => {
     const section = document.getElementById(id);
     const ph = section?.querySelector(".panel_header");
     const toolbar = section?.querySelector(".demandes_toolbar");
@@ -2739,6 +3380,147 @@ function wireSearchClear(inputId) {
   });
 }
 
+/* ---------------- Modules FAD ---------------- */
+/* Création / édition de la fiche d'un module (Drive : sous-dossier "Modules",
+   voir exportModuleToDrive / chargerModule / listModulesPP côté Code.gs). En
+   édition, le planning, les inscrits et les champs gérés dans mod.html
+   (enseignant, heures dues, check tutorat...) sont conservés tels quels. */
+
+let ppModuleListCache = [];
+let editingModuleFileId = null;
+let editingModuleData = null;   // { module, planning, etudiants } du fichier édité
+
+function updateModuleDateVisibility() {
+  const etat = document.getElementById("mpp_etat").value;
+  const labelDebut = document.getElementById("mpp_label_date_debut");
+  const labelFin = document.getElementById("mpp_label_date_fin");
+  if (etat === "Prévue") { labelDebut.hidden = true; labelFin.hidden = true; }
+  else if (etat === "En cours") { labelDebut.hidden = false; labelFin.hidden = true; }
+  else { labelDebut.hidden = false; labelFin.hidden = false; }
+}
+
+async function loadModulePartenaireOptions(valeurActuelle) {
+  const select = document.getElementById("mpp_partenaire");
+  try {
+    if (!partenairesCache.length) partenairesCache = await apiCallDirect("listPartPP", {});
+    select.innerHTML = `<option value="">----</option>` + partenairesCache
+      .map((p) => {
+        const valeur = p["Sigle"] || p["Etablissement"] || "";
+        return `<option value="${valeur}">${valeur}</option>`;
+      })
+      .join("");
+    if (valeurActuelle) select.value = valeurActuelle;
+  } catch (err) {
+    select.innerHTML = `<option value="">Erreur de chargement</option>`;
+  }
+}
+
+function wireModulesUi() {
+  document.getElementById("pp_classe_table_body")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".pp_module_btn_editer");
+    if (btn) ouvrirEditionModule(btn.dataset.id);
+  });
+
+  document.getElementById("mpp_etat")?.addEventListener("change", updateModuleDateVisibility);
+  document.getElementById("module_pp_form")?.addEventListener("submit", onSubmitModulePP);
+}
+
+async function ouvrirEditionModule(fileId) {
+  const form = document.getElementById("module_pp_form");
+  const token = ++editionToken;
+  form.reset();
+  editingModuleFileId = null;
+  editingModuleData = null;
+  document.getElementById("classe_fiche_modal_titre").textContent = "Modifier le module";
+  afficherFormulaireType("modulaire", true);
+  updateModuleDateVisibility();
+  form.classList.add("is_loading");
+  openFormModal("classe_fiche_modal", "module_pp_form");
+  try {
+    const [data] = await Promise.all([
+      apiCallDirect("chargerModule", { fileId }),
+      partenairesCache.length ? null : loadModulePartenaireOptions()
+    ]);
+    if (token !== editionToken || !document.getElementById("classe_fiche_modal").classList.contains("is_visible")) { form.classList.remove("is_loading"); return; }
+    const m = data.module || {};
+    editingModuleFileId = fileId;
+    editingModuleData = { module: m, planning: data.planning || [], etudiants: data.etudiants || [] };
+
+    await loadModulePartenaireOptions(m.partenairePP);
+    document.getElementById("mpp_nom").value = m.module || "";
+    document.getElementById("mpp_abreviation").value = m.abreviation || "";
+    document.getElementById("mpp_promotion").value = m.promotion || "";
+    const [sem, annee] = String(m.semestre || "").split("-");
+    document.getElementById("mpp_semestre_num").value = sem || "1";
+    document.getElementById("mpp_semestre_annee").value = annee || "";
+    document.getElementById("mpp_etat").value = m.etat || "Prévue";
+    updateModuleDateVisibility();
+    document.getElementById("mpp_date_debut").value = m.dateDebut || "";
+    document.getElementById("mpp_date_fin").value = m.dateFin || "";
+    form.classList.remove("is_loading");
+    openFormModal("classe_fiche_modal", "module_pp_form");
+  } catch (err) {
+    if (token !== editionToken) return;
+    form.classList.remove("is_loading");
+    closeFormModal("classe_fiche_modal");
+    alert(`Erreur de chargement : ${err.message}`);
+  }
+}
+
+async function onSubmitModulePP(e) {
+  e.preventDefault();
+  const semNum = document.getElementById("mpp_semestre_num").value;
+  const semAnnee = document.getElementById("mpp_semestre_annee").value;
+  const module = {
+    ...(editingModuleData ? editingModuleData.module : {}),
+    type: "module",
+    partenairePP: document.getElementById("mpp_partenaire").value,
+    module: document.getElementById("mpp_nom").value.trim(),
+    abreviation: document.getElementById("mpp_abreviation").value.trim(),
+    promotion: document.getElementById("mpp_promotion").value.trim(),
+    semestre: (semNum && semAnnee) ? `${semNum}-${semAnnee}` : "",
+    etat: document.getElementById("mpp_etat").value,
+    dateDebut: document.getElementById("mpp_date_debut").value,
+    dateFin: document.getElementById("mpp_date_fin").value
+  };
+  if (!module.partenairePP || !module.module || !module.promotion) {
+    alert("Merci de compléter la fiche : établissement, module et promotion.");
+    return;
+  }
+  if (module.dateDebut && module.dateFin && module.dateDebut >= module.dateFin) {
+    alert("La date de début doit être antérieure à la date de fin.");
+    return;
+  }
+  const btn = document.getElementById("mpp_btn_enregistrer");
+  setBtnSaving(btn, true);
+  try {
+    await apiCallDirect("exportModuleToDrive", {
+      module,
+      planning: editingModuleData ? editingModuleData.planning : [],
+      etudiants: editingModuleData ? editingModuleData.etudiants : [],
+      fileId: editingModuleFileId
+    });
+    closeFormModal("classe_fiche_modal");
+    editingModuleFileId = null;
+    editingModuleData = null;
+    await loadPPModules();
+  } catch (err) {
+    alert(`Erreur : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+async function loadPPModules() {
+  // Les modules sont affichés dans le même tableau que les classes.
+  try {
+    ppModuleListCache = await apiCallDirect("listModulesPP", {});
+  } catch (err) {
+    ppModuleListCache = [];
+  }
+  renderPPClasseTable("");
+}
+
 /* ---------------- Tableau des classes ---------------- */
 
 async function loadPPClasses() {
@@ -2746,11 +3528,25 @@ async function loadPPClasses() {
   tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr>`;
 
   try {
-    ppClasseListCache = await apiCallDirect("listClassesPP", {});
+    ppClassesPromise = Promise.all([
+      apiCallDirect("listClassesPP", {}),
+      apiCallDirect("listModulesPP", {}).catch(() => [])
+    ]);
+    const [classes, modules] = await ppClassesPromise;
+    ppClasseListCache = classes;
+    ppModuleListCache = modules;
+    ppClassesLoaded = true;
     renderPPClasseTable("");
   } catch (err) {
     tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
   }
+}
+
+// Ordre d'affichage : "En cours" tout en haut, puis "Clôturée", puis "Prévue",
+// et "Facturée" tout en bas (même défaut "Prévue" que le badge).
+function rangEtatClasse(c) {
+  const brut = (c.etat || c["État"] || c["Etat"] || "").trim() || "Prévue";
+  return { "En cours": 0, "Close": 1, "Prévue": 2, "Facturée": 3 }[brut] ?? 1;
 }
 
 function renderPPClasseTable(query) {
@@ -2779,9 +3575,19 @@ function renderPPClasseTable(query) {
   const estNiveau6sur6 = (c) => (c["Niveau"] || "").trim() === "6/6" || /_6-6_/.test(c.name || "");
   const urlClasse = (c) => estNiveau6sur6(c) ? `pfe.html?classe=${c.id}` : `class.html?classe=${c.id}`;
 
-  const filtered = (!q ? ppClasseListCache : ppClasseListCache.filter((c) =>
-    nomClasse(c).toLowerCase().includes(q)
-  )).sort((a, b) => nomClasse(a).localeCompare(nomClasse(b), "fr", { numeric: true, sensitivity: "base" }));
+  // Les modules (formation modulaire) sont listés avec les classes : même
+  // tableau, repérés par _type. Nom Drive d'un module :
+  // "<Sigle>_<Abréviation|Module>_Pr<promotion>_<semestre>".
+  const nomAffiche = (c) => c._type === "module"
+    ? (c.name || "").replace(/\.html?$/i, "").replace(/_/g, " ")
+    : nomClasse(c);
+  const tous = ppClasseListCache.map((c) => ({ ...c, _type: "classe" }))
+    .concat(ppModuleListCache.map((c) => ({ ...c, _type: "module" })));
+  const filtered = (!q ? tous : tous.filter((c) =>
+    nomAffiche(c).toLowerCase().includes(q)
+  )).sort((a, b) =>
+    rangEtatClasse(a) - rangEtatClasse(b)
+    || nomAffiche(a).localeCompare(nomAffiche(b), "fr", { numeric: true, sensitivity: "base" }));
 
   if (filtered.length === 0) {
     tbody.innerHTML = "";
@@ -2795,6 +3601,7 @@ function renderPPClasseTable(query) {
     // Le suivi Facturation n'a de sens qu'une fois la classe à l'état
     // Facturée (voir updateFacturationVisibility côté modale) : avant ça,
     // toujours "Non reçue".
+    if (etatBrut === "" || etatBrut === "Prévue" || etatBrut === "En cours") return "----";
     if (etatBrut !== "Facturée") return "Non reçue";
     // Bug corrigé : avec ||, un facturationStatut valant "" (Non reçue,
     // valeur légitime) était traité comme absent et retombait sur
@@ -2823,22 +3630,25 @@ function renderPPClasseTable(query) {
     return `<span class="etat_badge ${cls}">${libelle}</span>`;
   };
 
-  tbody.innerHTML = filtered.map((c) => `
+  tbody.innerHTML = filtered.map((c) => {
+    const estModule = c._type === "module";
+    return `
     <tr>
-      <td>${nomClasse(c)}</td>
+      <td>${nomAffiche(c)}</td>
       <td>${c["Début"] || ""}</td>
       <td>${c["Fin"] || ""}</td>
       <td>${etatBadge(c)}</td>
-      <td>${labelFacturation(c)}</td>
+      <td>${estModule ? "----" : labelFacturation(c)}</td>
       <td>
-        <button type="button" class="btn_primary pp_btn_editer" data-id="${c.id}">
+        <button type="button" class="btn_primary ${estModule ? "pp_module_btn_editer" : "pp_btn_editer"}" data-id="${c.id}">
           <i class="bi bi-pencil-square"></i> Editer
         </button>
-        <a class="btn_info" href="${urlClasse(c)}">
+        <a class="btn_info" href="${estModule ? `mod.html?module=${c.id}` : urlClasse(c)}">
           <i class="bi bi-eye"></i> Afficher
         </a>
       </td>
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
 }
 
 async function apiCallDirect(action, payload = {}) {
@@ -2856,8 +3666,3 @@ async function apiCallDirect(action, payload = {}) {
   </script>
 </body>
 </html>
-
-
-
-
-
