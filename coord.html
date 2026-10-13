@@ -239,7 +239,7 @@
         <tbody id="pp_classe_table_body"></tbody>
       </table>
       <div class="empty_state" id="pp_classe_empty" hidden>
-        <i class="bi bi-inbox"></i>Aucune classe enregistrée.
+        <i class="bi bi-inbox"></i>Aucune classe ni module enregistré.
       </div>
     </section>
 
@@ -442,6 +442,18 @@ function afficherClasses() {
   loadPPClasses();
 }
 
+let ppModuleListCache = [];
+
+// Un module n'a pas de "Classe" : le profil coord ne filtre que sur
+// l'Etablissement (le Sigle doit apparaître dans le nom du fichier).
+function moduleVisiblePourCoordUser(nomModule) {
+  if (!coordUser) return false;
+  const nom = (nomModule || "").toLowerCase();
+  const etablissements = String(coordUser["Etablissement"] || "")
+    .split(";").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return etablissements.length === 0 || etablissements.some((e) => nom.includes(e));
+}
+
 /* ---------------- Tableau des classes (repris de pp.html) ---------------- */
 
 async function loadPPClasses() {
@@ -449,7 +461,12 @@ async function loadPPClasses() {
   tbody.innerHTML = `<tr class="table_state_row"><td colspan="5"><span class="loading_state">Chargement...</span></td></tr>`;
 
   try {
-    ppClasseListCache = await apiCall("listClassesPP", {});
+    const [classes, modules] = await Promise.all([
+      apiCall("listClassesPP", {}),
+      apiCall("listModulesPP", {}).catch(() => [])
+    ]);
+    ppClasseListCache = classes;
+    ppModuleListCache = modules;
     renderPPClasseTable();
   } catch (err) {
     tbody.innerHTML = `<tr class="table_state_row"><td colspan="5"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
@@ -504,9 +521,14 @@ function renderPPClasseTable() {
   const estNiveau6sur6 = (c) => (c["Niveau"] || "").trim() === "6/6" || /_6-6_/.test(c.name || "");
   const urlClasse = (c) => `${estNiveau6sur6(c) ? "pfe.html" : "class.html"}?gclasse=${c.id}`;
 
-  const filtered = ppClasseListCache
-    .filter((c) => classeVisiblePourCoordUser(nomClasse(c)))
-    .sort((a, b) => nomClasse(a).localeCompare(nomClasse(b), "fr", { numeric: true, sensitivity: "base" }));
+  // Les modules (formation modulaire) sont listés avec les classes ; ils ne
+  // sont filtrés que sur l'Etablissement du profil (pas de "Classe").
+  const nomModule = (c) => (c.name || "").replace(/\.html?$/i, "").replace(/_/g, " ");
+  const nomAffiche = (c) => c._type === "module" ? nomModule(c) : nomClasse(c);
+  const tous = ppClasseListCache.filter((c) => classeVisiblePourCoordUser(nomClasse(c))).map((c) => ({ ...c, _type: "classe" }))
+    .concat(ppModuleListCache.filter((c) => moduleVisiblePourCoordUser(nomModule(c))).map((c) => ({ ...c, _type: "module" })));
+  const filtered = tous
+    .sort((a, b) => nomAffiche(a).localeCompare(nomAffiche(b), "fr", { numeric: true, sensitivity: "base" }));
 
 
   if (filtered.length === 0) {
@@ -533,12 +555,12 @@ function renderPPClasseTable() {
 
   tbody.innerHTML = filtered.map((c) => `
     <tr>
-      <td>${nomClasse(c)}</td>
+      <td>${nomAffiche(c)}</td>
       <td>${c["Début"] || ""}</td>
       <td>${c["Fin"] || ""}</td>
       <td>${etatBadge(c)}</td>
       <td>
-        <a class="btn_info" href="${urlClasse(c)}">
+        <a class="btn_info" href="${c._type === "module" ? `mod.html?gmodule=${c.id}` : urlClasse(c)}">
           <i class="bi bi-eye"></i> Afficher
         </a>
       </td>
