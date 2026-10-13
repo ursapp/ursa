@@ -626,6 +626,7 @@
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(22, 38, 42, 0.12);
     }
+    .index_shortcut_btn[hidden] { display: none !important; }
     /* Sur mobile, les boutons de raccourci n'affichent que leur icône */
     @media (max-width: 560px) {
       .index_shortcut_btn {
@@ -686,6 +687,88 @@
     }
     .fi_stage_field input:read-only { background: var(--color_paper); color: var(--text_secondary); }
     .fi_stage_field_wide { grid-column: 1 / -1; }
+
+    /* ---------- Modale "Spécialités PP" : liste + formulaire d'ajout ---------- */
+    .idx_spec_modal { max-width: 920px; }
+    .idx_spec_modal .fi_modal_body { max-height: 65vh; }
+    .idx_spec_table { width: 100%; border-collapse: collapse; font-size: var(--fs_sm); }
+    .idx_spec_table th, .idx_spec_table td {
+      padding: var(--space_2) var(--space_2);
+      border-bottom: 1px solid var(--border_soft);
+      text-align: center;
+      vertical-align: top;
+    }
+    .idx_spec_table th {
+      position: sticky;
+      top: calc(var(--space_4) * -1);
+      background: var(--color_paper_raised);
+      color: var(--text_secondary);
+      font-size: var(--fs_xs);
+      font-weight: 600;
+      box-shadow: inset 0 -1px 0 var(--border_soft);
+      border-bottom: none;
+    }
+    .idx_spec_table th:first-child, .idx_spec_table td:first-child { text-align: left; font-weight: 600; }
+    .idx_spec_table td.is_oui { color: var(--color_teal); font-weight: 700; }
+    .idx_spec_table td.is_cond { color: var(--text_secondary); font-style: italic; }
+    .idx_spec_empty { color: var(--text_secondary); font-size: var(--fs_sm); text-align: center; margin: 0; }
+    .idx_spec_form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space_3) var(--space_4);
+      margin-top: var(--space_4);
+      padding-top: var(--space_4);
+      border-top: 1px solid var(--border_soft);
+    }
+    .idx_spec_form[hidden] { display: none; }
+    .idx_spec_form h4 { grid-column: 1 / -1; margin: 0; font-family: var(--font_display); font-size: var(--fs_base); }
+    .idx_spec_form .fi_stage_field input[type="text"] { text-align: left; }
+    .idx_spec_checks { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space_2) var(--space_5); }
+    .idx_spec_checks label {
+      display: inline-flex; align-items: center; gap: var(--space_2);
+      font-size: var(--fs_sm); color: var(--text_primary); cursor: pointer;
+    }
+    .idx_spec_checks label small { color: var(--text_secondary); }
+    .idx_spec_error { grid-column: 1 / -1; color: var(--color_danger); font-size: var(--fs_sm); margin: 0; }
+    .idx_spec_error[hidden] { display: none; }
+    @media (max-width: 560px) {
+      .idx_spec_form { grid-template-columns: 1fr; }
+    }
+
+    /* ---------- Modale "Chercher un contact" ---------- */
+    .idx_contact_search {
+      width: 100%;
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+    }
+    .idx_contact_search:focus { outline: 2px solid var(--color_teal_light); outline-offset: 1px; }
+    .idx_contact_meta { font-size: var(--fs_xs); color: var(--text_secondary); margin: var(--space_2) 0; }
+    .idx_contact_item {
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      padding: var(--space_2) var(--space_3);
+      margin-bottom: var(--space_2);
+    }
+    .idx_contact_top { display: flex; align-items: center; gap: var(--space_2); flex-wrap: wrap; }
+    .idx_contact_nom { font-weight: 600; font-size: var(--fs_sm); }
+    .idx_contact_tag {
+      font-family: var(--font_mono);
+      font-size: var(--fs_xs);
+      color: var(--text_secondary);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      padding: 0 6px;
+    }
+    .idx_contact_coord {
+      margin: var(--space_1) 0 0 0;
+      font-size: var(--fs_sm);
+      color: var(--color_teal);
+      white-space: pre-line;
+      user-select: all;
+    }
 
     .btn_ghost {
       background: transparent;
@@ -820,6 +903,9 @@
       <button type="button" class="index_shortcut_btn" id="idx_btn_smig">
         <i class="bi bi-gear"></i> Réglage SMIG
       </button>
+      <button type="button" class="index_shortcut_btn" id="idx_btn_specialites" hidden title="Spécialités de la promotion professionnelle et pièces de leur dossier">
+        <i class="bi bi-mortarboard"></i> Spécialités PP
+      </button>
       <button type="button" class="index_shortcut_btn" id="idx_btn_contact">
         <i class="bi bi-search"></i> Chercher un contact
       </button>
@@ -867,7 +953,9 @@
         <button type="button" class="fi_modal_close" data-close-modal="idx_modal_contact"><i class="bi bi-x-lg"></i></button>
       </div>
       <div class="fi_modal_body">
-        <p class="loading_state">Chargement...</p>
+        <input type="search" class="idx_contact_search" id="idx_contact_input" placeholder="Nom, prénom, raison sociale..." autocomplete="off" />
+        <p class="idx_contact_meta" id="idx_contact_meta"></p>
+        <div id="idx_contact_results"><p class="loading_state">Chargement...</p></div>
       </div>
     </div>
   </div>
@@ -893,6 +981,47 @@
         <button type="button" class="btn_ghost" data-smig-copy hidden><i class="bi bi-clipboard-plus"></i> Copier SMIG</button>
         <button type="button" class="btn_ghost" data-smig-save hidden><i class="bi bi-check-lg"></i> Enregistrer</button>
         <!-- <button type="button" class="btn_ghost" data-smig-cancel>Annuler</button> -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Spécialités PP" : liste des spécialités de l'onglet "specialites"
+       (Sheet PP) avec les pièces du dossier demandées pour chacune, et ajout
+       d'une nouvelle spécialité. Ces pièces pilotent la modale "Vers dossiers"
+       et l'import Excel des dossiers de pp.html. -->
+  <div class="fi_modal_overlay" id="idx_modal_specialites">
+    <div class="fi_modal idx_spec_modal">
+      <div class="fi_modal_header">
+        <h3>Spécialités PP</h3>
+        <button type="button" class="fi_modal_close" data-close-modal="idx_modal_specialites"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body">
+        <div id="idx_spec_liste"><p class="loading_state">Chargement...</p></div>
+
+        <form class="idx_spec_form" id="idx_spec_form" hidden>
+          <h4>Nouvelle spécialité</h4>
+          <div class="fi_stage_field fi_stage_field_wide">
+            <label for="idx_spec_nom">Spécialité</label>
+            <input type="text" id="idx_spec_nom" placeholder="ex. LTI4" required />
+          </div>
+          <div class="idx_spec_checks">
+            <label><input type="checkbox" name="Photos" /> Photos</label>
+            <label><input type="checkbox" name="Copies CIN" /> Copies CIN</label>
+            <label><input type="checkbox" name="Attestation travail" /> Attestation travail</label>
+            <label><input type="checkbox" name="Profession" /> Profession</label>
+            <label><input type="checkbox" name="Affiliation SS" /> Affiliation SS <small>(Oui / Expérience PROF / Non)</small></label>
+          </div>
+          <div class="fi_stage_field">
+            <label for="idx_spec_diplome">Diplôme exigé (choix séparés par « ou »)</label>
+            <input type="text" id="idx_spec_diplome" placeholder="ex. CAP ou Certificat de scolarité (vide = non demandé)" />
+          </div>
+          <p class="idx_spec_error" id="idx_spec_error" hidden></p>
+        </form>
+      </div>
+      <div class="fi_modal_footer">
+        <button type="button" class="btn_ghost" id="idx_spec_btn_ajouter"><i class="bi bi-plus-lg"></i> Ajouter</button>
+        <button type="button" class="btn_ghost" id="idx_spec_btn_enregistrer" hidden><i class="bi bi-check-lg"></i> Enregistrer</button>
+        <button type="button" class="btn_ghost" id="idx_spec_btn_annuler" hidden>Annuler</button>
       </div>
     </div>
   </div>
@@ -967,6 +1096,7 @@
       }
 
       wireModaleCalculette();
+      wireModaleSpecialites();
       initSmigShared({
         buttonId: "idx_btn_smig",
         modalId: "fi_modal_smig",
@@ -1007,7 +1137,15 @@
 
       document.getElementById("idx_btn_contact")?.addEventListener("click", () => {
         openModal("idx_modal_contact");
+        const champ = document.getElementById("idx_contact_input");
+        champ.value = "";
+        // L'index est redemandé à chaque ouverture (le serveur ne le reconstruit
+        // que si un contact a changé) ; le cache précédent s'affiche en attendant.
+        if (CONTACTS_IDX) rechercherContactsIdx();
+        champ.focus();
+        chargerContactsIdx().then(() => rechercherContactsIdx());
       });
+      document.getElementById("idx_contact_input")?.addEventListener("input", rechercherContactsIdx);
 
       document.querySelectorAll("[data-close-modal]").forEach((btn) => {
         btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
@@ -1017,6 +1155,63 @@
           if (e.target === overlay) closeModal(overlay.id);
         });
       });
+    }
+
+    /* ============================================================
+       CHERCHER UN CONTACT — index généré chaque jour par le script
+       Apps Script (contacts_index.gs) ; lu via l'action backend
+       "getContactsIndex". Recherche insensible aux accents/casse ;
+       tous les mots saisis doivent figurer dans le nom.
+       ============================================================ */
+    let CONTACTS_IDX = null;
+    let CONTACTS_IDX_PROMESSE = null;
+
+    function normaliserRechercheIdx(v) {
+      return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+    }
+
+    function chargerContactsIdx() {
+      if (CONTACTS_IDX_PROMESSE) return CONTACTS_IDX_PROMESSE;
+      const zone = document.getElementById("idx_contact_results");
+      if (!CONTACTS_IDX) zone.innerHTML = `<p class="loading_state">Chargement...</p>`;
+      CONTACTS_IDX_PROMESSE = apiCall("getContactsIndex", {})
+        .then((data) => { CONTACTS_IDX = data; })
+        .catch((err) => {
+          zone.innerHTML = `<p class="error_state">Erreur : ${echapperHtmlIdx(err.message)}</p>`;
+        })
+        .finally(() => { CONTACTS_IDX_PROMESSE = null; });
+      return CONTACTS_IDX_PROMESSE;
+    }
+
+    function rechercherContactsIdx() {
+      const zone = document.getElementById("idx_contact_results");
+      const meta = document.getElementById("idx_contact_meta");
+      if (!CONTACTS_IDX) return;
+
+      const mots = normaliserRechercheIdx(document.getElementById("idx_contact_input").value).split(" ").filter(Boolean);
+      meta.textContent = CONTACTS_IDX.generatedAt
+        ? `${CONTACTS_IDX.count} contacts — mis à jour le ${new Date(CONTACTS_IDX.generatedAt).toLocaleString("fr-FR")}`
+        : "";
+      if (!mots.length) {
+        zone.innerHTML = `<p class="idx_spec_empty">Saisissez un nom pour lancer la recherche.</p>`;
+        return;
+      }
+
+      const trouves = CONTACTS_IDX.contacts.filter((c) => mots.every((m) => c.k.includes(m)));
+      if (!trouves.length) {
+        zone.innerHTML = `<p class="idx_spec_empty">Aucun contact trouvé.</p>`;
+        return;
+      }
+      const LIMITE = 50;
+      zone.innerHTML = trouves.slice(0, LIMITE).map((c) => `
+        <div class="idx_contact_item">
+          <div class="idx_contact_top">
+            <span class="idx_contact_nom">${echapperHtmlIdx(c.n)}</span>
+            <span class="idx_contact_tag">${echapperHtmlIdx(c.r)} · ${echapperHtmlIdx(c.s)}</span>
+          </div>
+          <p class="idx_contact_coord">${echapperHtmlIdx(c.c)}</p>
+        </div>`).join("")
+        + (trouves.length > LIMITE ? `<p class="idx_spec_empty">${trouves.length - LIMITE} autres résultats : affinez la recherche.</p>` : "");
     }
 
     function reinitialiserCalculette() {
@@ -1111,6 +1306,9 @@
         const autorise = !!user && String(user[page] || "").trim().toLowerCase() === "oui";
         carte.hidden = !autorise;
       });
+      // "Spécialités PP" : réservé aux utilisateurs ayant accès au module PP.
+      const btnSpec = document.getElementById("idx_btn_specialites");
+      if (btnSpec) btnSpec.hidden = !(user && String(user.pp || "").trim().toLowerCase() === "oui");
     }
 
     let loginUtilisateurSelectionne = null;
@@ -1194,6 +1392,110 @@
       document.getElementById("header_btn_logout").hidden = !getCurrentUser();
       appliquerPermissionsCartes(getCurrentUser());
       verifierBilansSilianaEnRetard();
+    }
+
+    /* ============================================================
+       SPÉCIALITÉS PP (raccourci accueil)
+       Onglet "specialites" de la Sheet PP : une ligne par spécialité, avec en
+       colonnes les pièces du dossier demandées (Photos, Copies CIN, Attestation
+       travail, Profession, Diplôme, Affiliation SS ;
+       "oui" pour Affiliation SS = groupe de boutons radio Oui / Expérience
+       PROF / Non dans le dossier). Actions backend : listSpecialitesDetailPP /
+       createSpecialitePP (Code.gs).
+       ============================================================ */
+
+    const SPEC_COLONNES = ["Photos", "Copies CIN", "Attestation travail", "Profession", "Diplôme",
+      "Affiliation SS"];
+
+    function echapperHtmlIdx(str) {
+      return String(str || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function wireModaleSpecialites() {
+      document.getElementById("idx_btn_specialites")?.addEventListener("click", () => {
+        basculerFormSpecialite(false);
+        openModal("idx_modal_specialites");
+        chargerSpecialitesPPIdx();
+      });
+      document.getElementById("idx_spec_btn_ajouter")?.addEventListener("click", () => basculerFormSpecialite(true));
+      document.getElementById("idx_spec_btn_annuler")?.addEventListener("click", () => basculerFormSpecialite(false));
+      document.getElementById("idx_spec_btn_enregistrer")?.addEventListener("click", enregistrerSpecialitePPIdx);
+      document.getElementById("idx_spec_form")?.addEventListener("submit", (e) => { e.preventDefault(); enregistrerSpecialitePPIdx(); });
+    }
+
+    function basculerFormSpecialite(afficher) {
+      const form = document.getElementById("idx_spec_form");
+      form.hidden = !afficher;
+      document.getElementById("idx_spec_btn_ajouter").hidden = afficher;
+      document.getElementById("idx_spec_btn_enregistrer").hidden = !afficher;
+      document.getElementById("idx_spec_btn_annuler").hidden = !afficher;
+      document.getElementById("idx_spec_error").hidden = true;
+      if (afficher) {
+        form.reset();
+        document.getElementById("idx_spec_nom").focus();
+      }
+    }
+
+    async function chargerSpecialitesPPIdx() {
+      const conteneur = document.getElementById("idx_spec_liste");
+      conteneur.innerHTML = `<p class="loading_state">Chargement...</p>`;
+      try {
+        const lignes = await apiCall("listSpecialitesDetailPP", {});
+        if (!lignes.length) {
+          conteneur.innerHTML = `<p class="idx_spec_empty">Aucune spécialité enregistrée.</p>`;
+          return;
+        }
+        const cellule = (col, valeur) => {
+          const v = String(valeur || "").trim();
+          if (!v) return `<td></td>`;
+          if (v.toLowerCase() === "oui") return `<td class="is_oui">✓</td>`;
+          if (/^si\s/i.test(v)) return `<td class="is_cond">${echapperHtmlIdx(v)}</td>`;
+          return `<td>${echapperHtmlIdx(v)}</td>`;
+        };
+        conteneur.innerHTML = `
+          <table class="idx_spec_table">
+            <thead><tr><th>Spécialité</th>${SPEC_COLONNES.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
+            <tbody>
+              ${lignes.map((l) => `<tr><td>${echapperHtmlIdx(l["Spécialité"])}</td>${SPEC_COLONNES.map((c) => cellule(c, l[c])).join("")}</tr>`).join("")}
+            </tbody>
+          </table>`;
+      } catch (err) {
+        conteneur.innerHTML = `<p class="error_state">Erreur : ${echapperHtmlIdx(err.message)}</p>`;
+      }
+    }
+
+    async function enregistrerSpecialitePPIdx() {
+      const form = document.getElementById("idx_spec_form");
+      const erreurEl = document.getElementById("idx_spec_error");
+      const nom = document.getElementById("idx_spec_nom").value.trim();
+      if (!nom) {
+        erreurEl.textContent = "Le nom de la spécialité est obligatoire.";
+        erreurEl.hidden = false;
+        return;
+      }
+      // Même format que l'onglet : "oui", diplôme exigé, ou mention conditionnelle.
+      const coche = (n) => form.elements[n].checked;
+      const record = {
+        "Spécialité": nom,
+        "Photos": coche("Photos") ? "oui" : "",
+        "Copies CIN": coche("Copies CIN") ? "oui" : "",
+        "Attestation travail": coche("Attestation travail") ? "oui" : "",
+        "Profession": coche("Profession") ? "oui" : "",
+        "Diplôme": document.getElementById("idx_spec_diplome").value.trim(),
+        "Affiliation SS": coche("Affiliation SS") ? "oui" : ""
+      };
+      const btn = document.getElementById("idx_spec_btn_enregistrer");
+      btn.disabled = true;
+      try {
+        await apiCall("createSpecialitePP", { record });
+        basculerFormSpecialite(false);
+        await chargerSpecialitesPPIdx();
+      } catch (err) {
+        erreurEl.textContent = err.message;
+        erreurEl.hidden = false;
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     /* ============================================================
