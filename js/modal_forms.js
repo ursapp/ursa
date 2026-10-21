@@ -35,15 +35,40 @@
 
 const formModalSnapshots = {}; // overlayId -> instantané sérialisé du formulaire
 
-function serializeForm(form) {
-  if (!form) return "";
+// Conteneur surveillé : le <form> s'il existe, sinon le .modal_body (pages
+// dont les champs ne sont pas dans un <form> : ci, dtc, dti).
+function serializeForm(root) {
+  if (!root) return "";
   const entries = [];
-  new FormData(form).forEach((value, key) => entries.push(`${key}=${value}`));
+  if (root.tagName === "FORM") {
+    new FormData(root).forEach((value, key) => entries.push(`${key}=${value}`));
+  } else {
+    root.querySelectorAll("input, select, textarea").forEach((el, i) => {
+      if (el.type === "button" || el.type === "submit" || el.hasAttribute("data-no-dirty")) return;
+      const key = el.name || el.id || `#${i}`;
+      const val = el.type === "checkbox" || el.type === "radio" ? (el.checked ? "1" : "0") : el.value;
+      entries.push(`${key}=${val}`);
+    });
+  }
   return entries.sort().join("&");
 }
 
+// État supplémentaire (hors champs HTML) pour les modales pilotées par un
+// brouillon JS : registerModalState(overlayId, () => JSON.stringify(brouillon)).
+const modalExtraState = {};
+function registerModalState(overlayId, getter) { modalExtraState[overlayId] = getter; }
+
+// <div class="modal_overlay" data-no-dirty> : modale de simple consultation ou
+// de choix (aucune alerte ni confirmation à la fermeture).
+function serializeModal(overlayId, formId) {
+  const overlay = document.getElementById(overlayId);
+  if (!overlay || overlay.hasAttribute("data-no-dirty")) return "";
+  const extra = modalExtraState[overlayId] ? modalExtraState[overlayId]() : "";
+  return serializeForm(resolveModalForm(overlayId, formId)) + "|" + extra;
+}
+
 function findModalForm(overlay) {
-  return overlay ? overlay.querySelector("form") : null;
+  return overlay ? (overlay.querySelector("form") || overlay.querySelector(".modal_body")) : null;
 }
 
 function resolveModalForm(overlayId, formId) {
@@ -51,10 +76,41 @@ function resolveModalForm(overlayId, formId) {
   return findModalForm(document.getElementById(overlayId));
 }
 
+// Alerte "Données à enregistrer" dans le .modal_header, affichée dès que le
+// formulaire diffère de l'instantané pris à l'ouverture.
+function getModalAlert(overlay) {
+  const header = overlay?.querySelector(".modal_header");
+  if (!header) return null;
+  let el = header.querySelector(".modal_alert");
+  if (!el) {
+    el = document.createElement("span");
+    el.className = "modal_alert";
+    el.hidden = true;
+    el.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Données à enregistrer !';
+    // .modal_close n'est pas toujours un enfant direct du .modal_header (ex. dans
+    // .modal_header_actions) : on insère dans son vrai parent, sinon insertBefore
+    // lève NotFoundError et la modale ne s'ouvre jamais.
+    const ref = header.querySelector(".modal_close");
+    (ref ? ref.parentNode : header).insertBefore(el, ref || null);
+  }
+  return el;
+}
+
+function refreshModalAlert(overlayId, formId) {
+  const overlay = document.getElementById(overlayId);
+  const el = getModalAlert(overlay);
+  if (!el) return;
+  const dirty = overlayId in formModalSnapshots &&
+    serializeModal(overlayId, formId) !== formModalSnapshots[overlayId];
+  el.hidden = !dirty;
+}
+
 function openFormModal(overlayId, formId) {
   const overlay = document.getElementById(overlayId);
   if (!overlay) return;
-  formModalSnapshots[overlayId] = serializeForm(resolveModalForm(overlayId, formId));
+  formModalSnapshots[overlayId] = serializeModal(overlayId, formId);
+  const alertEl = getModalAlert(overlay);
+  if (alertEl) alertEl.hidden = true;
   overlay.classList.add("is_visible");
 }
 
@@ -65,7 +121,7 @@ function closeFormModal(overlayId) {
 
 function attemptCloseFormModal(overlayId, formId) {
   const hasSnapshot = overlayId in formModalSnapshots;
-  const isDirty = hasSnapshot && serializeForm(resolveModalForm(overlayId, formId)) !== formModalSnapshots[overlayId];
+  const isDirty = hasSnapshot && serializeModal(overlayId, formId) !== formModalSnapshots[overlayId];
   if (isDirty && !confirm("Des modifications non enregistrées seront perdues. Fermer quand même ?")) {
     return;
   }
@@ -82,8 +138,13 @@ function wireFormModals() {
       if (e.target === overlay) attemptCloseFormModal(overlay.id, formId);
     });
 
-    overlay.querySelector("[data-modal-close]")
-      ?.addEventListener("click", () => attemptCloseFormModal(overlay.id, formId));
+    ["input", "change"].forEach((evt) =>
+      overlay.addEventListener(evt, () => refreshModalAlert(overlay.id, formId))
+    );
+
+    overlay.querySelectorAll("[data-modal-close], [data-close-modal]").forEach((btn) =>
+      btn.addEventListener("click", () => attemptCloseFormModal(overlay.id, formId))
+    );
   });
 
   document.addEventListener("keydown", (e) => {
