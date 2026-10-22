@@ -100,7 +100,7 @@
     }
     .inscrits_check_list table { width: 100%; border-collapse: collapse; }
     .inscrits_check_list th, .inscrits_check_list td {
-      padding: var(--space_2);
+      padding: var(--row_py) var(--row_px);
       border-bottom: 1px solid var(--border_soft);
       text-align: left;
       font-size: var(--fs_sm);
@@ -191,17 +191,9 @@
       padding-top: var(--space_4);
       border-top: 1px solid var(--border_soft);
     }
-    .matiere_form_actions .btn_danger {
-      order: -1;
-      margin-right: auto;
-    }
     .matiere_form_actions #etudiant_btn_base {
       order: -1;
       margin-right: auto;
-    }
-    .matiere_form_actions button[type="submit"] {
-      order: 1;
-      margin-left: auto;
     }
 
     .print_modal_hint_row {
@@ -226,7 +218,7 @@
     }
     .print_check input { width: auto; }
     .plan_table td, .plan_table th {
-      padding: var(--space_1) var(--space_2);
+      padding: var(--row_py) var(--row_px);
       text-align: center;
       vertical-align: middle;
     }
@@ -250,7 +242,7 @@
     .pr_real.pr_none { color: var(--text_secondary); font-weight: 400; }
 
     .compteur_reg_table_el td, .compteur_reg_table_el th {
-      padding: var(--space_1) var(--space_2);
+      padding: var(--row_py) var(--row_px);
       text-align: center;
       vertical-align: middle;
       white-space: nowrap;
@@ -272,7 +264,7 @@
     .cr_total_col { background: var(--color_paper_raised); }
     .cr_hour_cell { background: var(--color_paper_raised); font-weight: 600; text-align: center; }
     .compteur_reg_table_el tfoot td {
-      padding: var(--space_1) var(--space_2);
+      padding: var(--row_py) var(--row_px);
       text-align: center;
       border-top: 2px solid var(--border_soft);
     }
@@ -321,18 +313,12 @@
     }
     .reg_week_body table th,
     .reg_week_body table td {
-      padding: var(--space_1) var(--space_2);
+      padding: var(--row_py) var(--row_px);
       text-align: center;
       border-bottom: 1px solid var(--border_soft);
     }
     .reg_week_body table tr:last-child td {
       border-bottom: none;
-    }
-    .reg_week_body .empty_state {
-      padding: var(--space_3);
-      text-align: center;
-      color: var(--text_secondary);
-      font-style: italic;
     }
 
     /* Modale séquence : public en premier */
@@ -581,17 +567,11 @@
     }
     .tut_week_body table th,
     .tut_week_body table td {
-      padding: var(--space_1) var(--space_2);
+      padding: var(--row_py) var(--row_px);
       text-align: center;
       border-bottom: 1px solid var(--border_soft);
     }
     .tut_week_body table tr:last-child td { border-bottom: none; }
-    .tut_week_body .empty_state {
-      padding: var(--space_3);
-      text-align: center;
-      color: var(--text_secondary);
-      font-style: italic;
-    }
 
     /* Feuille de présence : colonne N° fixed width */
     .col-num {
@@ -650,7 +630,7 @@
     <div class="navbar_status" id="navbar_status">
       <span class="loading_state navbar_load" id="navbar_loading" hidden>Chargement...</span>
       <span class="navbar_alert" id="navbar_alert_save" hidden>
-        <i class="bi bi-exclamation-triangle-fill"></i> Données à sauvegarder !
+        <i class="bi bi-exclamation-triangle-fill"></i> Données à enregistrer !
       </span>
     </div>
     <div class="navbar_actions">
@@ -671,7 +651,7 @@
       <i class="bi bi-pencil-square"></i> Editer
     </button>
     <button type="button" class="btn_success" id="class_btn_enregistrer">
-      <i class="bi bi-save"></i> Enregistrer
+      <i class="bi bi-check-lg"></i> Enregistrer
     </button>
     <button type="button" class="btn_info" id="class_btn_imprimer">
       <i class="bi bi-printer"></i> Imprimer
@@ -695,7 +675,7 @@
 
   <main class="app_content app_content_metier">
     <!-- MODALE SÉLECTION DES SECTIONS À IMPRIMER -->
-    <div class="modal_overlay" id="print_modal">
+    <div class="modal_overlay" id="print_modal" data-no-dirty>
       <div class="modal_dialog">
         <div class="modal_header">
           <h3>Imprimer</h3>
@@ -718,7 +698,7 @@
             <label class="print_check"><input type="checkbox" name="print_section" value="compteur_tut" checked> Compteur de tutorat (par matière)</label>
             <label class="print_check"><input type="checkbox" name="print_section" value="compteur_tut_ens" checked> Compteur de tutorat (par enseignant)</label>
             <div class="matiere_form_actions">
-              <button type="submit" class="btn_success"><i class="bi bi-printer"></i> Imprimer la sélection</button>
+              <button type="submit" class="btn_info"><i class="bi bi-printer"></i> Imprimer la sélection</button>
             </div>
           </form>
         </div>
@@ -726,7 +706,7 @@
     </div>
 
     <!-- MODALE FACTURATION : N° et date de mémoire avant génération -->
-    <div class="modal_overlay" id="facturation_modal">
+    <div class="modal_overlay" id="facturation_modal" data-no-dirty>
       <div class="modal_dialog">
         <div class="modal_header">
           <h3>Facturation</h3>
@@ -934,7 +914,7 @@
       </div>
 
       <!-- MODALE RÉCUPÉRATION DEPUIS LE SEMESTRE PRÉCÉDENT -->
-      <div class="modal_overlay" id="inscrits_precedent_modal">
+      <div class="modal_overlay" id="inscrits_precedent_modal" data-no-dirty>
         <div class="modal_dialog modal_lg">
           <div class="modal_header">
             <h3>Récupérer des étudiants</h3>
@@ -961,7 +941,7 @@
       </div>
 
       <!-- MODALE IMPORT DEPUIS LA BASE (inscrits de pp.html, filtrés selon la classe) -->
-      <div class="modal_overlay" id="inscrits_base_modal">
+      <div class="modal_overlay" id="inscrits_base_modal" data-no-dirty>
         <div class="modal_dialog modal_lg">
           <div class="modal_header">
             <h3>Importer depuis la base</h3>
@@ -988,7 +968,7 @@
       </div>
 
       <!-- MODALE APERÇU IMPORT XLSX -->
-      <div class="modal_overlay" id="inscrits_import_modal">
+      <div class="modal_overlay" id="inscrits_import_modal" data-no-dirty>
         <div class="modal_dialog modal_lg">
           <div class="modal_header">
             <h3>Importer une liste xlsx</h3>
@@ -1027,7 +1007,7 @@
         </thead>
         <tbody id="inscrits_table_body"></tbody>
       </table>
-      <div class="empty_state" id="inscrits_empty">
+      <div class="empty_state" id="inscrits_empty" hidden>
         <i class="bi bi-inbox"></i>Aucun étudiant inscrit. Ajoutez-en manuellement, importez un fichier xlsx, ou récupérez la liste du semestre précédent.
       </div>
     </section>
@@ -1127,7 +1107,7 @@
         </thead>
         <tbody id="enseignants_table_body"></tbody>
       </table>
-      <div class="empty_state" id="enseignants_empty">
+      <div class="empty_state" id="enseignants_empty" hidden>
         <i class="bi bi-inbox"></i>Aucun enseignant assigné dans le plan d'étude.
       </div>
     </section>
@@ -1228,7 +1208,7 @@
       </div>
 
       <!-- MODALE RÉCUPÉRATION DEPUIS LE SEMESTRE PRÉCÉDENT -->
-      <div class="modal_overlay" id="frais_precedent_modal">
+      <div class="modal_overlay" id="frais_precedent_modal" data-no-dirty>
         <div class="modal_dialog modal_lg">
           <div class="modal_header">
             <h3>Récupérer des intervenants</h3>
@@ -1271,7 +1251,7 @@
         </thead>
         <tbody id="frais_table_body"></tbody>
       </table>
-      <div class="empty_state" id="frais_empty">
+      <div class="empty_state" id="frais_empty" hidden>
         <i class="bi bi-inbox"></i>Aucun intervenant ajouté.
       </div>
     </section>
@@ -1404,7 +1384,7 @@
         </thead>
         <tbody id="plan_table_body"></tbody>
       </table>
-      <div class="empty_state" id="plan_empty">
+      <div class="empty_state" id="plan_empty" hidden>
         <i class="bi bi-inbox"></i>Aucune matière ajoutée.
       </div>
     </section>
@@ -1417,7 +1397,7 @@
           Heures planifiées : <strong id="tut_total_planifie">0</strong> / <span class="cible_tutorat">140</span> h
         </span>
         <button type="button" class="btn_info no_mobile" id="tut_btn_planifier">
-          <i class="bi bi-calendar4-week"></i> Planifier tutorat
+          <i class="bi bi-calendar4-event"></i> Planifier tutorat
         </button>
         <button type="button" class="btn_info section_toggle_btn" id="tut_btn_hide" title="Développer la section" aria-label="Développer la section">
           <i class="bi bi-chevron-down"></i>
@@ -1488,7 +1468,7 @@
           <i class="bi bi-calendar4-event"></i> Planifier regroupements
         </button>
         <button type="button" class="btn_info no_mobile" id="exam_btn_planifier" hidden>
-          <i class="bi bi-watch"></i> Planifier examen
+          <i class="bi bi-calendar4-event"></i> Planifier examen
         </button>
         <button type="button" class="btn_info section_toggle_btn" id="reg_btn_hide" title="Développer la section" aria-label="Développer la section">
           <i class="bi bi-chevron-down"></i>
@@ -4147,6 +4127,45 @@
       return /^\d{7}$/.test(c) ? "0" + c : c;
     }
 
+    // Feuille de présence : lignes d'étudiants compactes (27 px max jusqu'à 30 étudiants, 24 px au-delà ; hauteur
+    // totale bordures comprises) et garantie d'une seule page A4. Ce script
+    // est exécuté dans la fenêtre d'impression : il mesure la page réelle
+    // (largeur 186 mm comme à l'impression) et réduit la hauteur des lignes
+    // jusqu'à ce que tout tienne dans les 277 mm utiles (A4 - marges 10 mm).
+    const ATTENDANCE_FIT_SCRIPT = `<script>
+(function () {
+  var probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;visibility:hidden;height:277mm;width:1px';
+  document.body.appendChild(probe);
+  var dispo = probe.offsetHeight - 2;
+  document.body.removeChild(probe);
+  var cells = document.querySelectorAll('table.attendance-grid tbody td');
+  var h = cells.length ? parseInt(getComputedStyle(cells[0]).height, 10) : 0;
+  function appliquer() {
+    var font = h < 13 ? 8 : h < 16 ? 9 : h < 19 ? 10 : 11;
+    for (var i = 0; i < cells.length; i++) { cells[i].style.height = h + 'px'; cells[i].style.fontSize = font + 'px'; }
+  }
+  // Mode 1 page : tout le document tient dans dispo. Mode 2 pages (data-saut) :
+  // page 1 = en-tête + tableau jusqu'à la ligne du saut ; page 2 = en-tête
+  // du tableau répété + lignes restantes.
+  var table = document.querySelector('table.attendance-grid');
+  var saut = parseInt(table.getAttribute('data-saut') || '0', 10);
+  function tient() {
+    if (!saut) return document.documentElement.scrollHeight <= dispo;
+    var rows = table.querySelectorAll('tbody tr');
+    var thead = table.querySelector('thead').getBoundingClientRect().height;
+    var p1 = table.getBoundingClientRect().top + window.scrollY + thead;
+    var p2 = thead;
+    for (var i = 0; i < rows.length; i++) {
+      var rh = rows[i].getBoundingClientRect().height;
+      if (i < saut) p1 += rh; else p2 += rh;
+    }
+    return p1 <= dispo && p2 <= dispo;
+  }
+  while (h > 10 && !tient()) { h--; appliquer(); }
+})();
+<\/script>`;
+
     function printAttendanceSheet(index) {
       const week = regroupements[index];
       if (!week) return;
@@ -4234,7 +4253,16 @@
       const tableHeaderPx = columns.length > 0 ? 155 : 26; // 5 lignes d'en-tête (dont enseignant 70px) vs 1 seule
       const availableForRowsPx = Math.max(pageHeightPx - headerBlockPx - tableHeaderPx, 200);
       const rowCountForSizing = totalInscrits > 0 ? totalInscrits : 22;
-      const rowHeightPx = Math.max(10, Math.min(22, Math.floor(availableForRowsPx / rowCountForSizing)));
+      // <= 30 étudiants : une seule page, lignes étendues (27 px max, réduites au
+      // besoin par ATTENDANCE_FIT_SCRIPT) ; au-delà : lignes de 24 px réparties
+      // sur deux pages (en-tête du tableau répété sur chacune).
+      const unePage = rowCountForSizing <= 30;
+      const rowHeightPx = unePage
+        ? Math.max(10, Math.min(27, Math.floor(availableForRowsPx / rowCountForSizing)))
+        : (rowCountForSizing <= 60 ? 24 : rowCountForSizing <= 70 ? 22 : 20);
+      // > 30 : deux pages, saut au milieu de la liste (borné par la capacité de
+      // la 1re page, en-tête du tableau compris).
+      const sautApresLigne = Math.min(Math.ceil(rowCountForSizing / 2), Math.floor((availableForRowsPx - 60) / rowHeightPx));
       const rowFontPx = rowHeightPx < 13 ? 8 : rowHeightPx < 16 ? 9 : rowHeightPx < 19 ? 10 : 11;
 
       const printWindow = window.open('', '_blank');
@@ -4257,7 +4285,9 @@
       font-family: Arial, Helvetica, sans-serif;
       color: #000;
       margin: 0;
-      padding: 20px;
+      padding: 0 20px;
+      width: 186mm;
+      box-sizing: border-box;
       font-size: 14px;
     }
     .header-title {
@@ -4334,12 +4364,17 @@
       font-weight: bold;
     }
     table.attendance-grid tbody td {
+      box-sizing: border-box;
       height: ${rowHeightPx}px;
+      padding-top: 0;
+      padding-bottom: 0;
+      line-height: 1.1;
       font-size: ${rowFontPx}px;
     }
-    table.attendance-grid, table.attendance-grid tr {
-      page-break-inside: avoid;
-    }
+    table.attendance-grid { page-break-inside: ${unePage ? 'avoid' : 'auto'}; }
+    table.attendance-grid tr { page-break-inside: avoid; }
+    table.attendance-grid thead { display: table-header-group; }
+    ${unePage ? '' : `table.attendance-grid tbody tr:nth-child(${sautApresLigne + 1}) { page-break-before: always; break-before: page; }`}
     @media print {
       body { -webkit-print-color-adjust: exact; }
       .col-num { width: 20px; }
@@ -4358,7 +4393,7 @@
     <span class="meta-right">Semaine N° ${escapeHtml(week.semaine)}</span>
   </div>
 
-  <table class="attendance-grid">
+  <table class="attendance-grid"${unePage ? '' : ` data-saut="${sautApresLigne}"`}>
     <colgroup>
       <col class="col-num">
       <col class="col-nom">
@@ -4399,6 +4434,7 @@
       ${studentRows}
     </tbody>
   </table>
+  ${ATTENDANCE_FIT_SCRIPT}
 </body>
 </html>`);
 
@@ -6652,7 +6688,7 @@
               </span>
             </div>
             <div class="reg_week_body">
-              ${seqs.length === 0 ? `<div class="empty_state">Aucune séquence</div>` : `
+              ${seqs.length === 0 ? `<div class="empty_state"><i class="bi bi-inbox"></i>Aucune séquence</div>` : `
                 <table>
                   <thead>
                     <tr>
@@ -7357,7 +7393,7 @@
         <input type="text" inputmode="numeric" autocomplete="off" maxlength="5"
                class="seq_fin seq_time_input" placeholder="10:00" value="${defaultFin}" />
         <select class="seq_matiere">${getMatiereOptions(initialMatiere, excludedNames)}</select>
-        <button type="button" class="btn_danger_small seq_remove" title="Supprimer"><i class="bi bi-x-lg"></i></button>
+        <button type="button" class="btn_danger_small seq_remove" title="Supprimer"><i class="bi bi-trash3"></i></button>
         <div class="seq_hint" data-hint></div>
       `;
 
@@ -7825,7 +7861,7 @@
         <select class="seq_matiere exam_seq_matiere">${getExamMatiereOptionsHTML(defaultMatiere)}</select>
         <span class="exam_seq_enseignant_info"></span>
         <select class="exam_seq_enseignant" hidden></select>
-        <button type="button" class="btn_danger_small seq_remove" title="Supprimer"><i class="bi bi-x-lg"></i></button>
+        <button type="button" class="btn_danger_small seq_remove" title="Supprimer"><i class="bi bi-trash3"></i></button>
       `;
 
       container.appendChild(div);
@@ -7995,7 +8031,7 @@
               </span>
             </div>
             <div class="reg_week_body">
-              ${seances.length === 0 ? `<div class="empty_state">Aucune séance</div>` : `
+              ${seances.length === 0 ? `<div class="empty_state"><i class="bi bi-inbox"></i>Aucune séance</div>` : `
                 <table>
                   <thead>
                     <tr>
@@ -8206,7 +8242,16 @@
       const tableHeaderPx = columns.length > 0 ? 155 : 26;
       const availableForRowsPx = Math.max(pageHeightPx - headerBlockPx - tableHeaderPx, 200);
       const rowCountForSizing = totalInscrits > 0 ? totalInscrits : 22;
-      const rowHeightPx = Math.max(10, Math.min(22, Math.floor(availableForRowsPx / rowCountForSizing)));
+      // <= 30 étudiants : une seule page, lignes étendues (27 px max, réduites au
+      // besoin par ATTENDANCE_FIT_SCRIPT) ; au-delà : lignes de 24 px réparties
+      // sur deux pages (en-tête du tableau répété sur chacune).
+      const unePage = rowCountForSizing <= 30;
+      const rowHeightPx = unePage
+        ? Math.max(10, Math.min(27, Math.floor(availableForRowsPx / rowCountForSizing)))
+        : (rowCountForSizing <= 60 ? 24 : rowCountForSizing <= 70 ? 22 : 20);
+      // > 30 : deux pages, saut au milieu de la liste (borné par la capacité de
+      // la 1re page, en-tête du tableau compris).
+      const sautApresLigne = Math.min(Math.ceil(rowCountForSizing / 2), Math.floor((availableForRowsPx - 60) / rowHeightPx));
       const rowFontPx = rowHeightPx < 13 ? 8 : rowHeightPx < 16 ? 9 : rowHeightPx < 19 ? 10 : 11;
 
       const printWindow = window.open('', '_blank');
@@ -8222,7 +8267,7 @@
   <title>Feuille de présence — Examen</title>
   <style>
     @page { size: A4 portrait; margin: 10mm 12mm 10mm 12mm; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 0; padding: 20px; font-size: 14px; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 0; padding: 0 20px; width: 186mm; box-sizing: border-box; font-size: 14px; }
     .header-title { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
     .sub-header-info { text-align: center; font-size: 13px; font-weight: bold; margin-bottom: 12px; }
     .meta-line { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; margin-bottom: 12px; }
@@ -8236,8 +8281,8 @@
     .row-enseignant { height: 70px; }
     .col-enseignant { vertical-align: top !important; padding-top: 6px !important; }
     .col-grp { background-color: #eef2f5 !important; font-weight: bold; }
-    table.attendance-grid tbody td { height: ${rowHeightPx}px; font-size: ${rowFontPx}px; }
-    table.attendance-grid, table.attendance-grid tr { page-break-inside: avoid; }
+    table.attendance-grid tbody td { box-sizing: border-box; height: ${rowHeightPx}px; padding-top: 0; padding-bottom: 0; line-height: 1.1; font-size: ${rowFontPx}px; }
+    table.attendance-grid { page-break-inside: ${unePage ? 'avoid' : 'auto'}; } table.attendance-grid tr { page-break-inside: avoid; } table.attendance-grid thead { display: table-header-group; } ${unePage ? '' : `table.attendance-grid tbody tr:nth-child(${sautApresLigne + 1}) { page-break-before: always; break-before: page; }`}
     @media print { body { -webkit-print-color-adjust: exact; } .col-num { width: 20px; } }
     .meta-line .meta-left { text-align: left; }
     .meta-line .meta-right { text-align: right; }
@@ -8253,7 +8298,7 @@
     <span class="meta-right">Examen</span>
   </div>
 
-  <table class="attendance-grid">
+  <table class="attendance-grid"${unePage ? '' : ` data-saut="${sautApresLigne}"`}>
     <colgroup>
       <col class="col-num">
       <col class="col-nom">
@@ -8294,6 +8339,7 @@
       ${studentRows}
     </tbody>
   </table>
+  ${ATTENDANCE_FIT_SCRIPT}
 </body>
 </html>`);
 
@@ -8464,7 +8510,7 @@
                     ${rows}
                   </tbody>
                 </table>
-              ` : `<div class="empty_state">Aucune séance</div>`}
+              ` : `<div class="empty_state"><i class="bi bi-inbox"></i>Aucune séance</div>`}
             </div>
           </div>
         `;
@@ -8612,7 +8658,7 @@
             <input type="text" class="tut_debut2 tut_time_input" placeholder="20:30" value="${s2?.debut || ''}" maxlength="5" />
             <input type="text" class="tut_fin2 tut_time_input" placeholder="22:00" value="${s2?.fin || ''}" maxlength="5" />
             <select class="tut_matiere2">${getMatiereOptionsForTutorat(s2?.matiere || '')}</select>
-            <button type="button" class="btn_danger_small tut_s2_remove" title="Retirer la 2e séance" aria-label="Retirer la 2e séance"><i class="bi bi-x-lg"></i></button>
+            <button type="button" class="btn_danger_small tut_s2_remove" title="Retirer la 2e séance" aria-label="Retirer la 2e séance"><i class="bi bi-trash3"></i></button>
           </div>
         `;
         container.appendChild(div);
