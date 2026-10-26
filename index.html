@@ -627,6 +627,13 @@
       box-shadow: 0 6px 20px rgba(22, 38, 42, 0.12);
     }
     .index_shortcut_btn[hidden] { display: none !important; }
+    /* Bouton "Suivi" coloré selon la prochaine date de contrôle :
+       aujourd'hui (rouge) / demain (orange) / programmé (vert) ; sans pastille = aucun contrôle à venir. */
+    .index_shortcut_btn.is_ctrl_aujourdhui { background: color-mix(in srgb, var(--color_danger) 16%, var(--color_paper_raised)); border-color: var(--color_danger); }
+    .index_shortcut_btn.is_ctrl_aujourdhui i { color: var(--color_danger); }
+    .index_shortcut_btn.is_ctrl_demain { background: color-mix(in srgb, #d97706 18%, var(--color_paper_raised)); border-color: #d97706; }
+    .index_shortcut_btn.is_ctrl_demain i { color: #d97706; }
+    .index_shortcut_btn.is_ctrl_programme { background: color-mix(in srgb, var(--color_teal) 16%, var(--color_paper_raised)); border-color: var(--color_teal); }
     /* Sur mobile, les boutons de raccourci n'affichent que leur icône */
     @media (max-width: 560px) {
       .index_shortcut_btn {
@@ -668,6 +675,40 @@
     .fi_modal_close:hover { color: var(--color_danger); }
     .fi_modal_body { padding: var(--space_4); max-height: 60vh; overflow-y: auto; }
     .fi_modal_footer { padding: var(--space_4); border-top: 1px solid var(--border_soft); display: flex; justify-content: flex-end; gap: var(--space_3); }
+
+    /* ---------- Modale "Suivi" : Gantt des actions confirmées ---------- */
+    .idx_suivi_modal { width: fit-content; min-width: 320px; max-width: 96vw; }
+    .idx_suivi_spinner { display: flex; align-items: center; justify-content: center; min-height: 160px; }
+    .idx_suivi_spinner::after { content: ""; width: 32px; height: 32px; border: 3px solid var(--border_soft); border-top-color: var(--color_teal); border-radius: 50%; animation: idx_suivi_spin .8s linear infinite; }
+    @keyframes idx_suivi_spin { to { transform: rotate(360deg); } }
+    .idx_suivi_modal .fi_modal_body { max-height: 70vh; padding: 0; overflow: auto; }
+    .idx_gantt { --idx_controle: #d97706; display: grid; width: max-content; min-width: 100%; font-size: var(--fs_xs); }
+    .idx_gantt_cell { border-bottom: 1px solid var(--border_soft); min-height: 44px; position: relative; }
+    .idx_gantt_head { position: sticky; top: 0; z-index: 3; background: var(--color_paper_raised); min-height: 22px; text-align: center; color: var(--text_secondary); font-weight: 600; border-left: 1px solid var(--border_soft); }
+    .idx_gantt_head.is_month { top: 0; text-align: left; padding-left: var(--space_2); }
+    .idx_gantt_head.is_day { top: 22px; line-height: 1.25; }
+    .idx_gantt_head.is_month { white-space: nowrap; overflow: hidden; }
+    .idx_gantt_wd { display: block; font-weight: 500; font-size: .85em; opacity: .85; }
+    .idx_gantt_head.is_today { color: var(--color_danger); }
+    /* Ligne des jours : vert clair = jour couvert par au moins une formation ;
+       orange clair = jour de contrôle (prioritaire sur le vert). */
+    .idx_gantt_head.is_formation { background: color-mix(in srgb, var(--color_teal) 28%, var(--color_paper_raised)); }
+    .idx_gantt_head.is_controle { background: color-mix(in srgb, var(--idx_controle) 32%, var(--color_paper_raised)); }
+    /* Colonne d'un jour de contrôle : bande orange clair sur toute la hauteur (sans position:relative, pour rester sous les barres). */
+    .idx_gantt_colctrl { min-height: 44px; background: color-mix(in srgb, var(--idx_controle) 14%, transparent); }
+    .idx_gantt_label { position: sticky; left: 0; z-index: 2; background: var(--color_paper_raised); padding: var(--space_2) var(--space_3); border-right: 1px solid var(--border_soft); }
+    .idx_gantt_label.is_corner { z-index: 4; top: 0; grid-row: span 2; font-weight: 600; color: var(--text_secondary); }
+    .idx_gantt_label b { display: block; font-size: var(--fs_sm); }
+    .idx_gantt_label span { display: block; color: var(--text_secondary); }
+    .idx_gantt_bar { align-self: center; height: 22px; margin: 0 1px; background: var(--color_teal); border-radius: var(--radius_sm); opacity: .9; }
+    .idx_gantt_controle { align-self: center; justify-self: center; z-index: 1; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; color: var(--idx_controle); font-size: 1.05rem; line-height: 1; filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); cursor: grab; touch-action: none; user-select: none; }
+    .idx_gantt_controle.is_drag { cursor: grabbing; z-index: 5; transform-origin: center; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+    .idx_suivi_legende { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space_1) var(--space_4); padding: var(--space_2) var(--space_4); border-top: 1px solid var(--border_soft); font-size: var(--fs_xs); color: var(--text_secondary); }
+    .idx_suivi_legende i { color: var(--idx_controle, #d97706); margin-right: var(--space_1); }
+    .idx_gantt_bar.is_libre { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: copy; transition: opacity .5s; }
+    .idx_gantt_bar.is_libre.is_appui { opacity: .55; }
+    .idx_gantt_today { background: rgba(200, 60, 60, 0.07); }
+    .idx_suivi_vide { padding: var(--space_4); color: var(--text_secondary); }
 
     /* ---------- Modale Calculette de stage (recopiée depuis fi.html, mode autonome) ---------- */
     .idx_calculette_modal .fi_modal_body {
@@ -847,10 +888,8 @@
         </div>
         <h3>Droits de tirage collectifs</h3>
         <ul class="index_card_sections">
-          <li><a href="dtc.html#conventions">Conventions</a></li>
-          <li><a href="dtc.html#demandes">Demandes</a></li>
-          <li><a href="dtc.html#realisation">Réalisation</a></li>
-          <li><a href="dtc.html#facturation">Facturation</a></li>
+          <li><a href="dtc.html#commissions">Commissions</a></li>
+          <li><a href="dtc.html#consultations">Consultations</a></li>
         </ul>
       </article>
 
@@ -861,8 +900,8 @@
         </div>
         <h3>Promotion professionnelle</h3>
         <ul class="index_card_sections">
-          <li><a href="pp.html#campagne">Campagne</a></li>
-          <li><a href="pp.html#demandes">Demandes</a> / <a href="pp.html#dossiers">Dossiers</a></li>
+          <li><a href="pp.html#demandes">Demandes</a></li>
+          <li><a href="pp.html#dossiers">Dossiers</a></li>
           <li><a href="pp.html#inscrits">Inscrits</a></li>
           <li><a href="pp.html#classes">Classes</a></li>
         </ul>
@@ -905,6 +944,9 @@
       </button>
       <button type="button" class="index_shortcut_btn" id="idx_btn_specialites" hidden title="Spécialités de la promotion professionnelle et pièces de leur dossier">
         <i class="bi bi-mortarboard"></i> Spécialités PP
+      </button>
+      <button type="button" class="index_shortcut_btn" id="idx_btn_suivi" title="Planning des actions confirmées">
+        <i class="bi bi-calendar3-range"></i> Suivi
       </button>
       <button type="button" class="index_shortcut_btn" id="idx_btn_contact">
         <i class="bi bi-search"></i> Chercher un contact
@@ -956,6 +998,22 @@
         <input type="search" class="idx_contact_search" id="idx_contact_input" placeholder="Nom, prénom, raison sociale..." autocomplete="off" />
         <p class="idx_contact_meta" id="idx_contact_meta"></p>
         <div id="idx_contact_results"><p class="loading_state">Chargement...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Suivi" : planning (Gantt) des actions confirmées des plans DTI de
+       l'année (date début/fin, horaire, lieu court). Données : listActionsConfirmees. -->
+  <div class="fi_modal_overlay" id="idx_modal_suivi">
+    <div class="fi_modal idx_suivi_modal">
+      <div class="fi_modal_header">
+        <h3>Suivi — actions confirmées <span id="idx_suivi_annee"></span></h3>
+        <button type="button" class="fi_modal_close" data-close-modal="idx_modal_suivi"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body" id="idx_suivi_corps"></div>
+      <div class="idx_suivi_legende">
+        <span><i class="bi bi-clipboard-check-fill"></i> Glisser l'icône : changer la date du contrôle</span>
+        <span><i class="bi bi-hand-index-thumb"></i> Appui prolongé sur une barre : créer le contrôle</span>
       </div>
     </div>
   </div>
@@ -1097,6 +1155,7 @@
 
       wireModaleCalculette();
       wireModaleSpecialites();
+      wireModaleSuivi();
       initSmigShared({
         buttonId: "idx_btn_smig",
         modalId: "fi_modal_smig",
@@ -1139,8 +1198,8 @@
         openModal("idx_modal_contact");
         const champ = document.getElementById("idx_contact_input");
         champ.value = "";
-        // L'index est redemandé à chaque ouverture (le serveur ne le reconstruit
-        // que si un contact a changé) ; le cache précédent s'affiche en attendant.
+        // L'index est reconstruit par le serveur à chaque ouverture ;
+        // le résultat précédent s'affiche en attendant.
         if (CONTACTS_IDX) rechercherContactsIdx();
         champ.focus();
         chargerContactsIdx().then(() => rechercherContactsIdx());
@@ -1158,9 +1217,277 @@
     }
 
     /* ============================================================
-       CHERCHER UN CONTACT — index généré chaque jour par le script
-       Apps Script (contacts_index.gs) ; lu via l'action backend
-       "getContactsIndex". Recherche insensible aux accents/casse ;
+       SUIVI — Gantt des actions confirmées (plans DTI de l'année).
+       Une ligne par action, barre = dateDebut → dateFin ; la ligne
+       indique entreprise, réf, lieu court ("Siège de la société -
+       Siliana" → "Siliana") et horaire.
+       ============================================================ */
+    let SUIVI_ANNEE = new Date().getFullYear();
+    let SUIVI_JETON = 0;
+    let SUIVI_ACTIONS = []; // actions brutes renvoyées par listActionsConfirmees (modifiées en place lors d'un glisser du contrôle)
+
+    function wireModaleSuivi() {
+      document.getElementById("idx_btn_suivi")?.addEventListener("click", () => {
+        SUIVI_ANNEE = new Date().getFullYear();
+        openModal("idx_modal_suivi");
+        document.getElementById("idx_suivi_annee").textContent = SUIVI_ANNEE;
+        if (SUIVI_CHARGE) {
+          // Données déjà préchargées au démarrage : affichage immédiat, puis actualisation discrète.
+          rendreSuivi(true);
+          prechargerSuivi(true);
+        } else {
+          chargerSuivi();
+        }
+      });
+      setInterval(colorerBoutonSuivi, 5 * 60 * 1000); // le "aujourd'hui / demain" change à minuit
+    }
+
+    // Chargement des données du Suivi dès l'ouverture de l'index (une fois connecté),
+    // pour colorer le bouton sans attendre l'ouverture de la modale.
+    let SUIVI_CHARGE = false, SUIVI_EN_COURS = false;
+    async function prechargerSuivi(forcer) {
+      if (SUIVI_EN_COURS || (SUIVI_CHARGE && !forcer)) return;
+      SUIVI_EN_COURS = true;
+      const annee = new Date().getFullYear();
+      try {
+        const actions = await apiCall("listActionsConfirmees", { annee });
+        SUIVI_ACTIONS = Array.isArray(actions) ? actions : [];
+        SUIVI_CHARGE = true;
+        colorerBoutonSuivi();
+        // Modale ouverte pendant l'actualisation : on redessine en conservant la position.
+        if (forcer && document.getElementById("idx_modal_suivi")?.classList.contains("is_visible")) rendreSuivi(false);
+      } catch (err) {
+        console.warn("Suivi : préchargement impossible :", err.message || err);
+      } finally {
+        SUIVI_EN_COURS = false;
+      }
+    }
+
+    // Prochaine date de contrôle (aujourd'hui ou à venir) -> classe du bouton.
+    function colorerBoutonSuivi() {
+      const btn = document.getElementById("idx_btn_suivi");
+      if (!btn) return;
+      const auj = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000); // jour local
+      const jours = SUIVI_ACTIONS.map((a) => jourUtcSuivi(a.dateControle)).filter((j) => j !== null && j >= auj);
+      btn.classList.remove("is_ctrl_aujourdhui", "is_ctrl_demain", "is_ctrl_programme");
+      let titre = "Planning des actions confirmées";
+      if (jours.includes(auj)) { btn.classList.add("is_ctrl_aujourdhui"); titre += " — contrôle aujourd'hui"; }
+      else if (jours.includes(auj + 1)) { btn.classList.add("is_ctrl_demain"); titre += " — contrôle demain"; }
+      else if (jours.length) { btn.classList.add("is_ctrl_programme"); titre += " — contrôle programmé"; }
+      btn.title = titre;
+    }
+
+    async function chargerSuivi() {
+      const corps = document.getElementById("idx_suivi_corps");
+      document.getElementById("idx_suivi_annee").textContent = SUIVI_ANNEE;
+      corps.innerHTML = `<div class="idx_suivi_spinner" role="status" aria-label="Chargement"></div>`;
+      const jeton = ++SUIVI_JETON; // ignore une réponse périmée (changement d'année rapide)
+      try {
+        const actions = await apiCall("listActionsConfirmees", { annee: SUIVI_ANNEE });
+        if (jeton !== SUIVI_JETON) return;
+        SUIVI_ACTIONS = Array.isArray(actions) ? actions : [];
+        SUIVI_CHARGE = true;
+        rendreSuivi(true);
+      } catch (err) {
+        if (jeton !== SUIVI_JETON) return;
+        corps.innerHTML = `<p class="idx_suivi_vide">Erreur de chargement : ${escSuivi(err.message || err)}</p>`;
+      }
+    }
+
+    // Redessine le Gantt ; hors premier affichage, conserve la position de défilement.
+    function rendreSuivi(centrerSurAujourdhui) {
+      const corps = document.getElementById("idx_suivi_corps");
+      const gauche = corps.scrollLeft, haut = corps.scrollTop;
+      corps.innerHTML = construireGantt(SUIVI_ACTIONS);
+      if (centrerSurAujourdhui) {
+        const auj = corps.querySelector(".idx_gantt_head.is_today");
+        if (auj) corps.scrollLeft = Math.max(0, auj.offsetLeft - 300);
+      } else {
+        corps.scrollLeft = gauche;
+        corps.scrollTop = haut;
+      }
+      brancherGlisserControle(corps);
+      brancherAppuiLongControle(corps);
+      colorerBoutonSuivi();
+    }
+
+    // Appui prolongé (≈ 0,5 s) sur la barre d'une action sans contrôle : l'icône de
+    // contrôle est placée au jour pressé (borné à dateDebut → dateFin), puis enregistrée
+    // comme pour un glissement. Un déplacement du doigt/souris > 8 px annule (défilement).
+    function brancherAppuiLongControle(corps) {
+      const LARGEUR_JOUR = 26;
+      const DUREE_MS = 500;
+      corps.querySelectorAll(".idx_gantt_bar.is_libre").forEach((barre) => {
+        barre.addEventListener("contextmenu", (e) => e.preventDefault());
+        barre.addEventListener("pointerdown", (e) => {
+          if (e.button !== undefined && e.button !== 0) return;
+          const x0 = e.clientX, y0 = e.clientY;
+          const d1 = Number(barre.dataset.d1), d2 = Number(barre.dataset.d2);
+          let minuteur = null;
+
+          const annuler = () => {
+            clearTimeout(minuteur);
+            barre.classList.remove("is_appui");
+            barre.removeEventListener("pointermove", bouger);
+            barre.removeEventListener("pointerup", annuler);
+            barre.removeEventListener("pointercancel", annuler);
+            barre.removeEventListener("pointerleave", annuler);
+          };
+          const bouger = (ev) => {
+            if (Math.abs(ev.clientX - x0) > 8 || Math.abs(ev.clientY - y0) > 8) annuler();
+          };
+
+          barre.classList.add("is_appui");
+          barre.addEventListener("pointermove", bouger);
+          barre.addEventListener("pointerup", annuler);
+          barre.addEventListener("pointercancel", annuler);
+          barre.addEventListener("pointerleave", annuler);
+
+          minuteur = setTimeout(() => {
+            const gauche = barre.getBoundingClientRect().left;
+            const jour = Math.min(d2, Math.max(d1, d1 + Math.floor((x0 - gauche) / LARGEUR_JOUR)));
+            annuler();
+            enregistrerDateControleSuivi(barre.dataset.plan, barre.dataset.ref, jour);
+          }, DUREE_MS);
+        });
+      });
+    }
+
+    // Glisser l'icône de contrôle : déplacement par jours entiers, limité aux
+    // jours de la formation (dateDebut → dateFin) de sa ligne ; au relâchement,
+    // la nouvelle date est enregistrée dans le plan (action modifierDateControleAction).
+    function brancherGlisserControle(corps) {
+      const LARGEUR_JOUR = 26; // doit correspondre à repeat(n, 26px) de construireGantt
+      corps.querySelectorAll(".idx_gantt_controle").forEach((ic) => {
+        ic.addEventListener("pointerdown", (e) => {
+          if (e.button !== undefined && e.button !== 0) return;
+          e.preventDefault();
+          const d1 = Number(ic.dataset.d1), d2 = Number(ic.dataset.d2), depart = Number(ic.dataset.dc);
+          const origine = e.clientX;
+          let cible = depart;
+          ic.setPointerCapture(e.pointerId);
+          ic.classList.add("is_drag");
+
+          const deplacer = (ev) => {
+            const delta = Math.round((ev.clientX - origine) / LARGEUR_JOUR);
+            cible = Math.min(d2, Math.max(d1, depart + delta));
+            ic.style.transform = `translateX(${(cible - depart) * LARGEUR_JOUR}px)`;
+          };
+          const terminer = (ev) => {
+            ic.removeEventListener("pointermove", deplacer);
+            ic.removeEventListener("pointerup", terminer);
+            ic.removeEventListener("pointercancel", terminer);
+            ic.classList.remove("is_drag");
+            if (ev.type === "pointercancel" || cible === depart) { ic.style.transform = ""; return; }
+            enregistrerDateControleSuivi(ic.dataset.plan, ic.dataset.ref, cible);
+          };
+          ic.addEventListener("pointermove", deplacer);
+          ic.addEventListener("pointerup", terminer);
+          ic.addEventListener("pointercancel", terminer);
+        });
+      });
+    }
+
+    // Mise à jour immédiate de l'affichage, puis enregistrement ; en cas d'échec, retour à l'ancienne date.
+    async function enregistrerDateControleSuivi(planId, ref, jour) {
+      const action = SUIVI_ACTIONS.find((a) => a.planId === planId && String(a.ref) === String(ref));
+      if (!action) return;
+      const ancienne = action.dateControle;
+      const iso = new Date(jour * 86400000).toISOString().slice(0, 10);
+      action.dateControle = iso;
+      rendreSuivi(false);
+      try {
+        await apiCall("modifierDateControleAction", { fileId: planId, ref, dateControle: iso });
+      } catch (err) {
+        action.dateControle = ancienne;
+        rendreSuivi(false);
+        alert("Date de contrôle non enregistrée : " + (err.message || err));
+      }
+    }
+
+    function escSuivi(v) {
+      return String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    }
+    function lieuCourtSuivi(l) {
+      const parts = String(l || "").split(/\s[-–—]\s/);
+      return parts[parts.length - 1].trim();
+    }
+    function jourUtcSuivi(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+      return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000 : null;
+    }
+
+    function construireGantt(actions) {
+      const lignes = actions
+        .map((a) => ({ ...a, d1: jourUtcSuivi(a.dateDebut), d2: jourUtcSuivi(a.dateFin), dc: jourUtcSuivi(a.dateControle) }))
+        .filter((a) => a.d1 !== null)
+        .map((a) => ({ ...a, d2: a.d2 === null || a.d2 < a.d1 ? a.d1 : a.d2 }))
+        .sort((x, y) => x.d1 - y.d1 || x.d2 - y.d2);
+      if (!lignes.length) return `<p class="idx_suivi_vide">Aucune action confirmée pour ${SUIVI_ANNEE}.</p>`;
+
+      const min = Math.min(...lignes.map((a) => a.d1)) - 2;
+      let max = Math.max(...lignes.map((a) => a.d2)) + 2;
+      // Le dernier mois doit couvrir au moins 4 colonnes pour que "mois année" tienne sur une seule ligne.
+      const moisFin = new Date(max * 86400000).getUTCMonth();
+      let spanFin = 0;
+      while (new Date((max - spanFin) * 86400000).getUTCMonth() === moisFin && max - spanFin >= min) spanFin++;
+      if (spanFin < 4) max += 4 - spanFin;
+      const n = max - min + 1;
+      const auj = Math.floor(Date.now() / 86400000);
+      const JOURS = ["D", "L", "M", "M", "J", "V", "S"]; // initiales, dimanche = 0
+      const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+
+      // Jours couverts par au moins une formation / jours de contrôle (colonnes colorées)
+      const joursFormation = new Set(), joursControle = new Set();
+      lignes.forEach((a) => {
+        for (let d = a.d1; d <= a.d2; d++) joursFormation.add(d);
+        if (a.dc !== null) joursControle.add(a.dc);
+      });
+
+      let html = `<div class="idx_gantt" data-min="${min}" style="grid-template-columns: 230px repeat(${n}, 26px);">`;
+      html += `<div class="idx_gantt_label is_corner" style="grid-column:1;grid-row:1 / span 2;">Action</div>`;
+
+      // Ligne des mois (cellules fusionnées) puis ligne des jours
+      let col = 2;
+      while (col < n + 2) {
+        const d = new Date((min + col - 2) * 86400000);
+        const mois = d.getUTCMonth();
+        let span = 0;
+        while (col + span < n + 2 && new Date((min + col + span - 2) * 86400000).getUTCMonth() === mois) span++;
+        html += `<div class="idx_gantt_head is_month" style="grid-column:${col} / span ${span};grid-row:1;">${MOIS[mois]} ${d.getUTCFullYear()}</div>`;
+        col += span;
+      }
+      for (let i = 0; i < n; i++) {
+        const d = new Date((min + i) * 86400000);
+        const jour = min + i;
+        const classes = `${jour === auj ? " is_today" : ""}${joursFormation.has(jour) ? " is_formation" : ""}${joursControle.has(jour) ? " is_controle" : ""}`;
+        html += `<div class="idx_gantt_head is_day${classes}" style="grid-column:${i + 2};grid-row:2;"><span class="idx_gantt_wd">${JOURS[d.getUTCDay()]}</span>${d.getUTCDate()}</div>`;
+      }
+
+      lignes.forEach((a, r) => {
+        const row = r + 3;
+        const lieu = lieuCourtSuivi(a.lieu);
+        const info = [a.ref, lieu].filter(Boolean).join(" · ");
+        const infoBulle = [a.theme, `${a.dateDebut} → ${a.dateFin}`, a.horaire, a.lieu, a.cabinet, a.dc !== null ? `Contrôle : ${a.dateControle}${a.chargeControle ? " (" + a.chargeControle + ")" : ""}` : ""].filter(Boolean).join("\n");
+        html += `<div class="idx_gantt_label" style="grid-column:1;grid-row:${row};" title="${escSuivi(infoBulle)}"><b>${escSuivi(a.entreprise)}</b><span>${escSuivi(info)}</span><span>${escSuivi(a.horaire)}</span></div>`;
+        joursControle.forEach((jc) => {
+          if (jc >= min && jc <= max) html += `<div class="idx_gantt_colctrl" style="grid-column:${jc - min + 2};grid-row:${row};"></div>`;
+        });
+        if (auj >= min && auj <= max) html += `<div class="idx_gantt_cell idx_gantt_today" style="grid-column:${auj - min + 2};grid-row:${row};"></div>`;
+        // Action sans contrôle : la barre porte les données nécessaires au placement par appui prolongé.
+        const libre = a.dc === null;
+        const dataLibre = libre ? ` data-libre="1" data-plan="${escSuivi(a.planId)}" data-ref="${escSuivi(a.ref)}" data-d1="${a.d1}" data-d2="${a.d2}"` : "";
+        const titreBarre = libre ? infoBulle + "\nAppui prolongé : placer le contrôle à cette date" : infoBulle;
+        html += `<div class="idx_gantt_bar${libre ? " is_libre" : ""}"${dataLibre} style="grid-column:${a.d1 - min + 2} / ${a.d2 - min + 3};grid-row:${row};" title="${escSuivi(titreBarre)}"></div>`;
+        if (a.dc !== null && a.dc >= min && a.dc <= max) html += `<div class="idx_gantt_controle" data-plan="${escSuivi(a.planId)}" data-ref="${escSuivi(a.ref)}" data-d1="${a.d1}" data-d2="${a.d2}" data-dc="${a.dc}" style="grid-column:${a.dc - min + 2};grid-row:${row};" title="${escSuivi("Contrôle : " + a.dateControle + (a.chargeControle ? " (" + a.chargeControle + ")" : "") + " — glisser pour changer la date")}"><i class="bi bi-clipboard-check-fill"></i></div>`;
+      });
+      return html + `</div>`;
+    }
+
+    /* ============================================================
+       CHERCHER UN CONTACT — index reconstruit à chaque ouverture de la
+       modale par le script Apps Script (getcontact.gs), via l'action
+       backend "getContactsIndex". Recherche insensible aux accents/casse ;
        tous les mots saisis doivent figurer dans le nom.
        ============================================================ */
     let CONTACTS_IDX = null;
@@ -1392,6 +1719,7 @@
       document.getElementById("header_btn_logout").hidden = !getCurrentUser();
       appliquerPermissionsCartes(getCurrentUser());
       verifierBilansSilianaEnRetard();
+      if (getCurrentUser()) prechargerSuivi(false);
     }
 
     /* ============================================================
