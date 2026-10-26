@@ -229,7 +229,7 @@
         <div class="sidebar_group_label">Sur cette page</div>
         <a class="sidebar_section_link is_active" href="#formation_initiale">Formation initiale</a>
         <a class="sidebar_section_link" href="#plans">Plans</a>
-        <a class="sidebar_section_link" href="#commission">Commission</a>
+        <a class="sidebar_section_link" href="#commission">Commissions</a>
 
         <div class="sidebar_divider"></div>
 
@@ -271,7 +271,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody><tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr></tbody>
         </table>
         <div class="empty_state" id="fi_recap_empty" hidden>
           <i class="bi bi-inbox"></i>Aucun calcul enregistré pour cette année.
@@ -296,7 +296,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody><tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr></tbody>
         </table>
         <div class="empty_state" id="dti_plans_empty" hidden>
           <i class="bi bi-inbox"></i>Aucun plan enregistré pour cette année.
@@ -305,28 +305,29 @@
 
       <section id="commission" class="panel">
         <div class="panel_header">
-          <h2><i class="bi bi-people"></i> Commission</h2>
+          <h2><i class="bi bi-people"></i> Commissions</h2>
           <button type="button" id="dti_btn_nouvelle_commission" class="btn_seal no_mobile"><i class="bi bi-plus-lg"></i> Nouvelle commission</button>
         </div>
 
         <table class="data_table" id="dti_commissions_table">
           <thead>
             <tr>
-              <th>N° commission</th>
+              <th>Num UR - Num année/année</th>
               <th>Date</th>
+              <th>Date report</th>
               <th>État</th>
               <th>Plans</th>
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody><tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr></tbody>
         </table>
         <div class="empty_state" id="dti_commissions_empty" hidden>
           <i class="bi bi-people"></i>Aucune commission enregistrée.
         </div>
       </section>
 
-      <div class="modal_overlay" id="dti_modal_smig">
+      <div class="modal_overlay" id="dti_modal_smig" data-no-dirty>
         <div class="modal_dialog fi_smig_modal">
           <div class="modal_header">
             <h3>Réglage Smig</h3>
@@ -345,13 +346,13 @@
           </div>
           <div class="fi_smig_footer">
             <button type="button" class="btn_ghost" data-smig-copy hidden><i class="bi bi-clipboard-plus"></i> Copier SMIG</button>
-            <button type="button" class="btn_ghost" data-smig-save hidden><i class="bi bi-check-lg"></i> Enregistrer</button>
+            <button type="button" class="btn_success" data-smig-save hidden><i class="bi bi-check-lg"></i> Enregistrer</button>
             <!-- <button type="button" class="btn_ghost" data-smig-cancel>Annuler</button> -->
           </div>
         </div>
       </div>
 
-      <div class="modal_overlay" id="dti_realisation_modal">
+      <div class="modal_overlay" id="dti_realisation_modal" data-no-dirty>
         <div class="modal_dialog">
           <div class="modal_header">
             <h3>Réalisations selon budget</h3>
@@ -395,7 +396,7 @@
            classe" dans pp.html), fi.html ne gérant plus que l'édition d'un
            dossier déjà déterminé (calcul existant via "Afficher", ou
            entreprise fraîchement choisie via ?ese=). -->
-      <div class="modal_overlay" id="dti_modal_nouveau_calcul">
+      <div class="modal_overlay" id="dti_modal_nouveau_calcul" data-no-dirty>
         <div class="modal_dialog">
           <div class="modal_header">
             <h3>Nouveau calcul — choisir une entreprise</h3>
@@ -424,7 +425,7 @@
               <label>Entreprise
                 <input type="text" id="dti_editer_entreprise" readonly />
               </label>
-              <label>Matricule
+              <label>Matricule (Fiscal | CNSS)
                 <input type="text" id="dti_editer_matricule" />
               </label>
               <label>Année FI
@@ -459,7 +460,7 @@
            Cette même modale est dupliquée dans plan.html (id
            "pl_modal_nouveau_plan"), sans la liste de sélection puisque
            l'entreprise/le calcul y sont déjà déterminés par l'URL. -->
-      <div class="modal_overlay" id="dti_modal_nouveau_plan">
+      <div class="modal_overlay" id="dti_modal_nouveau_plan" data-no-dirty>
         <div class="modal_dialog">
           <div class="modal_header">
             <h3>Nouveau plan</h3>
@@ -469,6 +470,16 @@
             <input type="text" class="dti_modal_search" id="dti_nouveau_plan_search" placeholder="Rechercher (entreprise)…" />
             <ul class="dti_ese_list" id="dti_nouveau_plan_list"></ul>
             <div class="dti_realisation_grid dti_nouveau_plan_grid">
+              <label class="dti_nouveau_plan_matricule_champ" hidden>Matricule fiscal (à renseigner)
+                <input type="text" id="dti_nouveau_plan_matricule_fiscal" placeholder="Ex : 1221646WAM000" />
+              </label>
+              <label class="dti_nouveau_plan_matricule_champ" hidden>N° CNSS (à renseigner)
+                <input type="text" id="dti_nouveau_plan_matricule_cnss" placeholder="Ex : 33440748" />
+              </label>
+              <label>Montant du plan
+                <input type="text" id="dti_nouveau_plan_montant" inputmode="decimal" placeholder="Montant (obligatoire)" />
+                <small id="dti_nouveau_plan_montant_note" class="dti_plan_montant_note"></small>
+              </label>
               <label>Date de la demande
                 <input type="date" id="dti_nouveau_plan_date" />
               </label>
@@ -501,7 +512,7 @@
               <label>Entreprise
                 <input type="text" id="dti_editer_plan_entreprise" readonly />
               </label>
-              <label>Matricule
+              <label>Matricule fiscal
                 <input type="text" id="dti_editer_plan_matricule" />
               </label>
               <label>Budget FI
@@ -529,7 +540,10 @@
                 <span class="dti_plan_montant_note" id="dti_editer_plan_montant_note"></span>
               </label>
               <label>Régime horaire
-                <input type="text" id="dti_editer_plan_regime_horaire" />
+                <span style="display:flex;gap:6px;align-items:center">
+                  <input type="text" id="dti_editer_plan_regime_horaire" style="flex:1" />
+                  <button type="button" class="btn_info" id="dti_editer_plan_regime_horaire_refresh" style="display:none" title="Récupérer le régime horaire depuis le calcul Formation initiale lié"><i class="bi bi-arrow-clockwise"></i> Rafraîchir</button>
+                </span>
               </label>
             </div>
           </div>
@@ -541,10 +555,10 @@
 
       <!-- Modale "Nouvelle commission" / "Éditer la commission" — une seule
            modale pour les deux cas (dataset.commissionId vide = nouvelle).
-           Le champ Date n'est actif que si État = "Programmée" (voir
-           appliquerVerrouDateCommission) ; les plans cochables sont ceux en
-           état "Demandé" (dtiPlansCache), plus ceux déjà rattachés à cette
-           commission si on édite. -->
+           Le champ Date est inactif tant que État = "Prévue" ; "Date report"
+           n'apparaît que si État = "Reportée" (voir appliquerVerrousCommission).
+           Les plans cochables sont ceux en état "Demandé" (dtiPlansCache),
+           plus ceux déjà rattachés à cette commission si on édite. -->
       <div class="modal_overlay" id="dti_modal_commission">
         <div class="modal_dialog">
           <div class="modal_header">
@@ -554,21 +568,27 @@
           <div class="modal_body">
             <div class="dti_realisation_grid">
               <label>N° commission UR
-                <input type="text" id="dti_commission_num_ur" title="Numéro cumulé depuis la création de l'unité (ne se réinitialise jamais)" placeholder="Cumulé depuis la création de l'UR" />
+                <input type="text" id="dti_commission_num_ur" title="Numéro cumulé depuis la création de l'unité (ne se réinitialise jamais)" placeholder="À saisir (première commission)" />
               </label>
               <label>N° commission année
-                <input type="text" id="dti_commission_num_annee" title="Numéro cumulé depuis le début de l'année en cours (repart de 1 chaque année)" placeholder="Cumulé depuis le début de l'année" />
+                <input type="text" id="dti_commission_num_annee" title="Numéro cumulé depuis le début de l'année en cours (repart de 1 chaque année)" placeholder="À saisir (première commission)" />
+              </label>
+              <label>Année
+                <input type="text" id="dti_commission_annee" disabled />
               </label>
               <label>État
                 <select id="dti_commission_etat">
                   <option value="Prévue">Prévue</option>
                   <option value="Programmée">Programmée</option>
                   <option value="Reportée">Reportée</option>
-                  <option value="Achevé">Achevé</option>
+                  <option value="Clôturée">Clôturée</option>
                 </select>
               </label>
               <label>Date
                 <input type="date" id="dti_commission_date" disabled />
+              </label>
+              <label id="dti_commission_report_field" style="display:none">Date report
+                <input type="date" id="dti_commission_date_report" />
               </label>
             </div>
             <div class="dti_commission_plans_field">
@@ -591,6 +611,7 @@
   <script src="js/sidebar_toggle.js"></script>
   <script src="js/sticky_panels.js"></script>
   <script src="js/navbar_breadcrumb.js"></script>
+  <script src="js/modal_forms.js"></script>
   <script src="js/smig.js"></script>
   <script>
 /* ============================================================
@@ -604,7 +625,47 @@
 
 const FI_RECAP_ANNEE = new Date().getFullYear() - 1;
 const DTI_CURRENT_YEAR = new Date().getFullYear();
+
+/* Colonne "Matricule" de la base "eses" : 2 lignes "Fiscal : …" / "CNSS : …".
+   Une ancienne valeur sans libellé (calculs/plans déjà enregistrés) est lue
+   comme matricule CNSS. Le plan, lui, ne garde que le matricule fiscal (champ
+   "Matricule fiscal" de la modale Éditer) ; le CNSS repris dans la lettre
+   commission régionale est lu côté serveur dans la base "eses". */
+function parseMatricule(v) {
+  let fiscal = "", cnss = "", libelle = false;
+  String(v || "").split(/\r?\n|\|/).forEach((ligne) => {
+    const i = ligne.indexOf(":");
+    if (i === -1) return;
+    const k = ligne.slice(0, i).trim().toLowerCase();
+    const val = ligne.slice(i + 1).trim();
+    if (k === "fiscal") { fiscal = val; libelle = true; }
+    else if (k === "cnss") { cnss = val; libelle = true; }
+  });
+  if (!libelle) cnss = String(v || "").trim();
+  return { fiscal, cnss, libelle };
+}
+
+// Matricule fiscal d'un plan : valeur seule, ou ligne "Fiscal : …" si le
+// matricule d'un calcul (composite) a été repris tel quel.
+function matriculeFiscal(v) {
+  const m = parseMatricule(v);
+  return m.libelle ? m.fiscal : String(v || "").trim();
+}
+
+// Identifiants utilisables pour rattacher un calcul/plan à une entreprise.
+function matriculeCles(v) {
+  const m = parseMatricule(v);
+  return [m.cnss, m.fiscal].filter(Boolean);
+}
+
+// Version sur une ligne (champ de saisie).
+function matriculeLigne(v) {
+  const m = parseMatricule(v);
+  if (!m.fiscal) return m.cnss;
+  return `Fiscal : ${m.fiscal} | CNSS : ${m.cnss}`;
+}
 let dtiRealisationCache = {};
+let dtiEsesPromise = null;
 let dtiEsesCache = null; // cache de la base "eses" (alimenté au 1er chargement, réutilisé partout : récap FI, plans, modale "Nouveau calcul")
 let dtiEseNomParMatricule = null; // { matricule: nom actuel } — dérivé de dtiEsesCache
 let dtiPlansCache = {}; // plans (section "Plans"), clé = fileId Drive du plan
@@ -615,13 +676,18 @@ let dtiPlansCache = {}; // plans (section "Plans"), clé = fileId Drive du plan
 // référence pour rattacher/rafraîchir le nom affiché. On charge la base une
 // seule fois par chargement de page.
 async function chargerEsesCache() {
-  if (!dtiEsesCache) dtiEsesCache = await apiCall("listEses", {});
+  if (!dtiEsesCache) {
+    // Une seule requête partagée même si plusieurs sections la demandent en même temps.
+    if (!dtiEsesPromise) {
+      dtiEsesPromise = apiCallRetry("listEses", {}).catch((err) => { dtiEsesPromise = null; throw err; });
+    }
+    dtiEsesCache = await dtiEsesPromise;
+  }
   if (!dtiEseNomParMatricule) {
     dtiEseNomParMatricule = {};
     dtiEsesCache.forEach((e) => {
-      const matricule = String(e["Matricule"] || "").trim();
-      if (!matricule) return;
-      dtiEseNomParMatricule[matricule] = e["Raison sociale"] || e["Nom commerciale"] || "";
+      const nom = e["Raison sociale"] || e["Nom commerciale"] || "";
+      matriculeCles(e["Matricule"]).forEach((cle) => { dtiEseNomParMatricule[cle] = nom; });
     });
   }
   return dtiEsesCache;
@@ -631,18 +697,43 @@ async function chargerEsesCache() {
 // est absent ou introuvable dans la base "eses", on garde le nom fourni
 // (dossier ancien sans matricule, ou entreprise supprimée de la base).
 function nomEseAJour(matricule, nomActuel) {
-  const mat = String(matricule || "").trim();
-  if (!mat || !dtiEseNomParMatricule || !dtiEseNomParMatricule[mat]) return nomActuel;
-  return dtiEseNomParMatricule[mat];
+  if (!dtiEseNomParMatricule) return nomActuel;
+  const cle = matriculeCles(matricule).find((k) => dtiEseNomParMatricule[k]);
+  return cle ? dtiEseNomParMatricule[cle] : nomActuel;
+}
+
+
+// Appel API avec nouvelles tentatives : au premier chargement, plusieurs requêtes
+// partent en même temps vers Apps Script ; un échec ponctuel ne doit pas laisser
+// une section vide.
+async function apiCallRetry(action, params, essais = 3) {
+  let derniere;
+  for (let i = 0; i < essais; i++) {
+    try { return await apiCall(action, params); }
+    catch (err) {
+      derniere = err;
+      await new Promise((r) => setTimeout(r, 600 * (i + 1)));
+    }
+  }
+  throw derniere;
+}
+
+// Remplit TOUTES les sections (Formation initiale, Plans, Commissions) dès le
+// premier chargement, qu'elles soient visibles ou non. La base "eses" est lue
+// d'abord (une seule fois), puis FI et Plans se chargent ; Plans enchaîne sur
+// les Commissions (dérivées des plans N et N-1).
+async function chargerToutesSections() {
+  try { await chargerEsesCache(); } catch (err) { console.warn("Base eses indisponible :", err.message); }
+  await Promise.allSettled([loadRecapFormationInitiale(), loadPlans()]);
 }
 
 const DTI_PLAN_ETATS = ["Demandé", "Approuvé", "En cours", "Facturé"];
 
+let dtiChargementInitial = null; // promesse du 1er chargement (FI + Plans) : la modale "Nouveau plan" l'attend pour calculer les soldes
+
 document.addEventListener("DOMContentLoaded", () => {
   initSectionToggle();
-  loadRecapFormationInitiale();
-  loadPlans();
-  loadCommissions();
+  dtiChargementInitial = chargerToutesSections(); // FI + Plans + Commissions (plans N et N-1) au 1er chargement
   wireDtiModals();
   wireDtiRealisationMode();
   wireDtiNouveauCalculModal();
@@ -703,7 +794,7 @@ async function loadRecapFormationInitiale() {
   if (emptyEl) emptyEl.hidden = true;
 
   try {
-    const calculs = await apiCall("listCalculs", { annee: FI_RECAP_ANNEE });
+    const calculs = await apiCallRetry("listCalculs", { annee: FI_RECAP_ANNEE });
 
     if (calculs.length === 0) {
       tbody.innerHTML = "";
@@ -712,7 +803,7 @@ async function loadRecapFormationInitiale() {
     }
     if (emptyEl) emptyEl.hidden = true;
 
-    const smigParams = await apiCall("getSmig", { annee: DTI_CURRENT_YEAR });
+    const smigParams = await apiCallRetry("getSmig", { annee: DTI_CURRENT_YEAR });
     await chargerEsesCache(); // pour rafraîchir le nom via le matricule ci-dessous
 
     const rows = await Promise.all(calculs.map(async (c) => {
@@ -724,7 +815,7 @@ async function loadRecapFormationInitiale() {
       let matricule = "";
 
       try {
-        const data = await apiCall("chargerCalcul", { fileId: c.id });
+        const data = await apiCallRetry("chargerCalcul", { fileId: c.id });
         regime = String(data.regime || regime).trim().toUpperCase();
         smig = String(data.smig || "").trim();
         etat = data.etat || etat;
@@ -763,7 +854,7 @@ async function loadRecapFormationInitiale() {
     tbody.innerHTML = rows.map((c) => `
       <tr>
         <td>${c.entreprise}</td>
-        <td>${c.matricule || "----"}</td>
+        <td>${matriculeFiscal(c.matricule) || "----"}</td>
         <td>${c.smig ? formatMontant(c.smig, false) : "----"}</td>
         <td>${c.budget ? formatMontant(c.budget) : "----"}</td>
         <td>${c.etat || "En cours"}</td>
@@ -772,7 +863,7 @@ async function loadRecapFormationInitiale() {
             <i class="bi bi-eye"></i> Afficher
           </a>
           <button type="button" class="btn_primary" data-editer-id="${c.id}">
-            <i class="bi bi-pencil"></i> Editer
+            <i class="bi bi-pencil-square"></i> Editer
           </button>
           <button type="button" class="btn_info" data-realisation-id="${c.id}">
             <i class="bi bi-calculator"></i> Simulation
@@ -807,6 +898,22 @@ function etatBadgeClass(etat) {
   }
 }
 
+let dtiPlansPrecCache = {}; // plans de l'année N-1 : servent uniquement à dériver la section "Commissions"
+
+// Charge (en parallèle) le détail de tous les plans d'une année DTI.
+async function chargerPlansAnnee(annee) {
+  const fichiers = await apiCallRetry("listPlansDti", { annee });
+  return Promise.all(fichiers.map(async (f) => {
+    try {
+      const data = await apiCallRetry("chargerPlan", { fileId: f.id });
+      return { ...data, id: f.id, url: f.url, entreprise: nomEseAJour(data.matricule, data.entreprise) };
+    } catch (err) {
+      console.warn("Impossible de charger le plan", f.id, err.message);
+      return { id: f.id, url: f.url, entreprise: nomEseAJour(f.matricule, f.entreprise), etat: "Demandé", montant: "", date: "" };
+    }
+  }));
+}
+
 async function loadPlans() {
   const tbody = document.querySelector("#dti_plans_table tbody");
   const emptyEl = document.getElementById("dti_plans_empty");
@@ -815,34 +922,31 @@ async function loadPlans() {
   tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr>`;
   if (emptyEl) emptyEl.hidden = true;
 
+  let plans = [];
   try {
-    const fichiers = await apiCall("listPlansDti", { annee: DTI_CURRENT_YEAR });
-
-    if (fichiers.length === 0) {
-      tbody.innerHTML = "";
-      if (emptyEl) emptyEl.hidden = false;
-      return;
-    }
-    if (emptyEl) emptyEl.hidden = true;
-
     await chargerEsesCache(); // pour rafraîchir le nom via le matricule ci-dessous
 
-    const plans = await Promise.all(fichiers.map(async (f) => {
-      try {
-        const data = await apiCall("chargerPlan", { fileId: f.id });
-        return { ...data, id: f.id, url: f.url, entreprise: nomEseAJour(data.matricule, data.entreprise) };
-      } catch (err) {
-        console.warn("Impossible de charger le plan", f.id, err.message);
-        return { id: f.id, url: f.url, entreprise: nomEseAJour(f.matricule, f.entreprise), etat: "Demandé", montant: "", date: "" };
-      }
-    }));
+    // N (affiché dans "Plans") et N-1 (seulement pour les commissions) : une
+    // erreur sur N-1 ne doit pas empêcher d'afficher l'année en cours.
+    const [plansN, plansPrec] = await Promise.all([
+      chargerPlansAnnee(DTI_CURRENT_YEAR),
+      chargerPlansAnnee(DTI_CURRENT_YEAR - 1).catch((err) => { console.warn("Plans N-1 indisponibles", err.message); return []; })
+    ]);
+    plans = plansN;
 
+    dtiPlansCache = {};
+    dtiPlansPrecCache = {};
     plans.forEach((p) => { if (p.id) dtiPlansCache[p.id] = p; });
+    plansPrec.forEach((p) => { if (p.id) dtiPlansPrecCache[p.id] = p; });
 
-    tbody.innerHTML = plans.map((p) => `
+    if (plans.length === 0) {
+      tbody.innerHTML = "";
+      if (emptyEl) emptyEl.hidden = false;
+    } else {
+      tbody.innerHTML = plans.map((p) => `
       <tr>
         <td>${p.entreprise || ""}</td>
-        <td>${p.matricule || "----"}</td>
+        <td>${matriculeFiscal(p.matricule) || "----"}</td>
         <td>${p.date || "----"}</td>
         <td>${p.numPlan || "----"}</td>
         <td><span class="dti_etat_badge ${etatBadgeClass(p.etat)}">${p.etat || "Demandé"}</span></td>
@@ -852,38 +956,95 @@ async function loadPlans() {
             <i class="bi bi-eye"></i> Afficher
           </a>
           <button type="button" class="btn_primary" data-editer-plan-id="${p.id}">
-            <i class="bi bi-pencil"></i> Editer
+            <i class="bi bi-pencil-square"></i> Editer
           </button>
         </td>
       </tr>`).join("");
 
-    tbody.querySelectorAll("[data-editer-plan-id]").forEach((btn) => {
-      btn.addEventListener("click", () => ouvrirModalEditerPlan(dtiPlansCache[btn.dataset.editerPlanId]));
-    });
+      tbody.querySelectorAll("[data-editer-plan-id]").forEach((btn) => {
+        btn.addEventListener("click", () => ouvrirModalEditerPlan(dtiPlansCache[btn.dataset.editerPlanId]));
+      });
+    }
   } catch (err) {
     tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
   }
+
+  await loadCommissions(); // les commissions sont dérivées des plans N et N-1 qu'on vient de charger
 }
 
-/* ---------------- Section "Commission" ----------------
-   Contrairement aux Plans/Calculs (un fichier par entité), TOUTES les
-   commissions vivent dans un unique fichier Drive (voir listCommissions /
-   enregistrerCommission côté Code.gs). Une commission référence un
-   sous-ensemble des plans en état "Demandé" (dtiPlansCache, alimenté par
-   loadPlans() ci-dessus) ; à l'enregistrement, sa date et ses 2 numéros
-   sont propagés vers ces plans, où ils deviennent alors affichage seul
-   dans plan.html (onglet "Commission"). */
+/* ---------------- Section "Commissions" ----------------
+   Il n'y a PAS de stockage propre aux commissions : elles sont dérivées, à
+   chaque chargement, des plans des années N et N-1 (dtiPlansCache +
+   dtiPlansPrecCache). Un plan appartient à une commission quand son champ
+   numCommission (N° UR, unique et cumulé) est renseigné ; les plans qui
+   partagent ce N° UR forment la commission. Chaque plan porte donc les
+   attributs de sa commission (voir mettreAJourPlan côté Code.gs) :
+     numCommission (UR), numCommissionAnnee, anneeCommission, dateCommission,
+     etatCommission, dateReportCommission.
+   Créer/éditer une commission réécrit ces champs dans les fichiers plan ;
+   ils sont en affichage seul dans plan.html (onglet "Commission").
+   Conséquence : une commission n'existe que si elle contient ≥ 1 plan. */
 
-const DTI_COMMISSION_ETATS = ["Prévue", "Programmée", "Reportée", "Achevé"];
-let dtiCommissionsCache = {}; // commissions, clé = id
+const DTI_COMMISSION_ETATS = ["Prévue", "Programmée", "Reportée", "Clôturée"];
+let dtiCommissionsCache = {}; // commissions dérivées, clé = N° UR
 
 function commissionEtatBadgeClass(etat) {
   switch (etat) {
     case "Programmée": return "is_approuve";
     case "Reportée": return "is_en_cours";
-    case "Achevé": return "is_facture";
+    case "Clôturée": return "is_facture";
     default: return "is_demande"; // "Prévue"
   }
+}
+
+function nombreOuZero(v) {
+  const n = parseInt(v, 10);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+// Regroupe les plans N et N-1 par N° commission UR.
+async function deriverCommissions() {
+  const plans = [...Object.values(dtiPlansPrecCache), ...Object.values(dtiPlansCache)];
+  const groupes = {};
+
+  plans.forEach((p) => {
+    const ur = String(p.numCommission || "").trim();
+    if (!ur) return;
+    if (!groupes[ur]) {
+      groupes[ur] = {
+        id: ur,
+        numCommissionUR: ur,
+        numCommissionAnnee: p.numCommissionAnnee || "",
+        annee: String(p.anneeCommission || (p.dateCommission ? p.dateCommission.slice(0, 4) : p.anneeDti || "")),
+        date: p.dateCommission || "",
+        etat: p.etatCommission || "",
+        dateReport: p.dateReportCommission || "",
+        plans: [],
+        plansInfo: []
+      };
+    }
+    groupes[ur].plans.push(p.id);
+    groupes[ur].plansInfo.push({ id: p.id, entreprise: p.entreprise, numPlan: p.numPlan });
+  });
+
+  const liste = Object.values(groupes);
+
+  // Reprise des commissions créées avant ce changement : l'état n'était
+  // alors conservé que dans l'ancien fichier "COMMISSIONS DTI.html"
+  // (lecture seule, "Achevé" devient "Clôturée"). Appelé seulement si
+  // nécessaire ; chaque réenregistrement écrit l'état dans les plans.
+  if (liste.some((c) => !c.etat)) {
+    let anciennes = [];
+    try { anciennes = await apiCall("listCommissions", {}); } catch (err) { console.warn("Ancien fichier commissions illisible", err.message); }
+    const etatAncien = {};
+    anciennes.forEach((a) => { etatAncien[String(a.numCommissionUR || "").trim()] = a.etat === "Achevé" ? "Clôturée" : a.etat; });
+    liste.forEach((c) => {
+      if (!c.etat) c.etat = DTI_COMMISSION_ETATS.includes(etatAncien[c.id]) ? etatAncien[c.id] : (c.date ? "Programmée" : "Prévue");
+    });
+  }
+
+  liste.sort((a, b) => (nombreOuZero(b.annee) - nombreOuZero(a.annee)) || (nombreOuZero(b.numCommissionUR) - nombreOuZero(a.numCommissionUR)));
+  return liste;
 }
 
 async function loadCommissions() {
@@ -891,11 +1052,11 @@ async function loadCommissions() {
   const emptyEl = document.getElementById("dti_commissions_empty");
   if (!tbody) return;
 
-  tbody.innerHTML = `<tr class="table_state_row"><td colspan="5"><span class="loading_state">Chargement...</span></td></tr>`;
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr>`;
   if (emptyEl) emptyEl.hidden = true;
 
   try {
-    const commissions = await apiCall("listCommissions", {});
+    const commissions = await deriverCommissions();
     dtiCommissionsCache = {};
     commissions.forEach((c) => { dtiCommissionsCache[c.id] = c; });
 
@@ -908,13 +1069,14 @@ async function loadCommissions() {
 
     tbody.innerHTML = commissions.map((c) => `
       <tr>
-        <td>${c.numCommissionUR || "----"}/${c.numCommissionAnnee || "----"}</td>
+        <td>${c.numCommissionUR || "----"} - ${c.numCommissionAnnee || "----"}/${c.annee || "----"}</td>
         <td>${c.date || "----"}</td>
+        <td>${c.etat === "Reportée" && c.dateReport ? c.dateReport : "----"}</td>
         <td><span class="dti_etat_badge ${commissionEtatBadgeClass(c.etat)}">${c.etat || "Prévue"}</span></td>
         <td>${(c.plans || []).length}</td>
         <td class="fi_recap_actions">
           <button type="button" class="btn_primary" data-editer-commission-id="${c.id}">
-            <i class="bi bi-pencil"></i> Editer
+            <i class="bi bi-pencil-square"></i> Editer
           </button>
         </td>
       </tr>`).join("");
@@ -923,57 +1085,119 @@ async function loadCommissions() {
       btn.addEventListener("click", () => ouvrirModalCommission(dtiCommissionsCache[btn.dataset.editerCommissionId]));
     });
   } catch (err) {
-    tbody.innerHTML = `<tr class="table_state_row"><td colspan="5"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
   }
 }
 
 function wireDtiCommissionModal() {
   document.getElementById("dti_btn_nouvelle_commission")?.addEventListener("click", () => ouvrirModalCommission(null));
-  document.getElementById("dti_commission_etat")?.addEventListener("change", appliquerVerrouDateCommission);
+  document.getElementById("dti_commission_etat")?.addEventListener("change", appliquerVerrousCommission);
+  document.getElementById("dti_commission_date")?.addEventListener("change", majAnneeCommission);
   document.getElementById("dti_commission_btn_enregistrer")?.addEventListener("click", enregistrerCommission);
 }
 
-// La date de commission n'a de sens que pour une commission "Programmée" ;
-// désactivée (et vidée) pour les autres états.
-function appliquerVerrouDateCommission() {
+// Année de la commission : année de sa date si elle en a une, sinon année
+// de l'enregistrement (ou année déjà mémorisée en édition).
+function anneeCommissionCourante() {
+  const date = document.getElementById("dti_commission_date").value;
+  if (date) return date.slice(0, 4);
+  return document.getElementById("dti_modal_commission").dataset.annee || String(DTI_CURRENT_YEAR);
+}
+
+function majAnneeCommission() {
+  document.getElementById("dti_commission_annee").value = anneeCommissionCourante();
+}
+
+// Date : inactive (et vidée) tant que la commission est "Prévue".
+// Date report : visible seulement pour une commission "Reportée".
+function appliquerVerrousCommission() {
+  const etat = document.getElementById("dti_commission_etat").value;
   const dateInput = document.getElementById("dti_commission_date");
-  const estProgrammee = document.getElementById("dti_commission_etat").value === "Programmée";
-  dateInput.disabled = !estProgrammee;
-  if (!estProgrammee) dateInput.value = "";
+  dateInput.disabled = etat === "Prévue";
+  if (etat === "Prévue") dateInput.value = "";
+
+  const reportee = etat === "Reportée";
+  document.getElementById("dti_commission_report_field").style.display = reportee ? "" : "none";
+  if (!reportee) document.getElementById("dti_commission_date_report").value = "";
+
+  majAnneeCommission();
+}
+
+// Numéros proposés pour une nouvelle commission : UR = dernier N° UR + 1 ;
+// année = dernier N° de l'année en cours + 1 (repart à 1 si aucune commission
+// cette année). null s'il n'existe aucune commission (N et N-1) : on demande.
+function prochainsNumerosCommission() {
+  const liste = Object.values(dtiCommissionsCache);
+  if (liste.length === 0) return null;
+  const maxUR = Math.max(...liste.map((c) => nombreOuZero(c.numCommissionUR)));
+  const cetteAnnee = liste.filter((c) => String(c.annee) === String(DTI_CURRENT_YEAR));
+  const maxAnnee = cetteAnnee.length ? Math.max(...cetteAnnee.map((c) => nombreOuZero(c.numCommissionAnnee))) : 0;
+  return { ur: maxUR + 1, annee: maxAnnee + 1 };
 }
 
 function ouvrirModalCommission(record) {
   const modal = document.getElementById("dti_modal_commission");
+  const numUr = document.getElementById("dti_commission_num_ur");
+  const numAnnee = document.getElementById("dti_commission_num_annee");
+
   modal.dataset.commissionId = record?.id || "";
+  modal.dataset.annee = record?.annee || String(DTI_CURRENT_YEAR);
   document.getElementById("dti_commission_titre").textContent = record ? "Éditer la commission" : "Nouvelle commission";
-  document.getElementById("dti_commission_num_ur").value = record?.numCommissionUR || "";
-  document.getElementById("dti_commission_num_annee").value = record?.numCommissionAnnee || "";
+
+  if (record) {
+    numUr.value = record.numCommissionUR || "";
+    numAnnee.value = record.numCommissionAnnee || "";
+    numUr.readOnly = false;
+    numAnnee.readOnly = false;
+  } else {
+    const suivants = prochainsNumerosCommission();
+    if (suivants) { // cumul automatique
+      numUr.value = suivants.ur;
+      numAnnee.value = suivants.annee;
+    } else { // première commission : l'utilisateur donne le point de départ
+      numUr.value = "";
+      numAnnee.value = "";
+    }
+    numUr.readOnly = !!suivants;
+    numAnnee.readOnly = !!suivants;
+  }
+
   document.getElementById("dti_commission_etat").value = DTI_COMMISSION_ETATS.includes(record?.etat) ? record.etat : "Prévue";
   document.getElementById("dti_commission_date").value = record?.date || "";
-  appliquerVerrouDateCommission();
+  document.getElementById("dti_commission_date_report").value = record?.dateReport || "";
+  appliquerVerrousCommission();
+  // appliquerVerrousCommission vide la date si "Prévue" ; en édition d'une
+  // commission non Prévue la date est conservée (sélecteur d'état déjà positionné).
 
-  renderCommissionPlansList(record?.plans || []);
-  modal.classList.add("is_visible");
+  renderCommissionPlansList(record);
+  openFormModal("dti_modal_commission");
 }
 
-// Plans cochables : ceux en état "Demandé", plus ceux déjà rattachés à
-// cette commission (visibles/cochés même si leur état a changé depuis) —
-// évite qu'un plan déjà lié ne "disparaisse" à l'ouverture en édition.
-function renderCommissionPlansList(planIdsDejaLies) {
+// Plans cochables : ceux en état "Demandé" (année N), plus ceux déjà rattachés
+// à cette commission (y compris de l'année N-1, ou dont l'état a changé) —
+// sans quoi ils disparaîtraient de la liste et seraient détachés à l'enregistrement.
+// Un plan déjà rattaché à une AUTRE commission est signalé (le cocher le déplace).
+function renderCommissionPlansList(record) {
   const list = document.getElementById("dti_commission_plans_list");
-  const dejaLies = new Set(planIdsDejaLies);
-  const plans = Object.values(dtiPlansCache).filter((p) => (p.etat || "Demandé") === "Demandé" || dejaLies.has(p.id));
+  const dejaLies = new Set(record?.plans || []);
+  const entrees = new Map();
 
-  if (plans.length === 0) {
+  (record?.plansInfo || []).forEach((p) => entrees.set(p.id, { ...p, autre: "" }));
+  Object.values(dtiPlansCache).forEach((p) => {
+    if (entrees.has(p.id) || (p.etat || "Demandé") !== "Demandé") return;
+    entrees.set(p.id, { id: p.id, entreprise: p.entreprise, numPlan: p.numPlan, autre: p.numCommission ? String(p.numCommission) : "" });
+  });
+
+  if (entrees.size === 0) {
     list.innerHTML = `<li class="dti_commission_plans_empty">Aucune demande en attente.</li>`;
     return;
   }
 
-  list.innerHTML = plans.map((p) => `
+  list.innerHTML = Array.from(entrees.values()).map((p) => `
     <li>
       <label>
         <input type="checkbox" value="${p.id}" ${dejaLies.has(p.id) ? "checked" : ""} />
-        ${p.entreprise || "----"}${p.numPlan ? ` (N° ${p.numPlan})` : ""}
+        ${p.entreprise || "----"}${p.numPlan ? ` (N° ${p.numPlan})` : ""}${p.autre ? ` — déjà en commission UR ${p.autre}` : ""}
       </label>
     </li>`).join("");
 }
@@ -982,19 +1206,39 @@ async function enregistrerCommission() {
   const modal = document.getElementById("dti_modal_commission");
   const etat = document.getElementById("dti_commission_etat").value;
   const date = document.getElementById("dti_commission_date").value;
+  const dateReport = document.getElementById("dti_commission_date_report").value;
+  const numUR = document.getElementById("dti_commission_num_ur").value.trim();
+  const numAnnee = document.getElementById("dti_commission_num_annee").value.trim();
+  const plans = Array.from(document.querySelectorAll("#dti_commission_plans_list input[type=checkbox]:checked")).map((cb) => cb.value);
+  const id = modal.dataset.commissionId || "";
 
+  if (!numUR || !numAnnee) {
+    alert("Le N° de commission UR et le N° de commission année sont obligatoires.");
+    return;
+  }
+  if (Object.values(dtiCommissionsCache).some((c) => c.id !== id && String(c.numCommissionUR) === numUR)) {
+    alert(`Le N° de commission UR ${numUR} existe déjà.`);
+    return;
+  }
   if (etat === "Programmée" && !date) {
     alert("La date est obligatoire pour une commission Programmée.");
     return;
   }
+  if (plans.length === 0) {
+    alert("Cochez au moins un plan : une commission n'existe qu'à travers ses plans.");
+    return;
+  }
 
   const commission = {
-    id: modal.dataset.commissionId || undefined,
-    numCommissionUR: document.getElementById("dti_commission_num_ur").value.trim(),
-    numCommissionAnnee: document.getElementById("dti_commission_num_annee").value.trim(),
+    id,
+    numCommissionUR: numUR,
+    numCommissionAnnee: numAnnee,
+    annee: anneeCommissionCourante(),
     etat,
     date,
-    plans: Array.from(document.querySelectorAll("#dti_commission_plans_list input[type=checkbox]:checked")).map((cb) => cb.value)
+    dateReport,
+    plans,
+    anciensPlans: dtiCommissionsCache[id]?.plans || [] // pour détacher ceux qui sont décochés
   };
 
   const btn = document.getElementById("dti_commission_btn_enregistrer");
@@ -1002,8 +1246,7 @@ async function enregistrerCommission() {
   try {
     await apiCall("enregistrerCommission", { commission });
     closeModal("dti_modal_commission");
-    await loadCommissions();
-    await loadPlans(); // rafraîchit les plans dont date/n° commission viennent d'être propagés
+    await loadPlans(); // relit les plans modifiés et re-dérive les commissions
   } catch (err) {
     alert(`Erreur lors de l'enregistrement : ${err.message}`);
   } finally {
@@ -1024,6 +1267,8 @@ function wireDtiNouveauPlanModal() {
   const searchInput = document.getElementById("dti_nouveau_plan_search");
   searchInput?.addEventListener("input", () => renderNouveauPlanList(searchInput.value));
   document.getElementById("dti_nouveau_plan_btn_enregistrer")?.addEventListener("click", enregistrerNouveauPlan);
+  ["dti_nouveau_plan_matricule_fiscal", "dti_nouveau_plan_matricule_cnss", "dti_nouveau_plan_montant"]
+    .forEach((id) => document.getElementById(id)?.addEventListener("input", majBoutonNouveauPlan));
 }
 
 async function ouvrirModalNouveauPlan() {
@@ -1034,39 +1279,107 @@ async function ouvrirModalNouveauPlan() {
   dtiNouveauPlanSelection = null;
   document.getElementById("dti_nouveau_plan_date").value = new Date().toISOString().slice(0, 10);
   document.getElementById("dti_nouveau_plan_num").value = "";
+  document.getElementById("dti_nouveau_plan_num_ese").value = "";
+  document.getElementById("dti_nouveau_plan_matricule_fiscal").value = "";
+  document.getElementById("dti_nouveau_plan_matricule_cnss").value = "";
+  document.getElementById("dti_nouveau_plan_montant").value = "";
+  document.getElementById("dti_nouveau_plan_montant_note").textContent = "";
+  afficherChampsMatriculeNouveauPlan(false);
   const btnEnregistrer = document.getElementById("dti_nouveau_plan_btn_enregistrer");
   if (btnEnregistrer) btnEnregistrer.disabled = true;
 
-  document.getElementById("dti_modal_nouveau_plan")?.classList.add("is_visible");
+  openFormModal("dti_modal_nouveau_plan");
 
   // dtiRealisationCache est alimenté par loadRecapFormationInitiale() au
   // chargement de la page ; si un plan est ouvert avant la fin de cet appel
   // (chargement lent), on le déclenche ici pour ne pas laisser la liste vide.
+  // Les soldes dépendent aussi des plans existants : on attend la fin du
+  // chargement initial (FI + Plans) avant de lister.
+  list.innerHTML = `<li class="dti_ese_item"><span class="loading_state">Chargement...</span></li>`;
+  try { await dtiChargementInitial; } catch (err) { /* chaque section gère son erreur */ }
   if (Object.keys(dtiRealisationCache).length === 0) {
-    list.innerHTML = `<li class="dti_ese_item"><span class="loading_state">Chargement...</span></li>`;
     await loadRecapFormationInitiale();
   }
   renderNouveauPlanList("");
   searchInput?.focus();
 }
 
+// Plans de l'année N déjà enregistrés pour un calcul FI de N-1.
+// Rattachement par calculId ; à défaut (plan ancien sans calculId), par
+// matricule puis par nom d'entreprise.
+function plansDuCalcul(c) {
+  const clesCalcul = new Set([...matriculeCles(c.matricule), ...matriculeCles(matriculeDuCalcul(c))]);
+  const nomCalcul = String(c.entreprise || "").trim().toLowerCase();
+  // Règle : le budget vient des calculs FI de N-1, les plans sont créés pour l'année N exclusivement.
+  return Object.values(dtiPlansCache).filter((p) => {
+    // Un calcul réexporté peut changer d'identifiant Drive : le calculId d'un plan
+    // peut donc être périmé. Une entreprise n'a qu'un calcul FI par année, on
+    // rattache donc aussi par matricule puis par nom.
+    if (p.calculId && p.calculId === c.id) return true;
+    if (matriculeCles(p.matricule).some((k) => clesCalcul.has(k))) return true;
+    return nomCalcul !== "" && String(p.entreprise || "").trim().toLowerCase() === nomCalcul;
+  });
+}
+
+function montantPlansDuCalcul(c) {
+  return plansDuCalcul(c).reduce((somme, p) => somme + (parseDecimal(p.montant) || 0), 0);
+}
+
+// Solde disponible d'un calcul FI = budget FI - montants des plans existants.
+// null si le calcul n'a pas de budget exploitable.
+function soldeCalcul(c) {
+  const budget = parseDecimal(c.budget);
+  if (budget === null) return null;
+  return budget - montantPlansDuCalcul(c);
+}
+
+// Ligne de la base "eses" de l'entreprise : par matricule (référence stable),
+// sinon par nom.
+function eseDuCalcul(c) {
+  const cles = new Set(matriculeCles(c.matricule));
+  const nom = String(c.entreprise || "").trim().toLowerCase();
+  const eses = dtiEsesCache || [];
+  return eses.find((e) => matriculeCles(e["Matricule"]).some((k) => cles.has(k)))
+    || eses.find((e) => [e["Raison sociale"], e["Nom commerciale"]].some((n) => String(n || "").trim().toLowerCase() === nom));
+}
+
+// Matricules de l'entreprise : la base "eses" fait référence (le calcul n'en
+// garde qu'une copie figée, parfois ancienne et sans libellé) ; le calcul ne
+// complète que ce qui manque. Valeur composite "Fiscal : …\nCNSS : …", "" si rien.
+function matriculeDuCalcul(c) {
+  const ese = eseDuCalcul(c);
+  const b = parseMatricule(ese ? ese["Matricule"] : "");
+  const a = parseMatricule(c.matricule);
+  const fiscal = b.fiscal || a.fiscal;
+  const cnss = b.cnss || a.cnss;
+  return fiscal || cnss ? `Fiscal : ${fiscal}\nCNSS : ${cnss}` : "";
+}
+
 function renderNouveauPlanList(query) {
   const list = document.getElementById("dti_nouveau_plan_list");
   const q = (query || "").trim().toLowerCase();
 
-  const calculs = Object.values(dtiRealisationCache).filter((c) =>
-    (c.entreprise || "").toLowerCase().includes(q)
-  );
+  // Seules les entreprises qui ont encore un solde (> 0) sont proposées.
+  const calculs = Object.values(dtiRealisationCache).filter((c) => {
+    const solde = soldeCalcul(c);
+    return solde !== null && solde > 0.0005 && (c.entreprise || "").toLowerCase().includes(q);
+  });
+
+  if (dtiNouveauPlanSelection && !calculs.some((c) => c.id === dtiNouveauPlanSelection.id)) {
+    dtiNouveauPlanSelection = null;
+    afficherChampsMatriculeNouveauPlan(false);
+    majBoutonNouveauPlan();
+  }
 
   if (calculs.length === 0) {
-    list.innerHTML = `<li class="dti_ese_item">Aucun calcul Formation initiale trouvé pour ${FI_RECAP_ANNEE}.</li>`;
+    list.innerHTML = `<li class="dti_ese_item">Aucune entreprise avec un solde disponible pour ${FI_RECAP_ANNEE}.</li>`;
     return;
   }
 
   list.innerHTML = calculs.map((c) => `
       <li class="dti_ese_item${dtiNouveauPlanSelection?.id === c.id ? " is_selected" : ""}" data-calcul-id="${c.id}" data-nom="${c.entreprise}">
         <span>${c.entreprise}</span>
-        <span class="dti_ese_badge">${c.budget ? formatMontant(c.budget) : "----"}</span>
+        <span class="dti_ese_badge" title="Budget FI ${formatMontant(c.budget)} - plans existants ${formatMontant(montantPlansDuCalcul(c))}">Solde : ${formatMontant(soldeCalcul(c))}</span>
       </li>`).join("");
 
   list.querySelectorAll(".dti_ese_item[data-calcul-id]").forEach((el) => {
@@ -1074,35 +1387,109 @@ function renderNouveauPlanList(query) {
       dtiNouveauPlanSelection = dtiRealisationCache[el.dataset.calculId] || { id: el.dataset.calculId, entreprise: el.dataset.nom };
       list.querySelectorAll(".dti_ese_item").forEach((li) => li.classList.remove("is_selected"));
       el.classList.add("is_selected");
-      const btnEnregistrer = document.getElementById("dti_nouveau_plan_btn_enregistrer");
-      if (btnEnregistrer) btnEnregistrer.disabled = false;
+
+      // Matricules : si l'un des deux (fiscal, CNSS) manque, on demande les deux
+      // (préremplis avec ce qui est connu) avant de pouvoir enregistrer.
+      const m = parseMatricule(matriculeDuCalcul(dtiNouveauPlanSelection));
+      document.getElementById("dti_nouveau_plan_matricule_fiscal").value = m.fiscal;
+      document.getElementById("dti_nouveau_plan_matricule_cnss").value = m.cnss;
+      const complet = !!(m.fiscal && m.cnss);
+      afficherChampsMatriculeNouveauPlan(!complet);
+      document.getElementById("dti_nouveau_plan_montant").value = "";
+      majBoutonNouveauPlan();
     });
   });
 }
 
+function afficherChampsMatriculeNouveauPlan(visible) {
+  document.querySelectorAll(".dti_nouveau_plan_matricule_champ").forEach((l) => { l.hidden = !visible; });
+}
+
+// Solde disponible de l'entreprise sélectionnée.
+function soldeSelection() {
+  return dtiNouveauPlanSelection ? soldeCalcul(dtiNouveauPlanSelection) : null;
+}
+
+// "Enregistrer" : entreprise choisie, matricules complets, montant > 0 et
+// dans la limite du solde (un plan ne peut pas être créé sans montant).
+function majBoutonNouveauPlan() {
+  const btn = document.getElementById("dti_nouveau_plan_btn_enregistrer");
+  if (!btn) return;
+  const champsVisibles = !document.querySelector(".dti_nouveau_plan_matricule_champ").hidden;
+  const matriculesOk = !champsVisibles ||
+    (document.getElementById("dti_nouveau_plan_matricule_fiscal").value.trim() !== "" &&
+     document.getElementById("dti_nouveau_plan_matricule_cnss").value.trim() !== "");
+
+  const solde = soldeSelection();
+  const montant = parseDecimal(document.getElementById("dti_nouveau_plan_montant").value);
+  const note = document.getElementById("dti_nouveau_plan_montant_note");
+  const depasse = solde !== null && montant !== null && montant > solde + 0.0005;
+  note.textContent = solde !== null ? `Solde disponible : ${formatMontant(solde)}` : "";
+  note.classList.toggle("is_over_budget", depasse);
+  const montantOk = montant !== null && montant > 0 && !depasse;
+
+  btn.disabled = !dtiNouveauPlanSelection || !matriculesOk || !montantOk;
+}
+
 async function enregistrerNouveauPlan() {
   if (!dtiNouveauPlanSelection?.id) return;
+  const champsVisibles = !document.querySelector(".dti_nouveau_plan_matricule_champ").hidden;
+  const fiscalSaisi = document.getElementById("dti_nouveau_plan_matricule_fiscal").value.trim();
+  const cnssSaisi = document.getElementById("dti_nouveau_plan_matricule_cnss").value.trim();
+  if (champsVisibles && (!fiscalSaisi || !cnssSaisi)) {
+    alert("Renseignez le matricule fiscal et le N° CNSS de l'entreprise avant de continuer.");
+    return;
+  }
+  const montant = parseDecimal(document.getElementById("dti_nouveau_plan_montant").value);
+  const solde = soldeSelection();
+  if (montant === null || montant <= 0) {
+    alert("Le montant du plan est obligatoire.");
+    return;
+  }
+  if (solde === null || montant > solde + 0.0005) {
+    alert("Le montant ne peut pas dépasser le solde disponible de l'entreprise.");
+    return;
+  }
 
   const btn = document.getElementById("dti_nouveau_plan_btn_enregistrer");
   setBtnSaving(btn, true);
   try {
     // On relit le calcul FI (anneeFi/budgetFi/anneeDti à jour), la liste
     // en cache n'en portant qu'un sous-ensemble (voir loadRecapFormationInitiale()).
-    const calcul = await apiCall("chargerCalcul", { fileId: dtiNouveauPlanSelection.id });
+    const calcul = await apiCallRetry("chargerCalcul", { fileId: dtiNouveauPlanSelection.id });
     const plan = {
       entreprise: dtiNouveauPlanSelection.entreprise,
-      matricule: calcul.matricule || "",
+      matricule: fiscalSaisi || matriculeFiscal(matriculeDuCalcul({ ...dtiNouveauPlanSelection, matricule: calcul.matricule })),
       calculId: dtiNouveauPlanSelection.id,
       anneeFi: calcul.annee,
       budgetFi: calcul.budget,
       anneeDti: calcul.anneeDti || DTI_CURRENT_YEAR,
+      regimeHoraire: String(calcul.regime || "").trim().toUpperCase(), // régime horaire du calcul FI
       date: document.getElementById("dti_nouveau_plan_date").value,
       numPlan: document.getElementById("dti_nouveau_plan_num").value.trim(),
       numPlanEse: document.getElementById("dti_nouveau_plan_num_ese").value.trim(),
       etat: "Demandé",
-      montant: "",
+      montant,
       actions: []
     };
+
+    // Matricules saisis : reportés aussi dans la base "eses" (ligne retrouvée par
+    // le nom), pour que le fiscal et le CNSS soient connus la prochaine fois.
+    if (champsVisibles) {
+      const ese = eseDuCalcul(dtiNouveauPlanSelection);
+      if (ese) {
+        const record = { ...ese };
+        delete record._row;
+        record["Matricule"] = `Fiscal : ${fiscalSaisi}\nCNSS : ${cnssSaisi}`;
+        try {
+          await apiCall("updateEse", { _row: ese._row, record });
+          ese["Matricule"] = record["Matricule"];
+          dtiEseNomParMatricule = null;
+        } catch (err) {
+          console.warn("Matricules non reportés dans la base eses :", err.message);
+        }
+      }
+    }
     const { id } = await apiCall("exportPlanToDrive", { plan });
     window.location.href = `plan.html?id=${id}`;
   } catch (err) {
@@ -1117,6 +1504,28 @@ async function enregistrerNouveauPlan() {
 function wireDtiEditerPlanModal() {
   document.getElementById("dti_editer_plan_btn_enregistrer")?.addEventListener("click", enregistrerEditionPlan);
   document.getElementById("dti_editer_plan_montant")?.addEventListener("input", verifierMontantPlan);
+  document.getElementById("dti_editer_plan_regime_horaire_refresh")?.addEventListener("click", rafraichirRegimePlan);
+}
+
+// Plans sans régime horaire : le récupère depuis le calcul FI lié (le champ est
+// seulement rempli ; il est enregistré avec le bouton "Enregistrer").
+async function rafraichirRegimePlan() {
+  const modal = document.getElementById("dti_modal_editer_plan");
+  const calculId = modal?.dataset?.planCalculId;
+  const btn = document.getElementById("dti_editer_plan_regime_horaire_refresh");
+  if (!calculId) { alert("Ce plan n'est lié à aucun calcul Formation initiale."); return; }
+  if (btn) btn.disabled = true;
+  try {
+    const calcul = await apiCallRetry("chargerCalcul", { fileId: calculId });
+    const regime = String(calcul.regime || "").trim().toUpperCase();
+    if (!regime) { alert("Le calcul Formation initiale lié n'indique aucun régime horaire."); return; }
+    document.getElementById("dti_editer_plan_regime_horaire").value = regime;
+    if (btn) btn.style.display = "none";
+  } catch (err) {
+    alert(`Impossible de lire le calcul Formation initiale : ${err.message}`);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function verifierMontantPlan() {
@@ -1146,7 +1555,7 @@ function ouvrirModalEditerPlan(record) {
   modal.dataset.planId = record.id || "";
   modal.dataset.budgetFi = record.budgetFi || "";
   document.getElementById("dti_editer_plan_entreprise").value = record.entreprise || "";
-  document.getElementById("dti_editer_plan_matricule").value = record.matricule || "";
+  document.getElementById("dti_editer_plan_matricule").value = matriculeFiscal(record.matricule);
   document.getElementById("dti_editer_plan_budget_fi").value = record.budgetFi ? formatMontant(record.budgetFi) : "----";
   document.getElementById("dti_editer_plan_date").value = record.date || "";
   document.getElementById("dti_editer_plan_num").value = record.numPlan || "";
@@ -1154,8 +1563,11 @@ function ouvrirModalEditerPlan(record) {
   document.getElementById("dti_editer_plan_etat").value = DTI_PLAN_ETATS.includes(record.etat) ? record.etat : "Demandé";
   document.getElementById("dti_editer_plan_montant").value = record.montant || "";
   document.getElementById("dti_editer_plan_regime_horaire").value = record.regimeHoraire || "";
+  modal.dataset.planCalculId = record.calculId || "";
+  const btnRegime = document.getElementById("dti_editer_plan_regime_horaire_refresh");
+  if (btnRegime) btnRegime.style.display = record.regimeHoraire ? "none" : ""; // seulement si le plan n'a pas de régime
   verifierMontantPlan();
-  modal.classList.add("is_visible");
+  openFormModal("dti_modal_editer_plan");
 }
 
 async function enregistrerEditionPlan() {
@@ -1169,7 +1581,7 @@ async function enregistrerEditionPlan() {
     numPlanEse: document.getElementById("dti_editer_plan_num_ese").value.trim(),
     etat: document.getElementById("dti_editer_plan_etat").value,
     montant: parseDecimal(document.getElementById("dti_editer_plan_montant").value),
-    matricule: document.getElementById("dti_editer_plan_matricule").value.trim(),
+    matricule: matriculeFiscal(document.getElementById("dti_editer_plan_matricule").value),
     regimeHoraire: document.getElementById("dti_editer_plan_regime_horaire").value.trim()
   };
 
@@ -1192,16 +1604,8 @@ async function enregistrerEditionPlan() {
   }
 }
 
-function wireDtiModals() {
-  document.querySelectorAll("[data-close-modal]").forEach((btn) => {
-    btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
-  });
-  document.querySelectorAll(".modal_overlay").forEach((overlay) => {
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) closeModal(overlay.id);
-    });
-  });
-}
+// Croix, clic en dehors et Échap : js/modal_forms.js (confirmation + alerte).
+function wireDtiModals() {}
 
 /* ---------------- Modale "Nouveau calcul" (choix entreprise) ----------------
    Reprend le principe de l'ancienne modale "Choisir une entreprise" de
@@ -1224,7 +1628,7 @@ async function ouvrirModalNouveauCalcul() {
   const searchInput = document.getElementById("dti_nouveau_calcul_search");
   if (searchInput) searchInput.value = "";
   list.innerHTML = `<li class="dti_ese_item"><span class="loading_state">Chargement...</span></li>`;
-  document.getElementById("dti_modal_nouveau_calcul")?.classList.add("is_visible");
+  openFormModal("dti_modal_nouveau_calcul");
 
   try {
     await chargerEsesCache();
@@ -1242,7 +1646,7 @@ function renderNouveauCalculList(query) {
   // Le matricule est la référence : un renommage dans la base "eses" ne
   // doit pas faire perdre la détection d'un calcul déjà existant.
   const matriculesAvecCalcul = new Set(
-    Object.values(dtiRealisationCache).map((c) => String(c.matricule || "").trim()).filter(Boolean)
+    Object.values(dtiRealisationCache).flatMap((c) => matriculeCles(c.matricule))
   );
 
   const filtered = dtiEsesCache.filter((e) =>
@@ -1256,8 +1660,7 @@ function renderNouveauCalculList(query) {
 
   list.innerHTML = filtered.map((e) => {
     const nom = e["Raison sociale"] || e["Nom commerciale"] || "(sans nom)";
-    const matricule = String(e["Matricule"] || "").trim();
-    const aDejaUnCalcul = matricule !== "" && matriculesAvecCalcul.has(matricule);
+    const aDejaUnCalcul = matriculeCles(e["Matricule"]).some((k) => matriculesAvecCalcul.has(k));
     return `
       <li class="dti_ese_item${aDejaUnCalcul ? " is_disabled" : ""}" data-nom="${nom}" title="${aDejaUnCalcul ? "Utilisez « Afficher » dans le tableau pour reprendre ce calcul" : ""}">
         <span>${nom}</span>
@@ -1285,7 +1688,7 @@ function wireDtiRealisationMode() {
 }
 
 function closeModal(id) {
-  document.getElementById(id)?.classList.remove("is_visible");
+  closeFormModal(id);
 }
 
 /* ---------------- Modale "Editer" (état / année dti d'un calcul) ---------------- */
@@ -1309,12 +1712,15 @@ function ouvrirModalEditerCalcul(record) {
   const modal = document.getElementById("dti_modal_editer");
   modal.dataset.calculId = record.id || "";
   document.getElementById("dti_editer_entreprise").value = record.entreprise || "";
-  document.getElementById("dti_editer_matricule").value = record.matricule || "";
+  const champMatricule = document.getElementById("dti_editer_matricule");
+  champMatricule.value = matriculeLigne(record.matricule);
+  champMatricule.dataset.initial = champMatricule.value;
+  champMatricule.dataset.brut = record.matricule || "";
   document.getElementById("dti_editer_annee_fi").value = FI_RECAP_ANNEE;
   document.getElementById("dti_editer_annee_dti").value = record.anneeDti || DTI_CURRENT_YEAR;
   document.getElementById("dti_editer_etat").value = record.etat || "En cours";
   appliquerVerrouAnneeDti();
-  modal.classList.add("is_visible");
+  openFormModal("dti_modal_editer");
 }
 
 async function enregistrerEditionCalcul() {
@@ -1325,7 +1731,11 @@ async function enregistrerEditionCalcul() {
   const meta = {
     etat: document.getElementById("dti_editer_etat").value,
     anneeDti: Number(document.getElementById("dti_editer_annee_dti").value) || DTI_CURRENT_YEAR,
-    matricule: document.getElementById("dti_editer_matricule").value.trim()
+    matricule: (() => {
+      const champ = document.getElementById("dti_editer_matricule");
+      const saisi = champ.value.trim();
+      return saisi === champ.dataset.initial ? champ.dataset.brut : saisi; // non modifié : valeur d'origine conservée
+    })()
   };
 
   const btn = document.getElementById("dti_editer_btn_enregistrer");
@@ -1358,7 +1768,10 @@ function setBtnSaving(btn, saving, savingLabel = "Enregistrement...") {
 }
 
 function parseDecimal(value) {
-  const n = Number(String(value || "").trim().replace(",", "."));
+  // Tolère espaces (milliers), "TND" et virgule décimale ("1 234,500 TND").
+  const txt = String(value ?? "").replace(/TND/gi, "").replace(/[\s\u00a0\u202f]/g, "").replace(",", ".");
+  if (txt === "") return null;
+  const n = Number(txt);
   return Number.isNaN(n) ? null : n;
 }
 
@@ -1377,7 +1790,7 @@ function openRealisationModal(record) {
   smig.value = record.smig ? formatMontant(record.smig, false) : "----";
 
   updateRealisationModal(record);
-  modal.classList.add("is_visible");
+  openFormModal("dti_realisation_modal");
 }
 
 function updateRealisationModal(record) {
@@ -1415,3 +1828,4 @@ function updateRealisationModal(record) {
   </script>
 </body>
 </html>
+
