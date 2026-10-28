@@ -10,8 +10,18 @@
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/sidebar.css" />
   <link rel="stylesheet" href="css/navbar.css" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
+    /* Spinner de chargement des sections : présent dans le HTML statique,
+       donc visible dès le premier rendu (avant l'exécution du JS). */
+    @keyframes pp_spin { to { transform: rotate(360deg); } }
+    .loading_state { display: inline-flex; align-items: center; gap: .6rem; }
+    .loading_state::before {
+      content: ""; width: 1.1rem; height: 1.1rem; flex: none;
+      border: 2px solid var(--border_soft, #ccc); border-top-color: var(--color_teal, #0a8f8f);
+      border-radius: 50%; animation: pp_spin .7s linear infinite;
+    }
+    @media (prefers-reduced-motion: reduce) { .loading_state::before { animation-duration: 2s; } }
     /* ============================================================
        Styles propres à pp.html
        ============================================================ */
@@ -393,6 +403,14 @@
       color: var(--text_secondary);
     }
     .dossier_obs_options { display: flex; flex-wrap: wrap; gap: var(--space_4); }
+    .dossier_prof { display: flex; flex-direction: column; gap: var(--space_2); }
+    .dossier_prof_radios { display: flex; gap: var(--space_4); }
+    .dossier_obs_options input:disabled + * , .dossier_check:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+    .dossier_pending { display: inline-flex; align-items: center; gap: var(--space_3); margin-right: auto; margin-left: var(--space_4); color: var(--color_danger); font-size: var(--fs_sm); font-weight: 600; }
+    .dossier_pending[hidden] { display: none !important; }
+    button.dossier_obs_toggle.is_modifie { outline: 2px dashed var(--color_danger); outline-offset: 2px; }
+    button.dossier_obs_toggle { border: 0; cursor: pointer; font: inherit; }
+    button.dossier_obs_toggle:disabled { opacity: .6; cursor: wait; }
     .dossier_obs textarea:disabled { opacity: .55; cursor: not-allowed; }
     .classe_form_grid label textarea {
       font-family: inherit;
@@ -553,7 +571,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="campagne_table_body"></tbody>
+          <tbody id="campagne_table_body"><tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr></tbody>
         </table>
         <div class="empty_state" id="campagne_empty" hidden>
           <i class="bi bi-inbox"></i>Aucune campagne enregistrée.
@@ -667,7 +685,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="demande_table_body"></tbody>
+          <tbody id="demande_table_body"><tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr></tbody>
         </table>
         <div class="empty_state" id="demande_empty" hidden>
           <i class="bi bi-inbox"></i>Aucune demande enregistrée.
@@ -677,6 +695,10 @@
       <section id="dossiers" class="panel">
         <div class="panel_header">
           <h2><i class="bi bi-folder2-open"></i> Dossiers</h2>
+          <span class="dossier_pending" id="dossier_pending" hidden>
+            <i class="bi bi-exclamation-circle"></i> Données à sauvegarder <strong id="dossier_pending_nb"></strong>
+            <button type="button" class="btn_seal" id="dossier_btn_enregistrer"><i class="bi bi-save"></i> Enregistrer</button>
+          </span>
           <div class="panel_header_actions">
             <button type="button" class="btn_seal no_mobile" id="dossier_btn_nouveau">
               <i class="bi bi-plus-lg"></i> Nouveau dossier
@@ -781,7 +803,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="dossier_table_body"></tbody>
+          <tbody id="dossier_table_body"><tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr></tbody>
         </table>
         <div class="empty_state" id="dossier_empty" hidden>
           <i class="bi bi-inbox"></i>Aucun dossier enregistré.
@@ -873,7 +895,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="inscrit_table_body"></tbody>
+          <tbody id="inscrit_table_body"><tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr></tbody>
         </table>
         <div class="empty_state" id="inscrit_empty" hidden>
           <i class="bi bi-inbox"></i>Aucun inscrit enregistré.
@@ -915,7 +937,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="pp_classe_table_body"></tbody>
+          <tbody id="pp_classe_table_body"><tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr></tbody>
         </table>
         <div class="empty_state" id="pp_classe_empty" hidden>
           <i class="bi bi-inbox"></i>Aucune classe ni module enregistré.
@@ -1124,7 +1146,6 @@
                 <div class="dossier_obs_options">
                   <label class="dossier_check"><input type="radio" name="obs_option" value="Acceptable" /> Acceptable</label>
                   <label class="dossier_check"><input type="radio" name="obs_option" value="Incomplet" /> Incomplet</label>
-                  <label class="dossier_check"><input type="radio" name="obs_option" value="Invalide" /> Invalide</label>
                   <label class="dossier_check"><input type="radio" name="obs_option" value="Autre" /> Autre</label>
                 </div>
                 <textarea name="Observations" disabled placeholder="Précisez (option « Autre »)"></textarea>
@@ -1516,8 +1537,14 @@ function wireDemandesUi() {
   document.getElementById("demande_import_form")?.addEventListener("submit", onSubmitDemandeImportForm);
 
   // Modale "Vers dossiers"
-  document.getElementById("dossier_specialite_select")?.addEventListener("change", (e) => renderDossierChamps(e.target.value, collecterValeursDossier()));
-  document.querySelectorAll('#dossier_form input[name="obs_option"]').forEach((r) => r.addEventListener("change", majObservationDossier));
+  document.getElementById("dossier_specialite_select")?.addEventListener("change", (e) => {
+    renderDossierChamps(e.target.value, collecterValeursDossier());
+    majObservationAuto();
+  });
+  // Observation calculée automatiquement quand une pièce change (attestation, profession, statut).
+  document.getElementById("dossier_champs")?.addEventListener("input", majObservationAuto);
+  document.getElementById("dossier_champs")?.addEventListener("change", majObservationAuto);
+  document.querySelectorAll('#dossier_form input[name="obs_option"]').forEach((r) => r.addEventListener("change", majObservationAuto));
 }
 
 // Liste des spécialités : onglet "specialites" de la Sheet PP, colonne A à
@@ -1785,6 +1812,15 @@ function renderDossierChamps(specialite, valeurs) {
         <span>${c.label}</span>
         <span class="dossier_radio_options">${[...options, "Non"].map(radio).join("")}</span>
       </div>`;
+    } else if (c.regle === "profession") {
+      // Profession : texte libre ; en édition, deux boutons radio (OK / Non) valident la profession.
+      const prof = parseProfessionDossier(val);
+      const edition = document.getElementById("dossier_form").dataset.mode === "edition";
+      const radiosProf = edition ? `<span class="dossier_prof_radios">
+          <label class="dossier_check"><input type="radio" name="prof_statut" value="ok"${prof.statut === "ok" ? " checked" : ""} /> Profession OK</label>
+          <label class="dossier_check"><input type="radio" name="prof_statut" value="non"${prof.statut === "non" ? " checked" : ""} /> Profession Non</label>
+        </span>` : "";
+      html[c.regle] = `<div class="dossier_prof"><label>${c.label} <input type="text" name="${c.header}" value="${escapeHtmlDemande(prof.texte)}" /></label>${radiosProf}</div>`;
     } else if (regle === "text") {
       html[c.regle] = `<label>${c.label} <input type="text" name="${c.header}" value="${escapeHtmlDemande(val)}" /></label>`;
     } else {
@@ -1802,7 +1838,47 @@ function renderDossierChamps(specialite, valeurs) {
     .join("");
 }
 
-// Observations : 4 choix ; le champ texte n'est actif que pour "Autre".
+// Colonne Profession : "Prof : <texte>" puis, sur une 2e ligne, "Acceptée" ou
+// "Non acceptée" (absente tant qu'aucun statut n'est choisi).
+function parseProfessionDossier(v) {
+  const lignes = String(v || "").replace(/\r/g, "").split("\n");
+  const m = lignes[0].match(/^\s*Prof\s*:\s?(.*)$/i);
+  if (!m) return { texte: String(v || "").trim(), statut: "" };
+  const st = (lignes[1] || "").trim().toLowerCase();
+  return { texte: m[1].trim(), statut: st.startsWith("non") ? "non" : st.startsWith("accept") ? "ok" : "" };
+}
+
+function formaterProfessionDossier(texte, statut) {
+  const base = "Prof : " + texte;
+  return statut === "ok" ? base + "\nAcceptée" : statut === "non" ? base + "\nNon acceptée" : base;
+}
+
+// Valeurs d'observation d'un même "état" (modifiables par bascule dans le tableau).
+const OBS_FAMILLE_ACCEPTABLE = ["Acceptable", "Contacté pour frais", "Frais versés"];
+const OBS_FAMILLE_INCOMPLET = ["Incomplet", "Contacté pour complément"];
+
+// Observation déduite des pièces : "Incomplet", "Acceptable" ou "" (aucune règle).
+//  - attestation de travail non cochée -> Incomplet
+//  - profession vide, ou statut non choisi / "Non" -> Incomplet
+//  - profession renseignée et statut "OK" -> Acceptable
+function observationCalculeeDossier() {
+  const form = document.getElementById("dossier_form");
+  const regles = reglesDossierSpecialite(form.elements["Spécialité"].value);
+  if (!regles || (!regles.travail && !regles.profession)) return "";
+  if (regles.travail) {
+    const cb = form.elements["Attestation travail"];
+    if (!cb || !cb.checked) return "Incomplet";
+  }
+  if (regles.profession) {
+    const txt = String(form.elements["Profession"]?.value || "").trim();
+    if (!txt) return "Incomplet";
+    const st = form.querySelector('input[name="prof_statut"]:checked');
+    return st && st.value === "ok" ? "Acceptable" : "Incomplet";
+  }
+  return "Acceptable";
+}
+
+// Observations : 3 choix (Acceptable / Incomplet / Autre) ; le champ texte n'est actif que pour "Autre".
 function majObservationDossier() {
   const form = document.getElementById("dossier_form");
   const choix = form.querySelector('input[name="obs_option"]:checked');
@@ -1812,11 +1888,33 @@ function majObservationDossier() {
   else ta.focus();
 }
 
+// Applique l'observation calculée (sauf si "Autre" est choisi) et interdit
+// "Acceptable" tant que les conditions ne sont pas réunies.
+function majObservationAuto() {
+  const form = document.getElementById("dossier_form");
+  const choix = form.querySelector('input[name="obs_option"]:checked');
+  const calc = observationCalculeeDossier();
+  if (calc && !(choix && choix.value === "Autre")) {
+    form.querySelectorAll('input[name="obs_option"]').forEach((r) => { r.checked = r.value === calc; });
+    majObservationDossier();
+  }
+  majAcceptableAutorise(calc);
+}
+
+function majAcceptableAutorise(calc) {
+  const radio = document.querySelector('#dossier_form input[name="obs_option"][value="Acceptable"]');
+  if (radio) radio.disabled = calc !== "" && calc !== "Acceptable";
+}
+
 function valeurObservationDossier() {
   const form = document.getElementById("dossier_form");
   const choix = form.querySelector('input[name="obs_option"]:checked');
   if (!choix) return "";
-  return choix.value === "Autre" ? form.elements["Observations"].value.trim() : choix.value;
+  if (choix.value === "Autre") return form.elements["Observations"].value.trim();
+  // Conserve l'état détaillé d'origine ("Frais versés"...) tant qu'on reste dans la même famille.
+  const initiale = form.dataset.obsInitiale || "";
+  const famille = choix.value === "Acceptable" ? OBS_FAMILLE_ACCEPTABLE : OBS_FAMILLE_INCOMPLET;
+  return famille.includes(initiale) ? initiale : choix.value;
 }
 
 // Valeurs actuellement saisies dans les champs variables de la modale
@@ -1874,10 +1972,13 @@ function valeurChampDossier(form, c) {
   }
   const el = form.elements[c.header];
   if (!el) return "";
+  if (c.regle === "profession") {
+    const st = form.querySelector('input[name="prof_statut"]:checked');
+    return formaterProfessionDossier(String(el.value).trim(), st ? st.value : "");
+  }
   return el.type === "checkbox" ? (el.checked ? "Oui" : "") : String(el.value).trim();
 }
 
-const OBSERVATIONS_STANDARD = ["Acceptable", "Incomplet", "Invalide"];
 
 // Ouvre la modale dossier (dans la section courante) :
 //  - mode "nouveau"  : "src" = null, formulaire vide (bouton "Nouveau dossier")
@@ -1911,10 +2012,14 @@ async function openDossierForm(src, mode) {
 
   // Observations : l'une des 3 valeurs standard, sinon "Autre" + texte libre.
   const obs = mode === "edition" ? String(src["Observations"] || "").trim() : "";
-  const valeurRadio = !obs ? "" : (OBSERVATIONS_STANDARD.includes(obs) ? obs : "Autre");
+  const valeurRadio = !obs ? "" : OBS_FAMILLE_ACCEPTABLE.includes(obs) ? "Acceptable" : OBS_FAMILLE_INCOMPLET.includes(obs) ? "Incomplet" : "Autre";
+  form.dataset.obsInitiale = obs;
   form.querySelectorAll('input[name="obs_option"]').forEach((r) => { r.checked = r.value === valeurRadio; });
   majObservationDossier();
   if (valeurRadio === "Autre") form.elements["Observations"].value = obs;
+  // Création : observation déduite d'emblée ; édition : on garde la valeur enregistrée.
+  if (mode === "edition") majAcceptableAutorise(observationCalculeeDossier());
+  else majObservationAuto();
 
   openFormModal("dossier_modal", "dossier_form");
 }
@@ -1949,11 +2054,17 @@ async function onSubmitDossierForm(e) {
   setBtnSaving(btn, true);
   try {
     if (mode === "edition") {
+      const avant = dossiersCache.find((x) => String(x._row) === String(rowId));
       await apiCallDirect("updateDossierPP", { _row: rowId, record });
+      // La modale enregistre toute la ligne, observation comprise : plus rien en attente pour elle.
+      if (avant) dossierPending.delete(cleDossierPending(avant));
+      majIndicateurDossierPending();
       closeFormModal("dossier_modal");
+      viderRecherches("dossier_search");
     } else {
       await apiCallDirect("createDossierPP", { record });
       closeFormModal("dossier_modal");
+      viderRecherches("demande_search", "dossier_search");
       // Transfert : la demande quitte "Demandes" une fois le dossier créé.
       try {
         if (rowId) await apiCallDirect("deleteDemandePP", { _row: rowId });
@@ -2024,6 +2135,12 @@ function wireDossiersUi() {
   document.getElementById("dossier_table_body")?.addEventListener("click", (e) => {
     const find = (btn) => dossiersCache.find((x) => String(x._row) === btn.dataset.row);
 
+    const btnObs = e.target.closest(".dossier_obs_toggle");
+    if (btnObs) {
+      const d = find(btnObs);
+      if (d) basculerObservationDossier(d);
+      return;
+    }
     const btnAfficher = e.target.closest(".dossier_row_afficher");
     if (btnAfficher) {
       const d = find(btnAfficher);
@@ -2054,6 +2171,7 @@ function wireDossiersUi() {
   document.getElementById("dossier_search")?.addEventListener("input", renderDossierTable);
 
   document.getElementById("dossier_btn_nouveau")?.addEventListener("click", () => openDossierForm(null, "nouveau"));
+  document.getElementById("dossier_btn_enregistrer")?.addEventListener("click", enregistrerObservationsDossiers);
   document.getElementById("dossier_btn_liste")?.addEventListener("click", ouvrirListeDossiers);
   document.getElementById("dossier_liste_btn_imprimer")?.addEventListener("click", imprimerListeDossiers);
   document.getElementById("dossier_liste_form")?.addEventListener("submit", (e) => e.preventDefault());
@@ -2079,6 +2197,7 @@ async function loadDossiers() {
   tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr>`;
   try {
     dossiersCache = await apiCallDirect("listDossiersPP", {});
+    reappliquerDossierPending();
     renderDossierFilters();
     renderDossierTable();
   } catch (err) {
@@ -2127,7 +2246,9 @@ function piecesManquantesDossier(d) {
   DOSSIER_CHAMPS.forEach((c) => {
     const regle = regles[c.regle];
     if (!regle) return;
-    const ok = c.regle === "affSS"
+    const ok = c.regle === "profession"
+      ? (() => { const p = parseProfessionDossier(d[c.header]); return p.texte !== "" && p.statut !== "non"; })()
+      : c.regle === "affSS"
       ? ["Oui", "Expérience PROF"].includes(valeurAffiliationSS(d[c.header]))
       : rempli(c.header);
     if (!ok) manquantes.push(c.label);
@@ -2211,11 +2332,136 @@ function imprimerListeDossiers() {
   setTimeout(() => iframe.remove(), 1000);
 }
 
-function badgeObservationDossier(obs) {
-  const classes = { "Acceptable": "is_actif", "Incomplet": "is_prevue", "Invalide": "is_close" };
-  const txt = escapeHtmlDemande(obs);
-  return classes[obs] ? `<span class="etat_badge ${classes[obs]}">${txt}</span>` : txt;
+const OBS_CLASSES = {
+  "Acceptable": "is_actif", "Contacté pour frais": "is_actif", "Frais versés": "is_actif",
+  "Incomplet": "is_prevue", "Contacté pour complément": "is_prevue"
+};
+
+// Valeur suivante de la bascule (Acceptable -> Contacté pour frais -> Frais versés -> Acceptable ;
+// Incomplet <-> Contacté pour complément). "" si l'observation n'est pas basculable.
+function observationSuivanteDossier(obs) {
+  let i = OBS_FAMILLE_ACCEPTABLE.indexOf(obs);
+  if (i !== -1) return OBS_FAMILLE_ACCEPTABLE[(i + 1) % OBS_FAMILLE_ACCEPTABLE.length];
+  i = OBS_FAMILLE_INCOMPLET.indexOf(obs);
+  if (i !== -1) return OBS_FAMILLE_INCOMPLET[(i + 1) % OBS_FAMILLE_INCOMPLET.length];
+  return "";
 }
+
+function badgeObservationDossier(obs, row, modifie) {
+  const txt = escapeHtmlDemande(obs);
+  if (!OBS_CLASSES[obs]) return txt;
+  if (row === undefined) return `<span class="etat_badge ${OBS_CLASSES[obs]}">${txt}</span>`;
+  return `<button type="button" class="etat_badge ${OBS_CLASSES[obs]} dossier_obs_toggle${modifie ? " is_modifie" : ""}" data-row="${row}" title="${modifie ? "Changement non enregistré — " : ""}Cliquer pour changer l'état">${txt}</button>`;
+}
+
+/* ---------------- Bascule des observations en local ----------------
+   Un clic sur l'observation ne touche pas la base : le changement est gardé
+   en mémoire (dossierPending) jusqu'au clic sur "Enregistrer". Clé = CIN +
+   spécialité (et non le n° de ligne, qui se décale quand une ligne est
+   supprimée / archivée / transférée). Précautions :
+   - un rechargement (après modale, suppression, archivage...) réapplique les
+     changements en attente sur les données fraîches ;
+   - à l'enregistrement, les lignes sont relues : ligne disparue ou observation
+     modifiée entre-temps -> signalé / confirmation avant d'écraser ;
+   - les autres colonnes sont reprises de la ligne fraîche, pas du cache ;
+   - avertissement à la fermeture de la page s'il reste des changements. */
+const dossierPending = new Map();   // clé -> { origine, nouvelle }
+let dossierSauvegardeEnCours = false;
+
+const cleDossierPending = (d) => `${normaliserCinPP(d["CIN"])}|${String(d["Spécialité"] || "").trim()}`;
+
+function majIndicateurDossierPending() {
+  const box = document.getElementById("dossier_pending");
+  if (!box) return;
+  box.hidden = dossierPending.size === 0;
+  document.getElementById("dossier_pending_nb").textContent = dossierPending.size ? `(${dossierPending.size})` : "";
+  document.getElementById("dossier_btn_enregistrer").disabled = dossierSauvegardeEnCours;
+}
+
+function basculerObservationDossier(d) {
+  if (dossierSauvegardeEnCours) return;
+  const actuelle = String(d["Observations"] || "").trim();
+  const suivante = observationSuivanteDossier(actuelle);
+  if (!suivante) return;
+  const cle = cleDossierPending(d);
+  const origine = dossierPending.has(cle) ? dossierPending.get(cle).origine : actuelle;
+  d["Observations"] = suivante;
+  if (suivante === origine) dossierPending.delete(cle);   // retour à l'état d'origine
+  else dossierPending.set(cle, { origine, nouvelle: suivante });
+  majIndicateurDossierPending();
+  renderDossierTable();
+}
+
+// Réapplique les changements en attente sur des données fraîches (après un rechargement).
+function reappliquerDossierPending() {
+  const parCle = new Map(dossiersCache.map((d) => [cleDossierPending(d), d]));
+  Array.from(dossierPending.entries()).forEach(([cle, p]) => {
+    const d = parCle.get(cle);
+    const obs = d ? String(d["Observations"] || "").trim() : "";
+    if (!d || obs === p.nouvelle) { dossierPending.delete(cle); return; }   // ligne disparue ou déjà à jour
+    p.origine = obs;
+    d["Observations"] = p.nouvelle;
+  });
+  majIndicateurDossierPending();
+}
+
+async function enregistrerObservationsDossiers() {
+  if (dossierSauvegardeEnCours || dossierPending.size === 0) return;
+  dossierSauvegardeEnCours = true;
+  majIndicateurDossierPending();
+  const btn = document.getElementById("dossier_btn_enregistrer");
+  setBtnSaving(btn, true);
+  const problemes = [];
+  try {
+    // 1. Relecture de la base : les n° de ligne ont pu changer depuis le chargement.
+    const frais = await apiCallDirect("listDossiersPP", {});
+    const parCle = new Map(frais.map((d) => [cleDossierPending(d), d]));
+    const aEcrire = [];
+    const conflits = [];
+    dossierPending.forEach((p, cle) => {
+      const d = parCle.get(cle);
+      if (!d) { problemes.push(`${cle.replace("|", " — ")} : dossier introuvable (supprimé, archivé ou modifié).`); dossierPending.delete(cle); return; }
+      const obsBase = String(d["Observations"] || "").trim();
+      if (obsBase === p.nouvelle) { dossierPending.delete(cle); return; }   // déjà à jour
+      if (obsBase !== p.origine) conflits.push({ cle, d, p, obsBase });
+      else aEcrire.push({ cle, d, p });
+    });
+    // 2. Observation changée ailleurs entre-temps : confirmation avant d'écraser.
+    if (conflits.length) {
+      const detail = conflits.map((c) => `• ${c.cle.replace("|", " — ")} : « ${c.obsBase || "vide"} » dans la base, « ${c.p.nouvelle} » ici`).join("\n");
+      if (confirm(`${conflits.length} dossier(s) ont été modifiés ailleurs depuis le chargement :\n${detail}\n\nÉcraser avec vos changements ?`)) {
+        conflits.forEach((c) => aEcrire.push(c));
+      } else {
+        conflits.forEach((c) => dossierPending.delete(c.cle));   // la valeur de la base l'emporte
+      }
+    }
+    // 3. Écriture une par une ; un échec n'empêche pas les autres et reste en attente.
+    for (const { cle, d, p } of aEcrire) {
+      try {
+        const record = { ...d, "CIN": normaliserCinPP(d["CIN"]), "Observations": p.nouvelle };
+        delete record._row;
+        await apiCallDirect("updateDossierPP", { _row: d._row, record });
+        dossierPending.delete(cle);
+      } catch (err) {
+        problemes.push(`${cle.replace("|", " — ")} : ${err.message}`);
+      }
+    }
+  } catch (err) {
+    problemes.push(`Impossible de relire la base : ${err.message}`);
+  } finally {
+    dossierSauvegardeEnCours = false;
+    setBtnSaving(btn, false);
+    majIndicateurDossierPending();
+  }
+  await loadDossiers();   // état réel de la base (garde les éventuels changements restés en attente)
+  if (problemes.length) alert(`Certains changements n'ont pas été enregistrés :\n${problemes.join("\n")}`);
+}
+
+window.addEventListener("beforeunload", (e) => {
+  if (dossierPending.size === 0) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
 
 function renderDossierTable() {
   ajusterStickyPP();
@@ -2230,6 +2476,15 @@ function renderDossierTable() {
     if (!terme) return true;
     return [d["CIN"], d["Prénom"], d["Nom"]].some((v) => norm(v).includes(terme));
   });
+
+  // Tri : spécialité, puis observation (Incomplet, Contacté pour complément,
+  // Acceptable, Contacté pour frais, Frais versés ; les autres à la fin).
+  // Le tri est stable : à égalité, l'ordre de la base est conservé.
+  const ordreObs = ["Incomplet", "Contacté pour complément", "Acceptable", "Contacté pour frais", "Frais versés"];
+  const rangObs = (d) => { const i = ordreObs.indexOf(String(d["Observations"] || "").trim()); return i === -1 ? ordreObs.length : i; };
+  filtered.sort((a, b) =>
+    String(a["Spécialité"] || "").trim().localeCompare(String(b["Spécialité"] || "").trim(), "fr")
+    || rangObs(a) - rangObs(b));
 
   majBoutonListeDossiers(filtered);
 
@@ -2253,7 +2508,7 @@ function renderDossierTable() {
       <td>${escapeHtmlDemande(d["Nom"])}</td>
       <td><span class="demande_tel_tooltip" tabindex="0" data-tooltip="${escapeHtmlDemande(tooltip)}">${escapeHtmlDemande(tel) || "—"}</span></td>
       <td>${escapeHtmlDemande(d["Spécialité"])}</td>
-      <td>${badgeObservationDossier(d["Observations"] || "")}</td>
+      <td>${badgeObservationDossier(String(d["Observations"] || "").trim(), d._row, dossierPending.has(cleDossierPending(d)))}</td>
       <td>
         <button type="button" class="btn_info dossier_row_afficher" data-row="${d._row}">
           <i class="bi bi-eye"></i> Afficher
@@ -2288,6 +2543,8 @@ function anneeInscritDepuisClasse(c) {
 }
 
 let versInscritClasses = [];
+let versInscritDossier = null;      // dossier en cours de passage en inscrit
+let versInscritEnAttente = null;    // dossier à terminer une fois la nouvelle classe créée
 let versInscritSpecialite = "";   // spécialité du dossier en cours de passage en inscrit
 const VERS_INSCRIT_NOUVELLE = "__nouvelle__";
 
@@ -2316,7 +2573,7 @@ function majAnneeVersInscrit() {
     const type = estSpecialiteModulaire(versInscritSpecialite) ? "modulaire" : "fad";
     select.value = "";
     closeFormModal("vers_inscrit_modal");
-    ouvrirNouvelleClasse(type);
+    ouvrirNouvelleClasse(type, versInscritDossier);
     return;
   }
   const c = versInscritClasses.find((x) => x.id === select.value);
@@ -2330,6 +2587,7 @@ function majAnneeVersInscrit() {
 async function openVersInscritForm(dossier) {
   const form = document.getElementById("vers_inscrit_form");
   form.reset();
+  versInscritDossier = dossier;
   form.elements["_row"].value = dossier._row;
   form.elements["CIN"].value = normaliserCinPP(dossier["CIN"]);
   form.elements["Prénom"].value = dossier["Prénom"] || "";
@@ -2387,6 +2645,45 @@ function remplirClassesVersInscrit() {
       : `<option value="${VERS_INSCRIT_NOUVELLE}">Nouvelle classe</option>`);
 }
 
+// Après création de la classe (ou du module) demandée depuis "Vers inscrits" :
+// la nouvelle entrée est repérée par différence avec la liste d'avant, puis le
+// dossier est transféré automatiquement vers les inscrits. Si la nouvelle
+// classe n'est pas identifiable ou si l'enregistrement échoue, on rouvre la
+// modale "Vers inscrits" pour finir à la main.
+async function reprendreVersInscrit(dossier, modulaire, idsAvant) {
+  const source = modulaire ? ppModuleListCache : ppClasseListCache;
+  const nouvelles = (Array.isArray(source) ? source : []).filter((c) => !idsAvant.has(c.id));
+  if (nouvelles.length !== 1) { await openVersInscritForm(dossier); return; }
+  const c = nouvelles[0];
+  const coord = dossier["Coordonnées"] || "";
+  const record = {
+    "CIN": normaliserCinPP(dossier["CIN"]),
+    "Prénom": String(dossier["Prénom"] || "").trim(),
+    "Nom": String(dossier["Nom"] || "").trim(),
+    "Coordonnées": buildCoordText(DEMANDE_COORD_LABELS, {
+      "Tél": getCoordField(coord, "Tél"),
+      "Tél2": getCoordField(coord, "Tél2"),
+      "Email": getCoordField(coord, "Email")
+    }),
+    "Année": modulaire ? anneeInscritDepuisModule(c) : anneeInscritDepuisClasse(c)
+  };
+  try {
+    await apiCallDirect("createInscritPP", { record });
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement de l'inscrit : ${err.message}`);
+    await openVersInscritForm(dossier);
+    return;
+  }
+  try {
+    if (dossier._row) await apiCallDirect("deleteDossierPP", { _row: dossier._row });
+  } catch (errSuppr) {
+    alert(`Inscrit créé, mais le dossier n'a pas pu être retiré de la liste : ${errSuppr.message}`);
+  }
+  viderRecherches("dossier_search", "inscrit_search");
+  await loadDossiers();
+  await loadInscrits();
+}
+
 // Validation : crée l'inscrit (onglet "Inscrits") puis retire le dossier.
 async function onSubmitVersInscritForm(e) {
   e.preventDefault();
@@ -2408,6 +2705,7 @@ async function onSubmitVersInscritForm(e) {
   try {
     await apiCallDirect("createInscritPP", { record });
     closeFormModal("vers_inscrit_modal");
+    viderRecherches("dossier_search", "inscrit_search");
     try {
       if (rowId) await apiCallDirect("deleteDossierPP", { _row: rowId });
     } catch (errSuppr) {
@@ -2472,6 +2770,7 @@ async function onSubmitDemandeForm(e) {
       await apiCallDirect("createDemandePP", { record });
     }
     closeFormModal("demande_modal");
+    viderRecherches("demande_search");
     await loadDemandes();
   } catch (err) {
     alert(`Erreur lors de l'enregistrement : ${err.message}`);
@@ -2993,6 +3292,7 @@ async function onSubmitInscritForm(e) {
       await apiCallDirect("createInscritPP", { record });
     }
     closeFormModal("inscrit_modal");
+    viderRecherches("inscrit_search");
     await loadInscrits();
   } catch (err) {
     alert(`Erreur lors de l'enregistrement : ${err.message}`);
@@ -3021,7 +3321,8 @@ function afficherFormulaireType(type, verrouille) {
 
 // Ouvre la modale unique de création. type : "" (choix dans le select de
 // l'en-tête), "fad" ou "modulaire" (présélectionné, ex. depuis "Vers inscrits").
-async function ouvrirNouvelleClasse(type = "") {
+async function ouvrirNouvelleClasse(type = "", dossierEnAttente = null) {
+  versInscritEnAttente = dossierEnAttente;
   const form = document.getElementById("classe_fiche_form");
   editionToken++;
   form.classList.remove("is_loading");
@@ -3339,6 +3640,8 @@ async function onSubmitNouvelleClasse(e) {
     return;
   }
   const btn = document.getElementById("classe_fiche_btn_enregistrer");
+  const dossierAttente = editingFileId ? null : versInscritEnAttente;
+  const idsAvant = new Set((Array.isArray(ppClasseListCache) ? ppClasseListCache : []).map((c) => c.id));
   setBtnSaving(btn, true);
   try {
     // Le nom du fichier Drive est calculé côté Code.gs (nomFichierClasse) —
@@ -3362,7 +3665,12 @@ async function onSubmitNouvelleClasse(e) {
     editingFileId = null;
     editingExtraData = null;
     editingConstantesHeures = null;
+    viderRecherches("pp_search");
     await loadPPClasses();
+    if (dossierAttente) {
+      versInscritEnAttente = null;
+      await reprendreVersInscrit(dossierAttente, false, idsAvant);
+    }
   } catch (err) {
     alert(`Erreur : ${err.message}`);
   } finally {
@@ -3399,6 +3707,17 @@ function ajusterStickyPP() {
     const base = sticky ? (parseFloat(cs.top) || 0) + ph.offsetHeight : 0;
     section.style.setProperty("--pp_toolbar_top", base + "px");
     section.style.setProperty("--pp_thead_top", (base + toolbar.offsetHeight) + "px");
+  });
+}
+
+// Vide les champs de recherche indiqués (et met à jour leur bouton d'effacement
+// ainsi que la liste associée via l'événement "input").
+function viderRecherches(...ids) {
+  ids.forEach((id) => {
+    const input = document.getElementById(id);
+    if (!input || !input.value) return;
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
   });
 }
 
@@ -3531,6 +3850,8 @@ async function onSubmitModulePP(e) {
     return;
   }
   const btn = document.getElementById("mpp_btn_enregistrer");
+  const dossierAttente = editingModuleFileId ? null : versInscritEnAttente;
+  const idsAvant = new Set((Array.isArray(ppModuleListCache) ? ppModuleListCache : []).map((c) => c.id));
   setBtnSaving(btn, true);
   try {
     await apiCallDirect("exportModuleToDrive", {
@@ -3542,7 +3863,12 @@ async function onSubmitModulePP(e) {
     closeFormModal("classe_fiche_modal");
     editingModuleFileId = null;
     editingModuleData = null;
+    viderRecherches("pp_search");
     await loadPPModules();
+    if (dossierAttente) {
+      versInscritEnAttente = null;
+      await reprendreVersInscrit(dossierAttente, true, idsAvant);
+    }
   } catch (err) {
     alert(`Erreur : ${err.message}`);
   } finally {
