@@ -45,6 +45,11 @@
     .etat_badge.is_actif { background: #d1fae5; color: #065f46; }
     .etat_badge.is_close { background: #fee2e2; color: #991b1b; }
     .etat_badge.is_facture { background: #dbeafe; color: #1e40af; }
+    /* Observations des dossiers */
+    .etat_badge.obs_complet { background: #ecfccb; color: #3f6212; }
+    .etat_badge.obs_compl_frais { background: linear-gradient(90deg, #dbeafe 50%, #fee2e2 50%); color: #3730a3; }
+    .etat_badge.obs_compl { background: #ffe4e6; color: #be123c; }
+    .etat_badge.obs_reserve { background: #ccfbf1; color: #115e59; }
 
 
     /*.search_wrap {
@@ -475,24 +480,8 @@
         <i class="bi bi-x-lg"></i>
       </button>
 
-      <nav class="sidebar_nav">
-        <a class="sidebar_module_link" href="index.html"><i class="bi bi-house"></i> Accueil</a>
-        <div class="sidebar_divider"></div>
-        <div class="sidebar_group_label">Sur cette page</div>
-        <a class="sidebar_section_link" href="#campagne">Campagne</a>
-        <a class="sidebar_section_link is_active" href="#demandes">Demandes</a>
-        <a class="sidebar_section_link" href="#dossiers">Dossiers</a>
-        <a class="sidebar_section_link" href="#inscrits">Inscrits</a>
-        <a class="sidebar_section_link" href="#classes">Classes</a>
-
-        <div class="sidebar_divider"></div>
-
-        <div class="sidebar_group_label">Autres modules</div>
-        <a class="sidebar_module_link" href="ci.html"><i class="bi bi-percent"></i> Crédit d'impôt</a>
-        <a class="sidebar_module_link" href="dti.html"><i class="bi bi-building"></i> Droits de tirage individuels</a>
-        <a class="sidebar_module_link" href="dtc.html"><i class="bi bi-buildings"></i> Droits de tirage collectifs</a>
-        <a class="sidebar_module_link" href="part.html"><i class="bi bi-diagram-3"></i> Partenaires</a>
-        <a class="sidebar_module_link" href="docs.html"><i class="bi bi-file-earmark-text"></i> Documents</a>
+      <nav class="sidebar_nav" data-page="pp">
+        <script src="js/sidebar_menu.js"></script>
       </nav>
 
       <div class="sidebar_footer">
@@ -1144,6 +1133,7 @@
               <div class="dossier_obs">
                 <span>Observations</span>
                 <div class="dossier_obs_options">
+                  <label class="dossier_check"><input type="radio" name="obs_option" value="Complet" /> Complet</label>
                   <label class="dossier_check"><input type="radio" name="obs_option" value="Acceptable" /> Acceptable</label>
                   <label class="dossier_check"><input type="radio" name="obs_option" value="Incomplet" /> Incomplet</label>
                   <label class="dossier_check"><input type="radio" name="obs_option" value="Autre" /> Autre</label>
@@ -1544,7 +1534,7 @@ function wireDemandesUi() {
   // Observation calculée automatiquement quand une pièce change (attestation, profession, statut).
   document.getElementById("dossier_champs")?.addEventListener("input", majObservationAuto);
   document.getElementById("dossier_champs")?.addEventListener("change", majObservationAuto);
-  document.querySelectorAll('#dossier_form input[name="obs_option"]').forEach((r) => r.addEventListener("change", majObservationAuto));
+  document.querySelectorAll('#dossier_form input[name="obs_option"]').forEach((r) => r.addEventListener("change", majObservationDossier));
 }
 
 // Liste des spécialités : onglet "specialites" de la Sheet PP, colonne A à
@@ -1854,28 +1844,39 @@ function formaterProfessionDossier(texte, statut) {
 }
 
 // Valeurs d'observation d'un même "état" (modifiables par bascule dans le tableau).
-const OBS_FAMILLE_ACCEPTABLE = ["Acceptable", "Contacté pour frais", "Frais versés"];
 const OBS_FAMILLE_INCOMPLET = ["Incomplet", "Contacté pour complément"];
+const OBS_FAMILLE_COMPLET = ["Complet", "Contacté pour frais", "Frais versés"];
+const OBS_FAMILLE_ACCEPTABLE = ["Acceptable", "Contacté pour complément et frais", "Frais versés sous réserve"];
+const OBS_FAMILLES = [OBS_FAMILLE_COMPLET, OBS_FAMILLE_ACCEPTABLE, OBS_FAMILLE_INCOMPLET];
 
-// Observation déduite des pièces : "Incomplet", "Acceptable" ou "" (aucune règle).
-//  - attestation de travail non cochée -> Incomplet
-//  - profession vide, ou statut non choisi / "Non" -> Incomplet
-//  - profession renseignée et statut "OK" -> Acceptable
-function observationCalculeeDossier() {
+// État de l'observation d'après les pièces : { calc, acceptable }.
+//  - Acceptable INACTIF (observation = Incomplet) si : attestation de travail non cochée (quand la
+//    spécialité l'exige), profession "Non", ou diplôme absent ("Non", quand la spécialité l'exige).
+//  - Sinon Acceptable ACTIF : observation = Incomplet si une autre pièce manque (photos, CIN,
+//    profession vide ou non validée, affiliation SS "Non"...).
+//  - Aucune pièce manquante : observation = Complet (option réservée à ce cas ; Acceptable reste choisissable).
+//  - calc "" = aucune pièce exigée par la spécialité (pas de calcul automatique).
+function etatObservationDossier() {
   const form = document.getElementById("dossier_form");
   const regles = reglesDossierSpecialite(form.elements["Spécialité"].value);
-  if (!regles || (!regles.travail && !regles.profession)) return "";
-  if (regles.travail) {
-    const cb = form.elements["Attestation travail"];
-    if (!cb || !cb.checked) return "Incomplet";
-  }
-  if (regles.profession) {
-    const txt = String(form.elements["Profession"]?.value || "").trim();
-    if (!txt) return "Incomplet";
-    const st = form.querySelector('input[name="prof_statut"]:checked');
-    return st && st.value === "ok" ? "Acceptable" : "Incomplet";
-  }
-  return "Acceptable";
+  if (!regles || !DOSSIER_CHAMPS.some((c) => regles[c.regle])) return { calc: "", acceptable: true };
+
+  const grp = (nom) => form.querySelector(`input[name="grp_${nom}"]:checked`)?.value || "Non";
+  const statutProf = form.querySelector('input[name="prof_statut"]:checked')?.value || "";
+  const coche = (header) => !!form.elements[header]?.checked;
+
+  const bloque = (regles.travail && !coche("Attestation travail"))
+    || (regles.profession && statutProf === "non")
+    || (regles.diplome && grp("diplome") === "Non");
+  if (bloque) return { calc: "Incomplet", acceptable: false };
+
+  const manque = DOSSIER_CHAMPS.some((c) => {
+    if (!regles[c.regle]) return false;
+    if (c.groupe) return grp(c.regle) === "Non";
+    if (c.regle === "profession") return !String(form.elements["Profession"]?.value || "").trim() || statutProf !== "ok";
+    return !coche(c.header);
+  });
+  return { calc: manque ? "Incomplet" : "Complet", acceptable: true };
 }
 
 // Observations : 3 choix (Acceptable / Incomplet / Autre) ; le champ texte n'est actif que pour "Autre".
@@ -1893,17 +1894,22 @@ function majObservationDossier() {
 function majObservationAuto() {
   const form = document.getElementById("dossier_form");
   const choix = form.querySelector('input[name="obs_option"]:checked');
-  const calc = observationCalculeeDossier();
-  if (calc && !(choix && choix.value === "Autre")) {
+  const etat = etatObservationDossier();
+  const calc = etat.calc;
+  // "Autre" est conservé ; "Acceptable" choisi à la main est conservé tant qu'il reste autorisé.
+  const garde = choix && (choix.value === "Autre" || (choix.value === "Acceptable" && etat.acceptable));
+  if (calc && !garde) {
     form.querySelectorAll('input[name="obs_option"]').forEach((r) => { r.checked = r.value === calc; });
     majObservationDossier();
   }
-  majAcceptableAutorise(calc);
+  majAcceptableAutorise(etat);
 }
 
-function majAcceptableAutorise(calc) {
+function majAcceptableAutorise(etat) {
   const radio = document.querySelector('#dossier_form input[name="obs_option"][value="Acceptable"]');
-  if (radio) radio.disabled = calc !== "" && calc !== "Acceptable";
+  if (radio) radio.disabled = !etat.acceptable;
+  const complet = document.querySelector('#dossier_form input[name="obs_option"][value="Complet"]');
+  if (complet) complet.disabled = etat.calc !== "" && etat.calc !== "Complet";
 }
 
 function valeurObservationDossier() {
@@ -1913,7 +1919,7 @@ function valeurObservationDossier() {
   if (choix.value === "Autre") return form.elements["Observations"].value.trim();
   // Conserve l'état détaillé d'origine ("Frais versés"...) tant qu'on reste dans la même famille.
   const initiale = form.dataset.obsInitiale || "";
-  const famille = choix.value === "Acceptable" ? OBS_FAMILLE_ACCEPTABLE : OBS_FAMILLE_INCOMPLET;
+  const famille = choix.value === "Complet" ? OBS_FAMILLE_COMPLET : choix.value === "Acceptable" ? OBS_FAMILLE_ACCEPTABLE : OBS_FAMILLE_INCOMPLET;
   return famille.includes(initiale) ? initiale : choix.value;
 }
 
@@ -2012,13 +2018,13 @@ async function openDossierForm(src, mode) {
 
   // Observations : l'une des 3 valeurs standard, sinon "Autre" + texte libre.
   const obs = mode === "edition" ? String(src["Observations"] || "").trim() : "";
-  const valeurRadio = !obs ? "" : OBS_FAMILLE_ACCEPTABLE.includes(obs) ? "Acceptable" : OBS_FAMILLE_INCOMPLET.includes(obs) ? "Incomplet" : "Autre";
+  const valeurRadio = !obs ? "" : OBS_FAMILLE_COMPLET.includes(obs) ? "Complet" : OBS_FAMILLE_ACCEPTABLE.includes(obs) ? "Acceptable" : OBS_FAMILLE_INCOMPLET.includes(obs) ? "Incomplet" : "Autre";
   form.dataset.obsInitiale = obs;
   form.querySelectorAll('input[name="obs_option"]').forEach((r) => { r.checked = r.value === valeurRadio; });
   majObservationDossier();
   if (valeurRadio === "Autre") form.elements["Observations"].value = obs;
   // Création : observation déduite d'emblée ; édition : on garde la valeur enregistrée.
-  if (mode === "edition") majAcceptableAutorise(observationCalculeeDossier());
+  if (mode === "edition") majAcceptableAutorise(etatObservationDossier());
   else majObservationAuto();
 
   openFormModal("dossier_modal", "dossier_form");
@@ -2191,6 +2197,19 @@ function wireDossiersUi() {
   document.getElementById("archive_form")?.addEventListener("submit", onSubmitArchiveForm);
 }
 
+// Tri du cache : spécialité, puis observation (Incomplet, Contacté pour complément,
+// Complet, Acceptable, Incomplet, Contacté pour frais, Contacté pour complément,
+// Contacté pour complément et frais, Frais versés sous réserve, Frais versés ; les autres à la fin). Appliqué
+// seulement au chargement : une bascule locale ne déplace pas la ligne avant le
+// prochain chargement. Tri stable : à égalité, l'ordre de la base est conservé.
+function trierDossiersCache() {
+  const ordreObs = ["Complet", "Acceptable", "Incomplet", "Contacté pour frais", "Contacté pour complément", "Contacté pour complément et frais", "Frais versés sous réserve", "Frais versés"];
+  const rangObs = (d) => { const i = ordreObs.indexOf(String(d["Observations"] || "").trim()); return i === -1 ? ordreObs.length : i; };
+  dossiersCache.sort((a, b) =>
+    String(a["Spécialité"] || "").trim().localeCompare(String(b["Spécialité"] || "").trim(), "fr")
+    || rangObs(a) - rangObs(b));
+}
+
 async function loadDossiers() {
   const tbody = document.getElementById("dossier_table_body");
   if (!tbody) return;
@@ -2198,6 +2217,7 @@ async function loadDossiers() {
   try {
     dossiersCache = await apiCallDirect("listDossiersPP", {});
     reappliquerDossierPending();
+    trierDossiersCache();
     renderDossierFilters();
     renderDossierTable();
   } catch (err) {
@@ -2333,24 +2353,33 @@ function imprimerListeDossiers() {
 }
 
 const OBS_CLASSES = {
-  "Acceptable": "is_actif", "Contacté pour frais": "is_actif", "Frais versés": "is_actif",
-  "Incomplet": "is_prevue", "Contacté pour complément": "is_prevue"
+  "Complet": "obs_complet",                              // vert clair
+  "Acceptable": "is_actif",                              // vert
+  "Incomplet": "is_close",                               // rouge
+  "Contacté pour frais": "is_facture",                   // bleu
+  "Contacté pour complément": "obs_compl",               // rouge rosé
+  "Contacté pour complément et frais": "obs_compl_frais", // bleu / rouge
+  "Frais versés sous réserve": "obs_reserve",            // vert d'eau
+  "Frais versés": "is_actif"                             // vert
 };
 
-// Valeur suivante de la bascule (Acceptable -> Contacté pour frais -> Frais versés -> Acceptable ;
-// Incomplet <-> Contacté pour complément). "" si l'observation n'est pas basculable.
+// Valeur suivante de la bascule :
+//   Complet -> Contacté pour frais -> Frais versés -> Complet ;
+//   Acceptable -> Contacté pour complément et frais -> Frais versés sous réserve -> Acceptable ;
+//   Incomplet <-> Contacté pour complément. "" si l'observation n'est pas basculable.
 function observationSuivanteDossier(obs) {
-  let i = OBS_FAMILLE_ACCEPTABLE.indexOf(obs);
-  if (i !== -1) return OBS_FAMILLE_ACCEPTABLE[(i + 1) % OBS_FAMILLE_ACCEPTABLE.length];
-  i = OBS_FAMILLE_INCOMPLET.indexOf(obs);
-  if (i !== -1) return OBS_FAMILLE_INCOMPLET[(i + 1) % OBS_FAMILLE_INCOMPLET.length];
+  for (const famille of OBS_FAMILLES) {
+    const i = famille.indexOf(obs);
+    if (i !== -1) return famille[(i + 1) % famille.length];
+  }
   return "";
 }
 
 function badgeObservationDossier(obs, row, modifie) {
   const txt = escapeHtmlDemande(obs);
   if (!OBS_CLASSES[obs]) return txt;
-  if (row === undefined) return `<span class="etat_badge ${OBS_CLASSES[obs]}">${txt}</span>`;
+  // "Complet" n'est pas dans une famille de bascule : simple badge.
+  if (row === undefined || !observationSuivanteDossier(obs)) return `<span class="etat_badge ${OBS_CLASSES[obs]}">${txt}</span>`;
   return `<button type="button" class="etat_badge ${OBS_CLASSES[obs]} dossier_obs_toggle${modifie ? " is_modifie" : ""}" data-row="${row}" title="${modifie ? "Changement non enregistré — " : ""}Cliquer pour changer l'état">${txt}</button>`;
 }
 
@@ -2477,15 +2506,6 @@ function renderDossierTable() {
     return [d["CIN"], d["Prénom"], d["Nom"]].some((v) => norm(v).includes(terme));
   });
 
-  // Tri : spécialité, puis observation (Incomplet, Contacté pour complément,
-  // Acceptable, Contacté pour frais, Frais versés ; les autres à la fin).
-  // Le tri est stable : à égalité, l'ordre de la base est conservé.
-  const ordreObs = ["Incomplet", "Contacté pour complément", "Acceptable", "Contacté pour frais", "Frais versés"];
-  const rangObs = (d) => { const i = ordreObs.indexOf(String(d["Observations"] || "").trim()); return i === -1 ? ordreObs.length : i; };
-  filtered.sort((a, b) =>
-    String(a["Spécialité"] || "").trim().localeCompare(String(b["Spécialité"] || "").trim(), "fr")
-    || rangObs(a) - rangObs(b));
-
   majBoutonListeDossiers(filtered);
 
   if (filtered.length === 0) {
@@ -2513,9 +2533,9 @@ function renderDossierTable() {
         <button type="button" class="btn_info dossier_row_afficher" data-row="${d._row}">
           <i class="bi bi-eye"></i> Afficher
         </button>
-        <button type="button" class="btn_ghost dossier_row_vers_inscrit" data-row="${d._row}">
+        ${["Frais versés", "Frais versés sous réserve"].includes(String(d["Observations"] || "").trim()) ? `<button type="button" class="btn_ghost dossier_row_vers_inscrit" data-row="${d._row}">
           <i class="bi bi-arrow-right-circle"></i> Vers Inscrits
-        </button>
+        </button>` : ""}
         <button type="button" class="btn_danger dossier_row_archiver" data-row="${d._row}">
           <i class="bi bi-archive"></i> Archiver
         </button>
