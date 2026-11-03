@@ -44,20 +44,131 @@
       align-items: center;
     }
 
-    .docs_manuel_dialog { max-width: 900px; }
+    /* Modale de lecture : hauteur fixe, UNE seule barre de défilement (celle du
+       manuel, dans l'iframe). Ni le fond de la modale ni le corps ne défilent. */
+    #docs_manuel_modal { overflow: hidden; }
+
+    .docs_manuel_dialog {
+      max-width: 900px;
+      height: calc(100dvh - 2 * var(--space_7));
+      display: flex;
+      flex-direction: column;
+    }
 
     .docs_manuel_body {
       padding: 0;
-      max-height: 80vh;
-      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+      max-height: none;
+      overflow: hidden;
     }
 
     .docs_manuel_frame {
       width: 100%;
-      min-height: 60vh;
+      height: 100%;
       border: none;
       display: block;
     }
+
+    /* ---------- Recherche dans le manuel + historique ---------- */
+    #docs_manuel_title { white-space: nowrap; max-width: 30%; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .docs_search_bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+      flex: 1;
+      min-width: 0;
+      margin: 0 var(--space_4);
+    }
+    .docs_search_bar[hidden] { display: none !important; }
+
+    .docs_search_field {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+    }
+    .docs_search_field > i {
+      position: absolute;
+      right: 10px; /* champ RTL : loupe à droite */
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text_secondary);
+      pointer-events: none;
+    }
+    .docs_search_input {
+      width: 100%;
+      padding: 7px 32px 7px 10px;
+      text-align: right;
+      font-size: var(--fs_sm);
+    }
+
+    .docs_search_count {
+      font-family: var(--font_mono);
+      font-size: var(--fs_xs);
+      color: var(--text_secondary);
+      min-width: 56px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .docs_search_nav {
+      background: transparent;
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_md);
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      color: var(--text_secondary);
+    }
+    .docs_search_nav:hover:not(:disabled) { color: var(--color_seal); border-color: var(--color_seal); }
+    .docs_search_nav:disabled { opacity: 0.4; cursor: default; }
+
+    .docs_search_history {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      z-index: 5;
+      background: var(--color_paper_raised);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_md);
+      box-shadow: var(--shadow_panel);
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .docs_search_history[hidden] { display: none !important; }
+
+    .docs_search_history_title {
+      text-align: right;
+      padding: 6px 12px;
+      font-family: var(--font_mono);
+      font-size: var(--fs_xs);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text_secondary);
+    }
+    .docs_search_history_item {
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+      padding: 6px 12px;
+      font-size: var(--fs_sm);
+      cursor: pointer;
+    }
+    .docs_search_history_item:hover { background: rgba(176, 141, 87, 0.12); }
+    .docs_search_history_item .terme { text-align: right; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .docs_search_history_item .suppr {
+      background: transparent; border: none; cursor: pointer;
+      color: var(--text_secondary); padding: 0 4px;
+    }
+    .docs_search_history_item .suppr:hover { color: var(--color_danger); }
+    .docs_search_history_clear {
+      display: block; width: 100%;
+      padding: 8px 12px; border: none; border-top: 1px solid var(--border_soft); text-align: right;
+      background: transparent; cursor: pointer;
+      font-size: var(--fs_xs); color: var(--text_secondary);
+    }
+    .docs_search_history_clear:hover { color: var(--color_danger); }
   </style>
   <script src="js/session.js"></script>
 </head>
@@ -84,22 +195,8 @@
         <i class="bi bi-x-lg"></i>
       </button>
 
-      <nav class="sidebar_nav">
-        <a class="sidebar_module_link" href="index.html"><i class="bi bi-house"></i> Accueil</a>
-        <div class="sidebar_divider"></div>
-        <div class="sidebar_group_label">Sur cette page</div>
-        <a class="sidebar_section_link is_active" href="#convpp">Convention PP</a>
-        <a class="sidebar_section_link" href="#notes">Notes de service</a>
-        <a class="sidebar_section_link" href="#manuels">Manuels de procédures</a>
-
-        <div class="sidebar_divider"></div>
-
-        <div class="sidebar_group_label">Autres modules</div>
-        <a class="sidebar_module_link" href="ci.html"><i class="bi bi-percent"></i> Crédit d'impôt</a>
-        <a class="sidebar_module_link" href="dti.html"><i class="bi bi-building"></i> Droits de tirage individuels</a>
-        <a class="sidebar_module_link" href="dtc.html"><i class="bi bi-buildings"></i> Droits de tirage collectifs</a>
-        <a class="sidebar_module_link" href="pp.html"><i class="bi bi-mortarboard"></i> Promotion professionnelle</a>
-        <a class="sidebar_module_link" href="part.html"><i class="bi bi-diagram-3"></i> Partenaires</a>
+      <nav class="sidebar_nav" data-page="docs">
+        <script src="js/sidebar_menu.js"></script>
       </nav>
 
       <div class="sidebar_footer">
@@ -150,6 +247,16 @@
     <div class="modal_dialog docs_manuel_dialog">
       <div class="modal_header">
         <h3 id="docs_manuel_title"><i class="bi bi-journal-text"></i> Manuel</h3>
+        <div class="docs_search_bar" id="docs_search_bar" hidden>
+          <div class="docs_search_field">
+            <i class="bi bi-search"></i>
+            <input type="search" id="docs_search_input" class="docs_search_input" dir="rtl" lang="ar" placeholder="البحث في الدليل…" autocomplete="off" spellcheck="false" aria-label="Rechercher dans le manuel" />
+            <div class="docs_search_history" id="docs_search_history" dir="rtl" lang="ar" hidden></div>
+          </div>
+          <span class="docs_search_count" id="docs_search_count" aria-live="polite"></span>
+          <button type="button" class="docs_search_nav" id="docs_search_prev" title="Résultat précédent (Maj+Entrée)" aria-label="Résultat précédent" disabled><i class="bi bi-chevron-up"></i></button>
+          <button type="button" class="docs_search_nav" id="docs_search_next" title="Résultat suivant (Entrée)" aria-label="Résultat suivant" disabled><i class="bi bi-chevron-down"></i></button>
+        </div>
         <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
       </div>
       <div class="modal_body docs_manuel_body" id="docs_manuel_body">
@@ -239,6 +346,7 @@
       document.getElementById("docs_manuel_title").innerHTML = `<i class="bi bi-journal-text"></i> ${nom}`;
       body.innerHTML = `<div class="loading_state_block"><span class="loading_state">Chargement...</span></div>`;
       document.getElementById("docs_manuel_modal").classList.add("is_visible");
+      rechercheManuelReset();
 
       try {
         const html = await apiCall("getManuelHtml", { id: fileId });
@@ -246,18 +354,219 @@
         iframe.className = "docs_manuel_frame";
         iframe.setAttribute("sandbox", "allow-same-origin allow-popups");
         iframe.srcdoc = html;
-        iframe.addEventListener("load", () => {
-          try {
-            const doc = iframe.contentDocument;
-            iframe.style.height = `${doc.documentElement.scrollHeight}px`;
-          } catch (e) { /* ignore : ajustement de hauteur best-effort */ }
-        });
+        // Pas d'ajustement de hauteur : l'iframe remplit la modale et porte
+        // elle-même l'unique barre de défilement.
+        iframe.addEventListener("load", () => rechercheManuelInit(iframe));
         body.innerHTML = "";
         body.appendChild(iframe);
       } catch (err) {
         body.innerHTML = `<div class="loading_state_block"><span class="error_state">Erreur de chargement : ${err.message}</span></div>`;
       }
     }
+
+    /* ---------------- Recherche dans le manuel ouvert + historique ----------------
+       - Surligne (<mark>) toutes les occurrences dans l'iframe, insensible à la
+         casse, aux accents et aux signes diacritiques arabes (tashkîl).
+       - Entrée / Maj+Entrée (ou flèches) : résultat suivant / précédent.
+       - Historique des termes recherchés : mémoire du navigateur (localStorage,
+         clé HISTORIQUE_CLE), 10 derniers termes, partagé par tous les manuels. */
+
+    const RECH_HISTORIQUE_CLE = "urs_manuel_recherches";
+    const RECH_HISTORIQUE_MAX = 10;
+    let rechIframe = null;
+    let rechHits = [];
+    let rechIndex = -1;
+    let rechTimer = null;
+
+    function rechLireHistorique() {
+      try {
+        const v = JSON.parse(localStorage.getItem(RECH_HISTORIQUE_CLE) || "[]");
+        return Array.isArray(v) ? v.filter((t) => typeof t === "string") : [];
+      } catch (e) { return []; }
+    }
+    function rechEcrireHistorique(liste) {
+      try { localStorage.setItem(RECH_HISTORIQUE_CLE, JSON.stringify(liste.slice(0, RECH_HISTORIQUE_MAX))); } catch (e) { /* stockage indisponible */ }
+    }
+    function rechMemoriser(terme) {
+      const t = terme.trim();
+      if (t.length < 2) return;
+      const cle = rechNormaliser(t).texte;
+      const liste = rechLireHistorique().filter((x) => rechNormaliser(x).texte !== cle);
+      liste.unshift(t);
+      rechEcrireHistorique(liste);
+    }
+
+    // Normalise (minuscules, sans accents ni tashkîl) en gardant la
+    // correspondance avec les indices du texte d'origine.
+    function rechNormaliser(str) {
+      let texte = "";
+      const map = [];
+      for (let i = 0; i < str.length; i++) {
+        const n = str[i].normalize("NFD").replace(/[\u0300-\u036f\u064B-\u065F\u0670\u0640]/g, "").toLowerCase();
+        for (const c of n) { texte += c; map.push(i); }
+      }
+      return { texte, map };
+    }
+
+    function rechEffacerMarques() {
+      if (!rechIframe) return;
+      try {
+        const doc = rechIframe.contentDocument;
+        doc.querySelectorAll("mark[data-urs-hit]").forEach((m) => {
+          const parent = m.parentNode;
+          parent.replaceChild(doc.createTextNode(m.textContent), m);
+          parent.normalize();
+        });
+      } catch (e) { /* ignore */ }
+      rechHits = [];
+      rechIndex = -1;
+    }
+
+    function rechLancer(terme) {
+      rechEffacerMarques();
+      const count = document.getElementById("docs_search_count");
+      const prev = document.getElementById("docs_search_prev");
+      const next = document.getElementById("docs_search_next");
+      const q = rechNormaliser(terme.trim()).texte;
+      if (!rechIframe || q.length < 2) {
+        count.textContent = "";
+        prev.disabled = next.disabled = true;
+        return;
+      }
+      const doc = rechIframe.contentDocument;
+      const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+        acceptNode: (n) => /^(SCRIPT|STYLE|NOSCRIPT)$/.test(n.parentNode.nodeName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+      });
+      const noeuds = [];
+      while (walker.nextNode()) noeuds.push(walker.currentNode);
+
+      noeuds.forEach((node) => {
+        const { texte, map } = rechNormaliser(node.nodeValue);
+        const plages = [];
+        let pos = 0;
+        while ((pos = texte.indexOf(q, pos)) !== -1) {
+          const debut = map[pos];
+          const finNorm = pos + q.length - 1;
+          const fin = map[finNorm] + 1;
+          plages.push([debut, fin]);
+          pos += q.length;
+        }
+        // Du dernier au premier pour ne pas décaler les indices.
+        for (let k = plages.length - 1; k >= 0; k--) {
+          const [d, f] = plages[k];
+          const apres = node.splitText(f);
+          const milieu = node.splitText(d);
+          const mark = doc.createElement("mark");
+          mark.setAttribute("data-urs-hit", "");
+          mark.textContent = milieu.nodeValue;
+          milieu.parentNode.replaceChild(mark, milieu);
+        }
+      });
+
+      rechHits = Array.from(doc.querySelectorAll("mark[data-urs-hit]"));
+      prev.disabled = next.disabled = rechHits.length === 0;
+      if (rechHits.length) rechAller(0); else count.textContent = "0 résultat";
+    }
+
+    function rechAller(i) {
+      if (!rechHits.length) return;
+      if (rechIndex >= 0 && rechHits[rechIndex]) rechHits[rechIndex].removeAttribute("data-urs-actif");
+      rechIndex = (i + rechHits.length) % rechHits.length;
+      const m = rechHits[rechIndex];
+      m.setAttribute("data-urs-actif", "");
+      m.scrollIntoView({ block: "center", behavior: "smooth" });
+      document.getElementById("docs_search_count").textContent = `${rechIndex + 1} / ${rechHits.length}`;
+    }
+
+    function rechAfficherHistorique() {
+      const box = document.getElementById("docs_search_history");
+      const saisie = rechNormaliser(document.getElementById("docs_search_input").value.trim()).texte;
+      const liste = rechLireHistorique().filter((t) => !saisie || rechNormaliser(t).texte.includes(saisie));
+      if (!liste.length) { box.hidden = true; return; }
+      box.innerHTML = `<div class="docs_search_history_title">عمليات البحث الأخيرة</div>`;
+      liste.forEach((t) => {
+        const row = document.createElement("div");
+        row.className = "docs_search_history_item";
+        row.innerHTML = `<i class="bi bi-clock-history"></i><span class="terme" dir="auto"></span><button type="button" class="suppr" title="إزالة من السجل" aria-label="إزالة من السجل"><i class="bi bi-x"></i></button>`;
+        row.querySelector(".terme").textContent = t;
+        // mousedown (et non click) : agit avant que l'input perde le focus.
+        row.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          const input = document.getElementById("docs_search_input");
+          if (e.target.closest(".suppr")) {
+            rechEcrireHistorique(rechLireHistorique().filter((x) => x !== t));
+            rechAfficherHistorique();
+            return;
+          }
+          input.value = t;
+          box.hidden = true;
+          rechLancer(t);
+          rechMemoriser(t);
+        });
+        box.appendChild(row);
+      });
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "docs_search_history_clear";
+      clear.innerHTML = `<i class="bi bi-trash"></i> مسح السجل`;
+      clear.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        rechEcrireHistorique([]);
+        box.hidden = true;
+      });
+      box.appendChild(clear);
+      box.hidden = false;
+    }
+
+    function rechercheManuelReset() {
+      rechIframe = null;
+      rechHits = [];
+      rechIndex = -1;
+      document.getElementById("docs_search_bar").hidden = true;
+      document.getElementById("docs_search_input").value = "";
+      document.getElementById("docs_search_count").textContent = "";
+      document.getElementById("docs_search_history").hidden = true;
+      document.getElementById("docs_search_prev").disabled = true;
+      document.getElementById("docs_search_next").disabled = true;
+    }
+
+    function rechercheManuelInit(iframe) {
+      rechIframe = iframe;
+      try {
+        const doc = iframe.contentDocument;
+        const style = doc.createElement("style");
+        style.textContent = "mark[data-urs-hit]{background:#f5e08a;color:inherit;border-radius:2px}mark[data-urs-actif]{background:#e8a33d;outline:2px solid #b08d57}";
+        doc.head.appendChild(style);
+      } catch (e) { /* ignore */ }
+      document.getElementById("docs_search_bar").hidden = false;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const input = document.getElementById("docs_search_input");
+      const box = document.getElementById("docs_search_history");
+      if (!input) return;
+
+      input.addEventListener("focus", rechAfficherHistorique);
+      input.addEventListener("blur", () => { box.hidden = true; });
+      input.addEventListener("input", () => {
+        rechAfficherHistorique();
+        clearTimeout(rechTimer);
+        rechTimer = setTimeout(() => rechLancer(input.value), 250);
+      });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          box.hidden = true;
+          if (!rechHits.length) rechLancer(input.value);
+          else rechAller(rechIndex + (e.shiftKey ? -1 : 1));
+          rechMemoriser(input.value);
+        } else if (e.key === "Escape") {
+          if (!box.hidden) { box.hidden = true; e.stopPropagation(); }
+        }
+      });
+      document.getElementById("docs_search_next").addEventListener("click", () => { rechAller(rechIndex + 1); rechMemoriser(input.value); });
+      document.getElementById("docs_search_prev").addEventListener("click", () => { rechAller(rechIndex - 1); rechMemoriser(input.value); });
+    });
   </script>
 </body>
 </html>
