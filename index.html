@@ -38,6 +38,12 @@
       --color_alert_attention: #c99790;
       --color_alert_attention_bg: #f1ded9;
       --color_alert_expired: #1a1210;
+      /* Rouge dense partagé : bouton "Suivi" (contrôle aujourd'hui) et carte
+         Crédit d'impôt (alerte "imminent"). */
+      --color_state_red: color-mix(in srgb, var(--color_danger) 32%, var(--color_paper_raised));
+      --color_state_orange_ink: #d97706;
+      --color_state_orange: color-mix(in srgb, var(--color_state_orange_ink) 34%, var(--color_paper_raised));
+      --color_state_green: color-mix(in srgb, var(--color_teal) 30%, var(--color_paper_raised));
 
       /* Texte */
       --text_primary: #16262a;
@@ -172,7 +178,7 @@
       display: flex;
       flex-direction: column;
       gap: var(--space_2);
-      transition: transform var(--ease_std), box-shadow var(--ease_std);
+      transition: transform var(--ease_std), box-shadow var(--ease_std), background var(--ease_std);
       cursor: pointer;
     }
     .index_card[hidden] { display: none !important; }
@@ -232,32 +238,12 @@
       flex-shrink: 0;
     }
 
-    /* ---------- Carte "Prospections", mise en avant ---------- */
-    .index_card_featured {
-      background: linear-gradient(135deg, var(--color_seal), var(--color_seal_light));
-      border: none;
-      color: var(--color_ink);
-    }
-    .index_card_featured .index_card_top i { color: var(--color_ink); }
-    .index_card_featured .index_card_top .index_card_code {
-      border-color: rgba(22, 38, 42, 0.35);
-      color: var(--color_ink);
-    }
-    .index_card_featured h3 a { color: var(--color_ink); }
-    .index_card_featured .index_card_tagline {
+    /* ---------- Carte "Prospections" : même style que les autres cartes ---------- */
+    .index_card .index_card_tagline {
       font-size: var(--fs_sm);
-      color: rgba(22, 38, 42, 0.75);
+      color: var(--text_secondary);
       margin: 0;
       line-height: 1.4;
-    }
-    .index_card_featured:hover {
-      box-shadow: 0 10px 28px rgba(176, 141, 87, 0.45);
-    }
-    a.index_card_featured {
-      cursor: pointer;
-    }
-    a.index_card_featured h3 {
-      color: var(--color_ink);
     }
 
     /* ---------- Alerte "délai de clôture bilan" (carte Crédit d'impôt) —
@@ -265,34 +251,14 @@
        grave en cours parmi les bilans Siliana concernés ; le détail (un
        message par bilan) n'apparaît qu'au survol de la carte, dans un
        bandeau centré du header. ---------- */
-    .index_card[data-alert-tier] { border-color: transparent; }
-    .index_card[data-alert-tier="attention"] { background: var(--color_alert_attention_bg); }
-    .index_card[data-alert-tier="imminent"] { background: var(--color_danger); }
-    .index_card[data-alert-tier="expired"] { background: var(--color_alert_expired); }
-
-    .index_card[data-alert-tier="imminent"] .index_card_top i,
-    .index_card[data-alert-tier="imminent"] h3,
-    .index_card[data-alert-tier="expired"] .index_card_top i,
-    .index_card[data-alert-tier="expired"] h3 {
-      color: var(--text_inverse);
-    }
-    .index_card[data-alert-tier="imminent"] .index_card_top .index_card_code,
-    .index_card[data-alert-tier="expired"] .index_card_top .index_card_code {
-      color: var(--text_inverse);
-      border-color: rgba(255, 255, 255, 0.35);
-    }
-    .index_card[data-alert-tier="imminent"] .index_card_sections li a,
-    .index_card[data-alert-tier="expired"] .index_card_sections li a {
-      color: var(--text_inverse_soft);
-    }
-    .index_card[data-alert-tier="imminent"] .index_card_sections li a:hover,
-    .index_card[data-alert-tier="expired"] .index_card_sections li a:hover {
-      color: #ffffff;
-    }
-    .index_card[data-alert-tier="imminent"] .index_card_sections li a::before,
-    .index_card[data-alert-tier="expired"] .index_card_sections li a::before {
-      background: rgba(255, 255, 255, 0.5);
-    }
+    /* attention = orange de Suivi ("contrôle demain") ; imminent = aucun style ;
+       expired = rouge de Suivi ("contrôle aujourd'hui"). */
+    .index_card[data-alert-tier="attention"],
+    .index_card[data-alert-tier="expired"] { border-color: transparent; }
+    .index_card[data-alert-tier="attention"] { background: var(--color_state_orange); }
+    .index_card[data-alert-tier="attention"] .index_card_top i { color: var(--color_state_orange_ink); }
+    .index_card[data-alert-tier="expired"] { background: var(--color_state_red); }
+    .index_card[data-alert-tier="expired"] .index_card_top i { color: var(--color_danger); }
 
     /* ---------- Bandeau d'alerte du header, au centre, affiché au survol
        de la carte concernée (fondu). ---------- */
@@ -326,9 +292,9 @@
       white-space: nowrap;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
     }
-    .navbar_alert_line[data-tier="attention"] { background: var(--color_alert_attention); }
+    .navbar_alert_line[data-tier="attention"] { background: var(--color_state_orange_ink); }
     .navbar_alert_line[data-tier="imminent"] { background: var(--color_danger); }
-    .navbar_alert_line[data-tier="expired"] { background: var(--color_alert_expired); }
+    .navbar_alert_line[data-tier="expired"] { background: var(--color_danger); }
     @media (max-width: 720px) {
       .navbar_alert { display: none; }
     }
@@ -619,7 +585,7 @@
       font-size: var(--fs_sm);
       font-weight: 600;
       color: var(--text_primary);
-      transition: transform var(--ease_std), box-shadow var(--ease_std);
+      transition: transform var(--ease_std), box-shadow var(--ease_std), background var(--ease_std);
     }
     .index_shortcut_btn i { font-size: 1.1rem; color: var(--color_teal); }
     .index_shortcut_btn:hover {
@@ -629,11 +595,11 @@
     .index_shortcut_btn[hidden] { display: none !important; }
     /* Bouton "Suivi" coloré selon la prochaine date de contrôle :
        aujourd'hui (rouge) / demain (orange) / programmé (vert) ; sans pastille = aucun contrôle à venir. */
-    .index_shortcut_btn.is_ctrl_aujourdhui { background: color-mix(in srgb, var(--color_danger) 16%, var(--color_paper_raised)); border-color: var(--color_danger); }
+    .index_shortcut_btn.is_ctrl_aujourdhui { background: var(--color_state_red); border-color: transparent; }
     .index_shortcut_btn.is_ctrl_aujourdhui i { color: var(--color_danger); }
-    .index_shortcut_btn.is_ctrl_demain { background: color-mix(in srgb, #d97706 18%, var(--color_paper_raised)); border-color: #d97706; }
-    .index_shortcut_btn.is_ctrl_demain i { color: #d97706; }
-    .index_shortcut_btn.is_ctrl_programme { background: color-mix(in srgb, var(--color_teal) 16%, var(--color_paper_raised)); border-color: var(--color_teal); }
+    .index_shortcut_btn.is_ctrl_demain { background: var(--color_state_orange); border-color: transparent; }
+    .index_shortcut_btn.is_ctrl_demain i { color: var(--color_state_orange_ink); }
+    .index_shortcut_btn.is_ctrl_programme { background: var(--color_state_green); border-color: transparent; }
     /* Sur mobile, les boutons de raccourci n'affichent que leur icône */
     @media (max-width: 560px) {
       .index_shortcut_btn {
@@ -689,7 +655,8 @@
     .idx_gantt_head.is_day { top: 22px; line-height: 1.25; }
     .idx_gantt_head.is_month { white-space: nowrap; overflow: hidden; }
     .idx_gantt_wd { display: block; font-weight: 500; font-size: .85em; opacity: .85; }
-    .idx_gantt_head.is_today { color: var(--color_danger); }
+    .idx_gantt_head.is_today { color: var(--color_danger); font-weight: 800; }
+    .idx_gantt_head.is_today .idx_gantt_wd { font-weight: 800; opacity: 1; }
     /* Ligne des jours : vert clair = jour couvert par au moins une formation ;
        orange clair = jour de contrôle (prioritaire sur le vert). */
     .idx_gantt_head.is_formation { background: color-mix(in srgb, var(--color_teal) 28%, var(--color_paper_raised)); }
@@ -846,7 +813,7 @@
   <main class="index_content">
     <div class="index_grid">
 
-      <article class="index_card index_card_featured" data-href="prosp.html" data-page="prosp">
+      <article class="index_card" data-href="prosp.html" data-page="prosp">
         <div class="index_card_top">
           <i class="bi bi-bullseye"></i>
           <span class="index_card_code">PROSP</span>
@@ -890,6 +857,7 @@
         <ul class="index_card_sections">
           <li><a href="dtc.html#commissions">Commissions</a></li>
           <li><a href="dtc.html#consultations">Consultations</a></li>
+          <li><a href="dtc.html#plans">Plans</a></li>
         </ul>
       </article>
 
@@ -1245,15 +1213,15 @@
     // Chargement des données du Suivi dès l'ouverture de l'index (une fois connecté),
     // pour colorer le bouton sans attendre l'ouverture de la modale.
     let SUIVI_CHARGE = false, SUIVI_EN_COURS = false;
-    async function prechargerSuivi(forcer) {
+    async function prechargerSuivi(forcer, sansCouleur) {
       if (SUIVI_EN_COURS || (SUIVI_CHARGE && !forcer)) return;
       SUIVI_EN_COURS = true;
       const annee = new Date().getFullYear();
       try {
         const actions = await apiCall("listActionsConfirmees", { annee });
-        SUIVI_ACTIONS = Array.isArray(actions) ? actions : [];
+        SUIVI_ACTIONS = actionsASuivreSuivi(actions);
         SUIVI_CHARGE = true;
-        colorerBoutonSuivi();
+        if (!sansCouleur) colorerBoutonSuivi();
         // Modale ouverte pendant l'actualisation : on redessine en conservant la position.
         if (forcer && document.getElementById("idx_modal_suivi")?.classList.contains("is_visible")) rendreSuivi(false);
       } catch (err) {
@@ -1285,7 +1253,7 @@
       try {
         const actions = await apiCall("listActionsConfirmees", { annee: SUIVI_ANNEE });
         if (jeton !== SUIVI_JETON) return;
-        SUIVI_ACTIONS = Array.isArray(actions) ? actions : [];
+        SUIVI_ACTIONS = actionsASuivreSuivi(actions);
         SUIVI_CHARGE = true;
         rendreSuivi(true);
       } catch (err) {
@@ -1405,6 +1373,13 @@
       }
     }
 
+    // Suivi : on ne garde que les actions confirmées dont "Agréés suivi" est vide
+    // (un contrôle déjà fait — valeur renseignée, même 0 — est ignoré).
+    function actionsASuivreSuivi(actions) {
+      return (Array.isArray(actions) ? actions : [])
+        .filter((a) => String(a.agreesSuivi ?? "").trim() === "");
+    }
+
     function escSuivi(v) {
       return String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
     }
@@ -1423,7 +1398,7 @@
         .filter((a) => a.d1 !== null)
         .map((a) => ({ ...a, d2: a.d2 === null || a.d2 < a.d1 ? a.d1 : a.d2 }))
         .sort((x, y) => x.d1 - y.d1 || x.d2 - y.d2);
-      if (!lignes.length) return `<p class="idx_suivi_vide">Aucune action confirmée pour ${SUIVI_ANNEE}.</p>`;
+      if (!lignes.length) return `<p class="idx_suivi_vide">Aucune action en attente de suivi.</p>`;
 
       const min = Math.min(...lignes.map((a) => a.d1)) - 2;
       let max = Math.max(...lignes.map((a) => a.d2)) + 2;
@@ -1718,8 +1693,23 @@
       renderUserBadge(document.getElementById("header_user_badge"));
       document.getElementById("header_btn_logout").hidden = !getCurrentUser();
       appliquerPermissionsCartes(getCurrentUser());
-      verifierBilansSilianaEnRetard();
-      if (getCurrentUser()) prechargerSuivi(false);
+      actualiserAlertesAccueil();
+    }
+
+    // Carte Crédit d'impôt et bouton Suivi : les deux jeux de données sont
+    // chargés en parallèle, puis les deux couleurs d'alerte sont appliquées
+    // dans la même passe (même instant, même transition).
+    let ALERTES_ACCUEIL_JETON = 0;
+    async function actualiserAlertesAccueil() {
+      const jeton = ++ALERTES_ACCUEIL_JETON;
+      const connecte = !!getCurrentUser();
+      await Promise.all([
+        verifierBilansSilianaEnRetard(true),
+        connecte ? prechargerSuivi(false, true) : Promise.resolve()
+      ]);
+      if (jeton !== ALERTES_ACCUEIL_JETON) return; // réponse périmée (connexion/déconnexion rapide)
+      appliquerAlerteCarteCI();
+      if (connecte) colorerBoutonSuivi();
     }
 
     /* ============================================================
@@ -1870,12 +1860,11 @@
       return { tier, mois, message: CI_ALERT_MESSAGES[tier](abreviation) };
     }
 
-    async function verifierBilansSilianaEnRetard() {
+    async function verifierBilansSilianaEnRetard(differer) {
       const carte = document.querySelector('.index_card[data-page="ci"]');
       if (!carte || carte.hidden) {
         CI_ALERTES_SILIANA = [];
-        carte?.removeAttribute("data-alert-tier");
-        masquerBandeauAlerteCI();
+        appliquerAlerteCarteCI();
         return;
       }
 
@@ -1890,7 +1879,14 @@
         CI_ALERTES_SILIANA = [];
       }
 
-      if (CI_ALERTES_SILIANA.length === 0) {
+      if (!differer) appliquerAlerteCarteCI();
+    }
+
+    // Applique (ou retire) la couleur d'alerte de la carte CI d'après CI_ALERTES_SILIANA.
+    function appliquerAlerteCarteCI() {
+      const carte = document.querySelector('.index_card[data-page="ci"]');
+      if (!carte) return;
+      if (CI_ALERTES_SILIANA.length === 0 || carte.hidden) {
         carte.removeAttribute("data-alert-tier");
         masquerBandeauAlerteCI();
       } else {
