@@ -49,6 +49,7 @@
     .etat_badge.obs_complet { background: #ecfccb; color: #3f6212; }
     .etat_badge.obs_compl_frais { background: linear-gradient(90deg, #dbeafe 50%, #fee2e2 50%); color: #3730a3; }
     .etat_badge.obs_compl { background: #ffe4e6; color: #be123c; }
+    .etat_badge.obs_roux { background: #ffedd5; color: #9a3412; }
     .etat_badge.obs_reserve { background: #ccfbf1; color: #115e59; }
 
 
@@ -413,9 +414,19 @@
     .dossier_obs_options input:disabled + * , .dossier_check:has(input:disabled) { opacity: .5; cursor: not-allowed; }
     .dossier_pending { display: inline-flex; align-items: center; gap: var(--space_3); margin-right: auto; margin-left: var(--space_4); color: var(--color_danger); font-size: var(--fs_sm); font-weight: 600; }
     .dossier_pending[hidden] { display: none !important; }
-    button.dossier_obs_toggle.is_modifie { outline: 2px dashed var(--color_danger); outline-offset: 2px; }
-    button.dossier_obs_toggle { border: 0; cursor: pointer; font: inherit; }
-    button.dossier_obs_toggle:disabled { opacity: .6; cursor: wait; }
+    button.dossier_obs_toggle.is_modifie,
+    button.inscrit_obs_toggle.is_modifie { outline: 2px dashed var(--color_danger); outline-offset: 2px; }
+    .inscrit_frais_cell { display: inline-flex; align-items: center; gap: var(--space_2); }
+    button.inscrit_lien_btn { border: 0; background: transparent; cursor: pointer; color: var(--text_secondary); padding: 2px 4px; font-size: var(--fs_sm); }
+    button.inscrit_lien_btn.is_lie { color: var(--color_teal); }
+    .inscrit_frais_aide { margin: 0 0 var(--space_3); color: var(--text_secondary); font-size: var(--fs_sm); }
+    #inscrit_liste_body tr.inscrit_liste_copie td { background: #fee2e2; color: #991b1b; font-weight: 600; }
+    #inscrit_liste_body td.inscrit_liste_commun { vertical-align: middle; text-align: left; background: #f0fdfa; }
+    button.inscrit_obs_toggle.inscrit_obs_vide { background: transparent; color: inherit; }
+    button.dossier_obs_toggle,
+    button.inscrit_obs_toggle { border: 0; cursor: pointer; font: inherit; }
+    button.dossier_obs_toggle:disabled,
+    button.inscrit_obs_toggle:disabled { opacity: .6; cursor: wait; }
     .dossier_obs textarea:disabled { opacity: .55; cursor: not-allowed; }
     .classe_form_grid label textarea {
       font-family: inherit;
@@ -585,7 +596,7 @@
           <div class="demandes_specialite_filters" id="demande_specialite_filters"></div>
           <div class="search_wrap demandes_search_wrap">
             <i class="bi bi-search search_icon"></i>
-            <input type="text" class="pp_search" id="demande_search" placeholder="Rechercher (CIN, prénom ou nom)…" autocomplete="off" />
+            <input type="text" class="pp_search" id="demande_search" placeholder="Rechercher (CIN, prénom, nom ou tél)…" autocomplete="off" />
             <button type="button" class="search_clear" data-clear="demande_search" hidden aria-label="Effacer la recherche">
               <i class="bi bi-x-circle-fill"></i>
             </button>
@@ -702,7 +713,7 @@
           <div class="demandes_specialite_filters" id="dossier_specialite_filters"></div>
           <div class="search_wrap demandes_search_wrap">
             <i class="bi bi-search search_icon"></i>
-            <input type="text" class="pp_search" id="dossier_search" placeholder="Rechercher (CIN, prénom ou nom)…" autocomplete="off" />
+            <input type="text" class="pp_search" id="dossier_search" placeholder="Rechercher (CIN, prénom, nom ou tél)…" autocomplete="off" />
             <button type="button" class="search_clear" data-clear="dossier_search" hidden aria-label="Effacer la recherche">
               <i class="bi bi-x-circle-fill"></i>
             </button>
@@ -802,23 +813,30 @@
       <section id="inscrits" class="panel">
         <div class="panel_header">
           <h2><i class="bi bi-people"></i> Inscrits</h2>
+          <span class="dossier_pending" id="inscrit_pending" hidden>
+            <i class="bi bi-exclamation-circle"></i> Données à sauvegarder <strong id="inscrit_pending_nb"></strong>
+            <button type="button" class="btn_seal" id="inscrit_btn_enregistrer"><i class="bi bi-save"></i> Enregistrer</button>
+          </span>
           <div class="panel_header_actions" id="inscrit_actions_normal">
             <button type="button" class="btn_seal" id="inscrit_btn_nouveau">
               <i class="bi bi-plus-lg"></i> Nouvel inscrit
             </button>
-            <button type="button" class="btn_success" id="inscrit_btn_bulk_suivante">
-              <i class="bi bi-arrow-up-circle"></i> Remonter plusieurs
+            <button type="button" class="btn_info no_mobile" id="inscrit_btn_liste" hidden title="Liste des inscrits de la classe affichée">
+              <i class="bi bi-list-check"></i> Liste
             </button>
-            <button type="button" class="btn_danger" id="inscrit_btn_bulk_archiver">
-              <i class="bi bi-archive"></i> Archiver plusieurs
+            <button type="button" class="btn_success" id="inscrit_btn_passage" hidden>
+              <i class="bi bi-arrow-up-circle"></i> Passage
             </button>
           </div>
           <div class="panel_header_actions" id="inscrit_actions_selection" hidden>
             <span class="inscrit_selection_count" id="inscrit_selection_count">0 sélectionné(s)</span>
-            <button type="button" class="btn_success" id="inscrit_btn_bulk_valider">
-              <i class="bi bi-check-lg"></i> Valider
+            <button type="button" class="btn_ghost" id="inscrit_btn_passage_tout">
+              <i class="bi bi-check2-all"></i> Tout cocher
             </button>
-            <button type="button" class="btn_ghost" id="inscrit_btn_bulk_annuler">
+            <button type="button" class="btn_success" id="inscrit_btn_passage_valider">
+              <i class="bi bi-check-lg"></i> Valider le passage
+            </button>
+            <button type="button" class="btn_ghost" id="inscrit_btn_passage_annuler">
               <i class="bi bi-x-lg"></i> Annuler
             </button>
           </div>
@@ -828,7 +846,7 @@
           <div class="demandes_specialite_filters" id="inscrit_classe_filters"></div>
           <div class="search_wrap demandes_search_wrap">
             <i class="bi bi-search search_icon"></i>
-            <input type="text" class="pp_search" id="inscrit_search" placeholder="Rechercher (CIN, prénom ou nom)…" autocomplete="off" />
+            <input type="text" class="pp_search" id="inscrit_search" placeholder="Rechercher (CIN, prénom, nom ou tél)…" autocomplete="off" />
             <button type="button" class="search_clear" data-clear="inscrit_search" hidden aria-label="Effacer la recherche">
               <i class="bi bi-x-circle-fill"></i>
             </button>
@@ -845,6 +863,9 @@
             <div class="modal_body">
               <form id="inscrit_form" class="classe_form_grid">
                 <input type="hidden" name="_row" />
+                <input type="hidden" name="Frais 1" />
+                <input type="hidden" name="Frais 2" />
+                <input type="hidden" name="Frais 3" />
                 <label>CIN
                   <input type="text" name="CIN" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 chiffres" />
                 </label>
@@ -873,6 +894,56 @@
           </div>
         </div>
 
+        <!-- MODALE "FRAIS COMMUNS" : un même reçu / virement versé pour plusieurs
+             inscrits de la même classe-année. Les inscrits cochés reçoivent la
+             même valeur et le même identifiant de groupe (jeton "#xxxx" dans la
+             cellule "Frais N"). -->
+        <div class="modal_overlay" id="inscrit_frais_modal">
+          <div class="modal_dialog">
+            <div class="modal_header">
+              <h3 id="inscrit_frais_titre">Frais communs</h3>
+              <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+            </div>
+            <form class="modal_body" id="inscrit_frais_form">
+              <p class="inscrit_frais_aide" id="inscrit_frais_aide"></p>
+              <div class="inscrits_check_list">
+                <table>
+                  <thead><tr><th></th><th>CIN</th><th>Inscrit</th><th>Frais actuels</th></tr></thead>
+                  <tbody id="inscrit_frais_body"></tbody>
+                </table>
+              </div>
+              <div class="matiere_form_actions">
+                <button type="submit" class="btn_success"><i class="bi bi-check-lg"></i> Appliquer</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- MODALE "LISTE" des inscrits d'une classe-année : CIN, nom et prénom,
+             versement des frais. Les inscrits qui partagent un même reçu /
+             virement ont leurs cellules "Versement" fusionnées. -->
+        <div class="modal_overlay" id="inscrit_liste_modal">
+          <div class="modal_dialog modal_lg">
+            <div class="modal_header">
+              <h3 id="inscrit_liste_titre">Liste des inscrits</h3>
+              <div class="modal_header_actions">
+                <button type="button" class="btn_ghost" id="inscrit_liste_btn_imprimer"><i class="bi bi-printer"></i> Imprimer</button>
+                <button type="button" class="modal_close" data-modal-close><i class="bi bi-x-lg"></i></button>
+              </div>
+            </div>
+            <form class="modal_body" id="inscrit_liste_form">
+              <div class="demandes_specialite_filters" id="inscrit_liste_filtres" style="margin-bottom: var(--space_3);"></div>
+              <div class="inscrits_check_list">
+                <table>
+                  <thead><tr><th>CIN</th><th>Nom et prénom</th><th>Versement des frais</th></tr></thead>
+                  <tbody id="inscrit_liste_body"></tbody>
+                </table>
+              </div>
+              <p class="empty_state" id="inscrit_liste_vide" hidden>Aucun inscrit.</p>
+            </form>
+          </div>
+        </div>
+
         <table class="data_table pp_table">
           <thead>
             <tr>
@@ -881,10 +952,11 @@
               <th>Nom</th>
               <th>Coordonnées</th>
               <th>Année</th>
+              <th>Frais</th>
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="inscrit_table_body"><tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr></tbody>
+          <tbody id="inscrit_table_body"><tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr></tbody>
         </table>
         <div class="empty_state" id="inscrit_empty" hidden>
           <i class="bi bi-inbox"></i>Aucun inscrit enregistré.
@@ -1095,7 +1167,10 @@
              que la demande + pièces variables selon la spécialité (voir
              DOSSIER_REGLES) ; la validation crée la ligne dans l'onglet
              "Dossiers" puis retire la demande.
-           - mode "edition" (bouton "Afficher" de Dossiers) : modifie la ligne. -->
+           - modes "nouveau" (bouton "Nouveau dossier") et "edition" (bouton "Afficher") :
+             même fiche (mêmes radios Profession OK / Non, même calcul d'observation) ;
+             "nouveau" part d'un formulaire vide et crée la ligne, "edition" est pré-remplie,
+             met à jour la ligne et propose "Supprimer". -->
       <div class="modal_overlay" id="dossier_modal">
         <div class="modal_dialog">
           <div class="modal_header">
@@ -1608,6 +1683,21 @@ function remplirSelectSpecialites(selectId, valeurSouhaitee) {
   select.value = valeur || "";
 }
 
+// Recherche commune (Demandes / Dossiers / Inscrits) : CIN, prénom, nom, ainsi
+// que Tél, Tél2 et Email (cellule "Coordonnées"). "terme" est déjà normalisé
+// (minuscules, sans accents). Les numéros sont aussi comparés sans espaces,
+// points ni tirets ("22 123 456" trouve "22123456").
+function correspondRecherchePP(rec, terme) {
+  const norm = (v) => String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const coord = rec["Coordonnées"] || "";
+  const champs = [rec["CIN"], rec["Prénom"], rec["Nom"],
+    getCoordField(coord, "Tél"), getCoordField(coord, "Tél2"), getCoordField(coord, "Email")];
+  if (champs.some((v) => norm(v).includes(terme))) return true;
+  const chiffres = terme.replace(/[\s.\-+]/g, "");
+  return /^\d{3,}$/.test(chiffres)
+    && champs.some((v) => String(v || "").replace(/[\s.\-+]/g, "").includes(chiffres));
+}
+
 // CIN sur 8 chiffres : conserve les 0 à gauche.
 function normaliserCinPP(v) {
   const t = String(v || "").trim();
@@ -1703,7 +1793,7 @@ function renderDemandeTable() {
   const filtered = demandesCache.filter((d) => {
     if (demandeSpecialiteFiltre && (d["Spécialité"] || "").trim() !== demandeSpecialiteFiltre) return false;
     if (!terme) return true;
-    return [d["CIN"], d["Prénom"], d["Nom"]].some((v) => norm(v).includes(terme));
+    return correspondRecherchePP(d, terme);
   });
 
   if (filtered.length === 0) {
@@ -1805,8 +1895,9 @@ function renderDossierChamps(specialite, valeurs) {
     } else if (c.regle === "profession") {
       // Profession : texte libre ; en édition, deux boutons radio (OK / Non) valident la profession.
       const prof = parseProfessionDossier(val);
-      const edition = document.getElementById("dossier_form").dataset.mode === "edition";
-      const radiosProf = edition ? `<span class="dossier_prof_radios">
+      // Fiche "nouveau" et fiche "afficher" : même formulaire, donc mêmes radios ; seul "Vers dossiers" (depuis une demande) n'en a pas.
+      const avecRadios = document.getElementById("dossier_form").dataset.mode !== "creation";
+      const radiosProf = avecRadios ? `<span class="dossier_prof_radios">
           <label class="dossier_check"><input type="radio" name="prof_statut" value="ok"${prof.statut === "ok" ? " checked" : ""} /> Profession OK</label>
           <label class="dossier_check"><input type="radio" name="prof_statut" value="non"${prof.statut === "non" ? " checked" : ""} /> Profession Non</label>
         </span>` : "";
@@ -1896,8 +1987,12 @@ function majObservationAuto() {
   const choix = form.querySelector('input[name="obs_option"]:checked');
   const etat = etatObservationDossier();
   const calc = etat.calc;
-  // "Autre" est conservé ; "Acceptable" choisi à la main est conservé tant qu'il reste autorisé.
-  const garde = choix && (choix.value === "Autre" || (choix.value === "Acceptable" && etat.acceptable));
+  // Le calcul a-t-il changé depuis le dernier passage (donnée modifiée dans la fiche) ?
+  const change = calc !== (form.dataset.calcPrecedent ?? "");
+  form.dataset.calcPrecedent = calc;
+  // "Autre" est conservé ; "Acceptable" choisi à la main est conservé tant qu'il reste autorisé
+  // et que le calcul n'a pas changé (sinon la nouvelle observation calculée s'applique).
+  const garde = choix && (choix.value === "Autre" || (!change && choix.value === "Acceptable" && etat.acceptable));
   if (calc && !garde) {
     form.querySelectorAll('input[name="obs_option"]').forEach((r) => { r.checked = r.value === calc; });
     majObservationDossier();
@@ -1917,10 +2012,18 @@ function valeurObservationDossier() {
   const choix = form.querySelector('input[name="obs_option"]:checked');
   if (!choix) return "";
   if (choix.value === "Autre") return form.elements["Observations"].value.trim();
-  // Conserve l'état détaillé d'origine ("Frais versés"...) tant qu'on reste dans la même famille.
+  // Observation du tableau à l'ouverture (obsInitiale) : on garde son état détaillé
+  // ("Frais versés"...) et on le transpose, de même rang, dans la famille choisie.
+  // Ex. "Frais versés sous réserve" (Acceptable) -> dossier devenu complet -> "Frais versés".
+  // Famille Incomplet : pas de versement possible depuis un dossier incomplet, donc
+  // "Frais versés" / "Frais versés sous réserve" (rang 3) retombent sur "Incomplet".
   const initiale = form.dataset.obsInitiale || "";
-  const famille = choix.value === "Complet" ? OBS_FAMILLE_COMPLET : choix.value === "Acceptable" ? OBS_FAMILLE_ACCEPTABLE : OBS_FAMILLE_INCOMPLET;
-  return famille.includes(initiale) ? initiale : choix.value;
+  const cible = choix.value === "Complet" ? OBS_FAMILLE_COMPLET : choix.value === "Acceptable" ? OBS_FAMILLE_ACCEPTABLE : OBS_FAMILLE_INCOMPLET;
+  const source = OBS_FAMILLES.find((f) => f.includes(initiale));
+  if (!source) return choix.value;
+  const rang = source.indexOf(initiale);
+  if (cible === OBS_FAMILLE_INCOMPLET && rang >= cible.length) return cible[0];
+  return cible[rang];
 }
 
 // Valeurs actuellement saisies dans les champs variables de la modale
@@ -2024,8 +2127,14 @@ async function openDossierForm(src, mode) {
   majObservationDossier();
   if (valeurRadio === "Autre") form.elements["Observations"].value = obs;
   // Création : observation déduite d'emblée ; édition : on garde la valeur enregistrée.
-  if (mode === "edition") majAcceptableAutorise(etatObservationDossier());
-  else majObservationAuto();
+  if (mode === "edition") {
+    const etat = etatObservationDossier();
+    form.dataset.calcPrecedent = etat.calc;   // point de départ : seule une modification déclenche un recalcul
+    majAcceptableAutorise(etat);
+  } else {
+    form.dataset.calcPrecedent = "";
+    majObservationAuto();
+  }
 
   openFormModal("dossier_modal", "dossier_form");
 }
@@ -2070,14 +2179,19 @@ async function onSubmitDossierForm(e) {
     } else {
       await apiCallDirect("createDossierPP", { record });
       closeFormModal("dossier_modal");
-      viderRecherches("demande_search", "dossier_search");
-      // Transfert : la demande quitte "Demandes" une fois le dossier créé.
-      try {
-        if (rowId) await apiCallDirect("deleteDemandePP", { _row: rowId });
-      } catch (errSuppr) {
-        alert(`Dossier créé, mais la demande n'a pas pu être retirée de la liste : ${errSuppr.message}`);
+      if (mode === "creation") {
+        viderRecherches("demande_search", "dossier_search");
+        // Transfert : la demande quitte "Demandes" une fois le dossier créé.
+        try {
+          if (rowId) await apiCallDirect("deleteDemandePP", { _row: rowId });
+        } catch (errSuppr) {
+          alert(`Dossier créé, mais la demande n'a pas pu être retirée de la liste : ${errSuppr.message}`);
+        }
+        await loadDemandes();
+      } else {
+        // "Nouveau dossier" : aucune demande à retirer.
+        viderRecherches("dossier_search");
       }
-      await loadDemandes();
     }
     await loadDossiers();
   } catch (err) {
@@ -2503,7 +2617,7 @@ function renderDossierTable() {
   const filtered = dossiersCache.filter((d) => {
     if (dossierSpecialiteFiltre && (d["Spécialité"] || "").trim() !== dossierSpecialiteFiltre) return false;
     if (!terme) return true;
-    return [d["CIN"], d["Prénom"], d["Nom"]].some((v) => norm(v).includes(terme));
+    return correspondRecherchePP(d, terme);
   });
 
   majBoutonListeDossiers(filtered);
@@ -2959,12 +3073,8 @@ async function onSubmitDemandeImportForm(e) {
        cours de route).
    "Nouvel inscrit" ouvre la même modale en mode création (pas de
    _row, "Année" saisie librement).
-   "Remonter plusieurs" / "Archiver plusieurs" font basculer le
-   tableau en mode sélection : les boutons d'actions de chaque ligne
-   laissent place à une case à cocher. La sélection est contrainte à
-   une seule valeur "Année" à la fois (ex. uniquement "LATI Pr2 1ère"
-   ou uniquement "LATI Pr2 2ème"), afin que l'action groupée reste
-   cohérente pour toutes les lignes cochées.
+   Colonne "Observations" : affiche la valeur du champ "Observations"
+   de l'inscrit, ou "Frais versés" par défaut (provisoire, pour tous).
    ============================================================ */
 
 const INSCRIT_ORDINAUX = ["1ère", "2ème", "3ème"];
@@ -2981,22 +3091,91 @@ function parseAnneeInscrit(anneeStr) {
   return { prefixe: s, ordinal: "" };
 }
 
+// Nombre d'années (= de versements "Frais 1..3") selon la classe : 3 pour
+// les licences (L / LA) et les BTS, 2 pour les BTP et MP (et CAP, par défaut).
+function nbAnneesInscrit(prefixe) {
+  const c = String(prefixe || "").trim().toUpperCase();
+  if (c.startsWith("BTS") || c.startsWith("L")) return 3;
+  return 2;
+}
+
+// Rang (1..3) de l'année de l'inscrit d'après l'ordinal, ou 0 si inconnu.
+function rangAnneeInscrit(anneeStr) {
+  return INSCRIT_ORDINAUX.indexOf(parseAnneeInscrit(anneeStr).ordinal) + 1;
+}
+
+// Valeurs possibles de l'observation (stockée dans "Frais N" selon l'année).
+// Dans l'ordre du cycle de clic : ---- -> ... -> ----.
+const INSCRIT_FRAIS_OPTIONS = ["Frais versés (Reçu)", "Frais versés (Copie reçu)",
+  "Frais versés (Virement)", "Frais versés (Copie virement)", "Frais versés (Virement commun)",
+  "Frais versés (2 reçus)"];
+// Seul ce choix peut couvrir plusieurs inscrits (icône "Lien" + groupe).
+const INSCRIT_FRAIS_COMMUN = "Frais versés (Virement commun)";
+
+// Une cellule "Frais N" contient la valeur, suivie éventuellement d'un jeton
+// de groupe " #xxxx" quand un même reçu / virement couvre plusieurs inscrits
+// (ex. "Frais versés (Virement) #k3f9"). Tous les membres du groupe ont le même
+// jeton ; il n'a de sens qu'entre inscrits de la même "Année".
+function analyserFrais(brut) {
+  const norm = (x) => String(x || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+  const txt = String(brut || "");
+  const m = txt.match(/^(.*?)\s*#([a-z0-9]{3,8})\s*$/i);
+  const base = m ? m[1] : txt;
+  const k = norm(base);
+  const val = INSCRIT_FRAIS_OPTIONS.find((o) => norm(o) === k) || base.trim();
+  return { val, groupe: val === INSCRIT_FRAIS_COMMUN && m ? m[2].toLowerCase() : "" };
+}
+const formaterFrais = (val, groupe) => (val && groupe ? `${val} #${groupe}` : (val || ""));
+
+// Ramène une valeur saisie à la main dans la Sheet (casse, espaces, accents
+// différents : "Frais versés (reçu)") à la forme officielle ; valeur inconnue
+// conservée telle quelle.
+function fraisCanonique(v) {
+  const a = analyserFrais(v);
+  return formaterFrais(a.val, a.groupe);
+}
+
+// Observation de l'année en cours : contenu canonique de "Frais N" (valeur + jeton).
+function observationInscrit(insc) {
+  const n = rangAnneeInscrit(insc["Année"]);
+  return n ? fraisCanonique(insc[`Frais ${n}`]) : "";
+}
+const valeurFraisInscrit = (insc) => analyserFrais(observationInscrit(insc)).val;
+const groupeFraisInscrit = (insc) => analyserFrais(observationInscrit(insc)).groupe;
+
+// Fiche complète pour updateBaseRow (qui réécrit toute la ligne : toute
+// colonne absente du record serait effacée), avec d'éventuelles surcharges.
+function recordInscrit(insc, surcharges) {
+  return Object.assign({
+    CIN: insc["CIN"] || "", "Prénom": insc["Prénom"] || "", "Nom": insc["Nom"] || "",
+    "Coordonnées": insc["Coordonnées"] || "", "Année": insc["Année"] || "",
+    "Frais 1": insc["Frais 1"] || "", "Frais 2": insc["Frais 2"] || "", "Frais 3": insc["Frais 3"] || ""
+  }, surcharges || {});
+}
+
 // Renvoie la chaîne "Année" de l'année suivante, ou null si déjà en
-// 3ème année (auquel cas c'est l'archivage qui s'applique, pas une
-// progression).
+// dernière année de la classe (2 ans pour BTP/MP, 3 sinon) : c'est alors
+// l'archivage qui s'applique, pas une progression.
 function anneeSuivanteInscrit(anneeStr) {
   const { prefixe, ordinal } = parseAnneeInscrit(anneeStr);
   const idx = INSCRIT_ORDINAUX.indexOf(ordinal);
-  if (idx === -1 || idx >= INSCRIT_ORDINAUX.length - 1) return null;
+  if (idx === -1 || idx >= nbAnneesInscrit(prefixe) - 1) return null;
   return `${prefixe} ${INSCRIT_ORDINAUX[idx + 1]}`.trim();
 }
 
-let inscritsCache = [];
-let inscritClasseFiltre = "";   // filtre par classe ("Année" sans l'ordinal : "LATI Pr2")
+// Le bouton "Passage" n'existe que de juillet à septembre.
+function estPeriodePassageInscrit() {
+  const m = new Date().getMonth() + 1;
+  return m >= 7 && m <= 9;
+}
 
-// Mode de sélection groupée : null (mode normal) | "suivante" | "archiver".
-let inscritBulkMode = null;
-let inscritBulkSelection = new Set();
+let inscritsCache = [];
+let inscritClasseFiltre = "";   // filtre sur la valeur complète de "Année" (ex. "LATI Pr2 3ème")
+
+// Mode "Passage" (juillet-septembre) : cases à cocher pour les inscrits
+// ayant réussi, qui passent alors à l'année suivante.
+let inscritPassageMode = false;
+let inscritPassageSelection = new Set();
 
 function wireInscritsUi() {
   document.getElementById("inscrit_form")?.addEventListener("submit", onSubmitInscritForm);
@@ -3007,64 +3186,61 @@ function wireInscritsUi() {
     const chip = e.target.closest(".demandes_specialite_chip");
     if (!chip) return;
     inscritClasseFiltre = chip.dataset.specialite || "";
+    if (inscritPassageMode) exitInscritPassage();
     renderInscritFilters();
     renderInscritTable();
   });
-  document.getElementById("inscrit_btn_bulk_suivante")?.addEventListener("click", () => enterInscritBulkMode("suivante"));
-  document.getElementById("inscrit_btn_bulk_archiver")?.addEventListener("click", () => enterInscritBulkMode("archiver"));
-  document.getElementById("inscrit_btn_bulk_annuler")?.addEventListener("click", () => exitInscritBulkMode());
-  document.getElementById("inscrit_btn_bulk_valider")?.addEventListener("click", onValiderInscritBulk);
-
-  document.getElementById("inscrit_table_body")?.addEventListener("change", (e) => {
-    const cb = e.target.closest(".inscrit_row_checkbox");
-    if (!cb) return;
-    const rowKey = cb.dataset.row;
-    const annee = cb.dataset.annee;
-
-    if (cb.checked) {
-      const anneeSelection = inscritBulkSelection.size > 0
-        ? inscritsCache.find((x) => inscritBulkSelection.has(String(x._row)))?.["Année"]
-        : null;
-      if (anneeSelection && anneeSelection !== annee) {
-        alert(`La sélection doit porter sur une seule année à la fois ("${anneeSelection}").`);
-        cb.checked = false;
-        return;
-      }
-      inscritBulkSelection.add(rowKey);
-    } else {
-      inscritBulkSelection.delete(rowKey);
-    }
+  document.getElementById("inscrit_btn_enregistrer")?.addEventListener("click", enregistrerObservationsInscrits);
+  document.getElementById("inscrit_frais_form")?.addEventListener("submit", appliquerFraisCommunInscrit);
+  document.getElementById("inscrit_btn_liste")?.addEventListener("click", ouvrirListeInscrits);
+  document.getElementById("inscrit_liste_btn_imprimer")?.addEventListener("click", imprimerListeInscrits);
+  document.getElementById("inscrit_liste_form")?.addEventListener("submit", (e) => e.preventDefault());
+  document.getElementById("inscrit_liste_filtres")?.addEventListener("click", (e) => {
+    const chip = e.target.closest(".demandes_specialite_chip");
+    if (!chip) return;
+    inscritListeFiltre = chip.dataset.filtre || "tous";
+    renderListeInscrits();
+  });
+  document.getElementById("inscrit_btn_passage")?.addEventListener("click", enterInscritPassage);
+  document.getElementById("inscrit_btn_passage_annuler")?.addEventListener("click", exitInscritPassage);
+  document.getElementById("inscrit_btn_passage_valider")?.addEventListener("click", onValiderInscritPassage);
+  document.getElementById("inscrit_btn_passage_tout")?.addEventListener("click", () => {
+    document.querySelectorAll("#inscrit_table_body .inscrit_row_checkbox:not([disabled])").forEach((cb) => {
+      cb.checked = true;
+      inscritPassageSelection.add(cb.dataset.row);
+    });
     updateInscritSelectionCount();
   });
 
-  document.getElementById("inscrit_table_body")?.addEventListener("click", async (e) => {
-    if (inscritBulkMode) return; // en mode sélection, seules les cases à cocher sont actives
+  document.getElementById("inscrit_table_body")?.addEventListener("change", async (e) => {
+    const cb = e.target.closest(".inscrit_row_checkbox");
+    if (cb) {
+      if (cb.checked) inscritPassageSelection.add(cb.dataset.row);
+      else inscritPassageSelection.delete(cb.dataset.row);
+      updateInscritSelectionCount();
+      return;
+    }
+  });
 
+  document.getElementById("inscrit_table_body")?.addEventListener("click", async (e) => {
+    if (inscritPassageMode) return; // en mode passage, seules les cases à cocher sont actives
+
+    const btnLien = e.target.closest(".inscrit_lien_btn");
+    if (btnLien) {
+      const insc = inscritsCache.find((x) => String(x._row) === btnLien.dataset.row);
+      if (insc) ouvrirFraisCommunInscrit(insc);
+      return;
+    }
+    const btnObs = e.target.closest(".inscrit_obs_toggle");
+    if (btnObs) {
+      const insc = inscritsCache.find((x) => String(x._row) === btnObs.dataset.row);
+      if (insc) basculerObservationInscrit(insc);
+      return;
+    }
     const btnAfficher = e.target.closest(".inscrit_row_afficher");
     if (btnAfficher) {
       const insc = inscritsCache.find((x) => String(x._row) === btnAfficher.dataset.row);
       if (insc) openInscritForm(insc);
-      return;
-    }
-
-    const btnSuivante = e.target.closest(".inscrit_row_annee_suivante");
-    if (btnSuivante) {
-      const insc = inscritsCache.find((x) => String(x._row) === btnSuivante.dataset.row);
-      if (!insc) return;
-      const nouvelleAnnee = anneeSuivanteInscrit(insc["Année"]);
-      if (!nouvelleAnnee) return;
-      if (!confirm(`Faire passer ${insc["Prénom"] || ""} ${insc["Nom"] || ""} en "${nouvelleAnnee}" ?`)) return;
-      try {
-        // updateBaseRow réécrit toute la ligne à partir des clés du
-        // record : on renvoie donc la fiche complète (pas seulement
-        // "Année"), sous peine d'effacer les autres colonnes.
-        const record = { CIN: insc["CIN"] || "", "Prénom": insc["Prénom"] || "", "Nom": insc["Nom"] || "",
-          "Coordonnées": insc["Coordonnées"] || "", "Année": nouvelleAnnee };
-        await apiCallDirect("updateInscritPP", { _row: insc._row, record });
-        await loadInscrits();
-      } catch (err) {
-        alert(`Erreur lors de la mise à jour : ${err.message}`);
-      }
       return;
     }
 
@@ -3078,113 +3254,409 @@ function wireInscritsUi() {
   });
 }
 
-// Bascule le tableau "Inscrits" en mode sélection groupée pour l'action
-// donnée ("suivante" ou "archiver") : les boutons d'actions par ligne
-// laissent place à des cases à cocher.
-function enterInscritBulkMode(mode) {
-  inscritBulkMode = mode;
-  inscritBulkSelection = new Set();
+/* ---------------- Bascule des observations (frais) en local ----------------
+   Même principe que les dossiers : un clic sur le badge fait passer à la
+   valeur suivante (---- -> Reçu -> Copie reçu -> Virement -> Copie virement -> ----)
+   sans toucher la base ; le changement reste en mémoire (inscritPending)
+   jusqu'au clic sur "Enregistrer". La valeur est écrite dans "Frais N"
+   (N = année en cours). Clé = CIN + Année + Prénom + Nom (pas le n° de
+   ligne, qui se décale quand une ligne est supprimée / archivée). */
+const inscritPending = new Map();   // clé -> { origine, nouvelle, n }
+let inscritSauvegardeEnCours = false;
 
-  document.getElementById("inscrit_actions_normal").hidden = true;
-  document.getElementById("inscrit_actions_selection").hidden = false;
+const cleInscritPending = (i) =>
+  [normaliserCinPP(i["CIN"]), String(i["Année"] || "").trim(), String(i["Prénom"] || "").trim(), String(i["Nom"] || "").trim()].join("|");
+const libelleInscritPending = (cle) => cle.split("|").slice(1).join(" — ");
 
-  const validerBtn = document.getElementById("inscrit_btn_bulk_valider");
-  if (validerBtn) {
-    if (mode === "suivante") {
-      validerBtn.className = "btn_success";
-      validerBtn.innerHTML = `<i class="bi bi-arrow-up-circle"></i> Valider la remontée`;
-    } else {
-      validerBtn.className = "btn_danger";
-      validerBtn.innerHTML = `<i class="bi bi-archive"></i> Valider l'archivage`;
-    }
+const OBS_CLASSES_FRAIS = {
+  "Frais versés (Reçu)": "is_actif",            // vert
+  "Frais versés (Copie reçu)": "obs_roux",      // roux
+  "Frais versés (Virement)": "is_facture",      // bleu
+  "Frais versés (Copie virement)": "obs_roux",  // roux
+  "Frais versés (Virement commun)": "is_facture", // bleu
+  "Frais versés (2 reçus)": "obs_complet"       // vert clair
+};
+
+// Inscrits (cache) partageant le même reçu / virement que "insc".
+function membresGroupeInscrit(insc) {
+  const g = groupeFraisInscrit(insc);
+  if (!g) return [insc];
+  const annee = String(insc["Année"] || "").trim();
+  return inscritsCache.filter((x) => String(x["Année"] || "").trim() === annee && groupeFraisInscrit(x) === g);
+}
+
+const nomInscrit = (i) => `${i["Prénom"] || ""} ${i["Nom"] || ""}`.trim();
+
+function badgeObservationInscrit(insc, modifie) {
+  if (!rangAnneeInscrit(insc["Année"])) return "—";
+  const val = valeurFraisInscrit(insc);
+  const cls = OBS_CLASSES_FRAIS[val] || "inscrit_obs_vide";
+  const badge = `<button type="button" class="etat_badge ${cls} inscrit_obs_toggle${modifie ? " is_modifie" : ""}" data-row="${insc._row}" title="${modifie ? "Changement non enregistré — " : ""}Cliquer pour changer l'état">${escapeHtmlDemande(val || "----")}</button>`;
+  if (val !== INSCRIT_FRAIS_COMMUN) return badge;
+  const autres = membresGroupeInscrit(insc).filter((x) => x !== insc).map(nomInscrit);
+  const titre = autres.length ? `Commun avec : ${autres.join(", ")}` : "Choisir les inscrits couverts par ce virement commun";
+  return `<span class="inscrit_frais_cell">${badge}<button type="button" class="inscrit_lien_btn${autres.length ? " is_lie" : ""}" data-row="${insc._row}" title="${escapeHtmlDemande(titre)}" aria-label="Frais communs"><i class="bi bi-link-45deg"></i></button></span>`;
+}
+
+function majIndicateurInscritPending() {
+  const box = document.getElementById("inscrit_pending");
+  if (!box) return;
+  box.hidden = inscritPending.size === 0;
+  document.getElementById("inscrit_pending_nb").textContent = inscritPending.size ? `(${inscritPending.size})` : "";
+  document.getElementById("inscrit_btn_enregistrer").disabled = inscritSauvegardeEnCours;
+}
+
+// Change le contenu de "Frais N" d'un inscrit en local (mémoire) en tenant le
+// registre des changements à enregistrer ; retour à l'origine = plus d'attente.
+function definirFraisInscrit(insc, nouvelle) {
+  const n = rangAnneeInscrit(insc["Année"]);
+  if (!n) return;
+  const actuelle = observationInscrit(insc);
+  nouvelle = fraisCanonique(nouvelle);
+  if (nouvelle === actuelle) return;
+  const cle = cleInscritPending(insc);
+  const origine = inscritPending.has(cle) ? inscritPending.get(cle).origine : actuelle;
+  insc[`Frais ${n}`] = nouvelle;
+  if (nouvelle === origine) inscritPending.delete(cle);
+  else inscritPending.set(cle, { origine, nouvelle, n });
+}
+
+// Clic sur le badge : valeur suivante du cycle, pour cet inscrit seulement.
+// Quitter "Virement commun" le détache de son groupe ; s'il ne reste qu'un
+// membre, son jeton de groupe est retiré.
+function basculerObservationInscrit(insc) {
+  if (inscritSauvegardeEnCours) return;
+  if (!rangAnneeInscrit(insc["Année"])) return;
+  const cycle = ["", ...INSCRIT_FRAIS_OPTIONS];
+  const i = Math.max(0, cycle.indexOf(valeurFraisInscrit(insc)));
+  const suivante = cycle[(i + 1) % cycle.length];
+  const ancien = membresGroupeInscrit(insc);
+  definirFraisInscrit(insc, suivante);
+  const restants = ancien.filter((x) => x !== insc);
+  if (ancien.length > 1 && restants.length === 1) definirFraisInscrit(restants[0], INSCRIT_FRAIS_COMMUN);
+  majIndicateurInscritPending();
+  renderInscritTable();
+}
+
+/* ---------- Frais communs (un reçu / virement pour plusieurs inscrits) ---------- */
+let inscritFraisAncre = null;
+
+function ouvrirFraisCommunInscrit(insc) {
+  const val = valeurFraisInscrit(insc);
+  if (val !== INSCRIT_FRAIS_COMMUN) return;
+  inscritFraisAncre = insc;
+  const annee = String(insc["Année"] || "").trim();
+  const groupe = groupeFraisInscrit(insc);
+  document.getElementById("inscrit_frais_titre").textContent = `Frais communs — ${annee}`;
+  document.getElementById("inscrit_frais_aide").textContent =
+    `Cochez les inscrits couverts par le même virement que ${nomInscrit(insc)}. Ils prendront « Virement commun » ; ceux décochés en sont détachés (ils gardent leur valeur).`;
+  const pairs = inscritsCache
+    .filter((x) => String(x["Année"] || "").trim() === annee)
+    .sort((a, b) => String(a["Prénom"] || "").localeCompare(String(b["Prénom"] || ""), "fr", { sensitivity: "base" })
+      || String(a["Nom"] || "").localeCompare(String(b["Nom"] || ""), "fr", { sensitivity: "base" }));
+  document.getElementById("inscrit_frais_body").innerHTML = pairs.map((x) => {
+    const estAncre = x === insc;
+    const dansGroupe = groupe && groupeFraisInscrit(x) === groupe;
+    return `<tr>
+      <td><input type="checkbox" data-row="${x._row}" ${estAncre || dansGroupe ? "checked" : ""} ${estAncre ? "disabled" : ""} /></td>
+      <td>${escapeHtmlDemande(normaliserCinPP(x["CIN"]))}</td>
+      <td>${escapeHtmlDemande(nomInscrit(x))}</td>
+      <td>${escapeHtmlDemande(valeurFraisInscrit(x) || "----")}</td>
+    </tr>`;
+  }).join("");
+  openFormModal("inscrit_frais_modal", "inscrit_frais_form");
+}
+
+function appliquerFraisCommunInscrit(e) {
+  e.preventDefault();
+  const ancre = inscritFraisAncre;
+  if (!ancre) return;
+  const val = valeurFraisInscrit(ancre);
+  const coches = new Set([...document.querySelectorAll("#inscrit_frais_body input[type=checkbox]:checked")].map((c) => c.dataset.row));
+  coches.add(String(ancre._row));
+  const annee = String(ancre["Année"] || "").trim();
+  const memeAnnee = inscritsCache.filter((x) => String(x["Année"] || "").trim() === annee);
+  const ancienGroupe = groupeFraisInscrit(ancre);
+  let groupe = ancienGroupe;
+  if (!groupe) {
+    const pris = new Set(inscritsCache.map(groupeFraisInscrit).filter(Boolean));
+    do { groupe = Math.random().toString(36).slice(2, 6); } while (pris.has(groupe) || groupe.length < 4);
   }
+  // Détachés : étaient dans l'ancien groupe, ne sont plus cochés (ils gardent la valeur).
+  if (ancienGroupe) {
+    memeAnnee.filter((x) => groupeFraisInscrit(x) === ancienGroupe && !coches.has(String(x._row)))
+      .forEach((x) => definirFraisInscrit(x, INSCRIT_FRAIS_COMMUN));
+  }
+  const membres = memeAnnee.filter((x) => coches.has(String(x._row)));
+  // Un seul inscrit = pas de groupe.
+  membres.forEach((x) => definirFraisInscrit(x, formaterFrais(val, membres.length > 1 ? groupe : "")));
+  closeFormModal("inscrit_frais_modal");
+  majIndicateurInscritPending();
+  renderInscritTable();
+}
 
+// Réapplique les changements en attente sur des données fraîches (après un rechargement).
+function reappliquerInscritPending() {
+  const parCle = new Map(inscritsCache.map((i) => [cleInscritPending(i), i]));
+  Array.from(inscritPending.entries()).forEach(([cle, p]) => {
+    const i = parCle.get(cle);
+    const obs = i ? fraisCanonique(i[`Frais ${p.n}`]) : "";
+    if (!i || obs === p.nouvelle) { inscritPending.delete(cle); return; }   // ligne disparue ou déjà à jour
+    p.origine = obs;
+    i[`Frais ${p.n}`] = p.nouvelle;
+  });
+  majIndicateurInscritPending();
+}
+
+async function enregistrerObservationsInscrits() {
+  if (inscritSauvegardeEnCours || inscritPending.size === 0) return;
+  inscritSauvegardeEnCours = true;
+  majIndicateurInscritPending();
+  const btn = document.getElementById("inscrit_btn_enregistrer");
+  setBtnSaving(btn, true);
+  const problemes = [];
+  try {
+    // 1. Relecture de la base : les n° de ligne ont pu changer depuis le chargement.
+    const frais = await apiCallDirect("listInscritsPP", {});
+    const parCle = new Map(frais.map((i) => [cleInscritPending(i), i]));
+    const aEcrire = [];
+    const conflits = [];
+    inscritPending.forEach((p, cle) => {
+      const i = parCle.get(cle);
+      if (!i) { problemes.push(`${libelleInscritPending(cle)} : inscrit introuvable (supprimé, archivé ou modifié).`); inscritPending.delete(cle); return; }
+      const obsBase = fraisCanonique(i[`Frais ${p.n}`]);
+      if (obsBase === p.nouvelle) { inscritPending.delete(cle); return; }   // déjà à jour
+      if (obsBase !== p.origine) conflits.push({ cle, i, p, obsBase });
+      else aEcrire.push({ cle, i, p });
+    });
+    // 2. Observation changée ailleurs entre-temps : confirmation avant d'écraser.
+    if (conflits.length) {
+      const detail = conflits.map((c) => `• ${libelleInscritPending(c.cle)} : « ${c.obsBase || "vide"} » dans la base, « ${c.p.nouvelle} » ici`).join("\n");
+      if (confirm(`${conflits.length} inscrit(s) ont été modifiés ailleurs depuis le chargement :\n${detail}\n\nÉcraser avec vos changements ?`)) {
+        conflits.forEach((c) => aEcrire.push(c));
+      } else {
+        conflits.forEach((c) => inscritPending.delete(c.cle));   // la valeur de la base l'emporte
+      }
+    }
+    // 3. Écriture une par une ; un échec n'empêche pas les autres et reste en attente.
+    for (const { cle, i, p } of aEcrire) {
+      try {
+        await apiCallDirect("updateInscritPP", { _row: i._row, record: recordInscrit(i, { [`Frais ${p.n}`]: p.nouvelle }) });
+        inscritPending.delete(cle);
+      } catch (err) {
+        problemes.push(`${libelleInscritPending(cle)} : ${err.message}`);
+      }
+    }
+  } catch (err) {
+    problemes.push(`Impossible de relire la base : ${err.message}`);
+  } finally {
+    inscritSauvegardeEnCours = false;
+    setBtnSaving(btn, false);
+    majIndicateurInscritPending();
+  }
+  await loadInscrits();   // état réel de la base (garde les éventuels changements restés en attente)
+  if (problemes.length) alert(`Certains changements n'ont pas été enregistrés :\n${problemes.join("\n")}`);
+}
+
+window.addEventListener("beforeunload", (e) => {
+  if (inscritPending.size === 0) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
+
+/* ---------------- Liste des inscrits (CIN, nom et prénom, versement des frais) ----------------
+   Bouton "Liste" visible quand les inscrits affichés appartiennent à une seule
+   classe-année (filtre / recherche). Filtres : Tous / Frais versés / Sans frais.
+   Les inscrits qui partagent un même reçu / virement sont regroupés et leur
+   cellule "Versement des frais" est fusionnée (rowspan). */
+let inscritListeAnnee = "";
+let inscritListeFiltre = "tous";
+
+function majBoutonListeInscrits(affiches) {
+  const btn = document.getElementById("inscrit_btn_liste");
+  if (!btn) return;
+  const annees = [...new Set(affiches.map((i) => String(i["Année"] || "").trim()))];
+  inscritListeAnnee = annees.length === 1 && annees[0] ? annees[0] : "";
+  btn.hidden = !inscritListeAnnee;
+}
+
+function ouvrirListeInscrits() {
+  if (!inscritListeAnnee) return;
+  inscritListeFiltre = "tous";
+  document.getElementById("inscrit_liste_titre").textContent = `Inscrits — ${inscritListeAnnee}`;
+  renderListeInscrits();
+  openFormModal("inscrit_liste_modal", "inscrit_liste_form");
+}
+
+// Libellé court du versement : "Frais versés (Virement)" -> "Virement".
+function libelleVersementInscrit(val) {
+  const m = String(val || "").match(/^Frais versés \((.*)\)$/);
+  return m ? m[1] : String(val || "");
+}
+
+function renderListeInscrits() {
+  const cmp = (a, b) => String(a || "").localeCompare(String(b || ""), "fr", { sensitivity: "base" });
+  const tous = inscritsCache
+    .filter((i) => String(i["Année"] || "").trim() === inscritListeAnnee)
+    .sort((a, b) => cmp(a["Prénom"], b["Prénom"]) || cmp(a["Nom"], b["Nom"]));
+  const compteurs = { tous: tous.length, verses: tous.filter((i) => valeurFraisInscrit(i)).length };
+  compteurs.sans = compteurs.tous - compteurs.verses;
+  const chip = (cle, libelle) => `
+    <span class="demandes_specialite_chip${inscritListeFiltre === cle ? " is_active" : ""}" data-filtre="${cle}">${libelle} <strong>${compteurs[cle]}</strong></span>`;
+  document.getElementById("inscrit_liste_filtres").innerHTML =
+    chip("tous", "Tous") + chip("verses", "Frais versés") + chip("sans", "Sans frais");
+
+  const visibles = tous.filter((i) =>
+    inscritListeFiltre === "verses" ? valeurFraisInscrit(i)
+      : inscritListeFiltre === "sans" ? !valeurFraisInscrit(i)
+      : true);
+
+  // Les membres d'un même groupe sont rendus à la suite (à la place du premier).
+  const ordonnes = [];
+  const faits = new Set();
+  visibles.forEach((i) => {
+    if (faits.has(i)) return;
+    const g = groupeFraisInscrit(i);
+    const bloc = g ? visibles.filter((x) => groupeFraisInscrit(x) === g) : [i];
+    bloc.forEach((x) => { faits.add(x); ordonnes.push({ i: x, taille: bloc.length, premier: x === bloc[0] }); });
+  });
+
+  document.getElementById("inscrit_liste_vide").hidden = ordonnes.length > 0;
+  document.getElementById("inscrit_liste_body").innerHTML = ordonnes.map(({ i, taille, premier }) => {
+    const val = valeurFraisInscrit(i);
+    let versement = "";
+    if (taille === 1) {
+      versement = `<td>${escapeHtmlDemande(libelleVersementInscrit(val)) || "—"}</td>`;
+    } else if (premier) {
+      versement = `<td class="inscrit_liste_commun" rowspan="${taille}">${escapeHtmlDemande(libelleVersementInscrit(val))}</td>`;
+    }
+    return `<tr${/copie/i.test(val) ? ' class="inscrit_liste_copie"' : ""}>
+      <td>${escapeHtmlDemande(normaliserCinPP(i["CIN"]))}</td>
+      <td>${escapeHtmlDemande(nomInscrit(i))}</td>
+      ${versement}
+    </tr>`;
+  }).join("");
+}
+
+function imprimerListeInscrits() {
+  const actif = document.querySelector("#inscrit_liste_filtres .is_active");
+  const filtre = actif ? `${actif.childNodes[0].textContent.trim()} (${actif.querySelector("strong").textContent})` : "";
+  const titre = document.getElementById("inscrit_liste_titre").textContent;
+  const lignes = document.getElementById("inscrit_liste_body").innerHTML;
+  if (!lignes.trim()) return;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+  document.body.appendChild(iframe);
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${escapeHtmlDemande(titre)}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 16px; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  p { margin: 0 0 12px; color: #444; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #999; padding: 4px 6px; text-align: left; vertical-align: top; }
+  td[rowspan] { vertical-align: middle; text-align: left; }
+  tr.inscrit_liste_copie td { background: #fee2e2; color: #991b1b; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  th { background: #eee; }
+  tr { page-break-inside: avoid; }
+</style></head><body>
+<h1>${escapeHtmlDemande(titre)}</h1>
+<p>${escapeHtmlDemande(filtre)} — imprimé le ${new Date().toLocaleDateString("fr-FR")}</p>
+<table><thead><tr><th>CIN</th><th>Nom et prénom</th><th>Versement des frais</th></tr></thead>
+<tbody>${lignes}</tbody></table></body></html>`);
+  doc.close();
+  iframe.contentWindow.focus();
+  iframe.contentWindow.print();
+  setTimeout(() => iframe.remove(), 1000);
+}
+
+function enterInscritPassage() {
+  if (inscritPending.size > 0) {
+    alert("Enregistrez d'abord les changements de frais en attente (bouton « Enregistrer »).");
+    return;
+  }
+  inscritPassageMode = true;
+  inscritPassageSelection = new Set();
+  updateInscritActionsBar();
   updateInscritSelectionCount();
   renderInscritTable();
 }
 
-// Quitte le mode sélection groupée et revient à l'affichage normal des
-// actions par ligne.
-function exitInscritBulkMode() {
-  inscritBulkMode = null;
-  inscritBulkSelection = new Set();
-
-  document.getElementById("inscrit_actions_normal").hidden = false;
-  document.getElementById("inscrit_actions_selection").hidden = true;
-
+function exitInscritPassage() {
+  inscritPassageMode = false;
+  inscritPassageSelection = new Set();
+  updateInscritActionsBar();
   renderInscritTable();
 }
 
 function updateInscritSelectionCount() {
   const el = document.getElementById("inscrit_selection_count");
-  if (el) el.textContent = `${inscritBulkSelection.size} sélectionné(s)`;
+  if (el) el.textContent = `${inscritPassageSelection.size} sélectionné(s)`;
 }
 
-// Applique l'action groupée (remontée d'année ou archivage) à toute la
-// sélection courante, puis quitte le mode sélection.
-async function onValiderInscritBulk() {
-  if (inscritBulkSelection.size === 0) {
-    alert("Sélectionnez au moins un inscrit.");
+// Barre d'actions : "Passage" visible de juillet à septembre, sauf si le
+// filtre porte sur une dernière année (rien à faire passer).
+function updateInscritActionsBar() {
+  const visible = estPeriodePassageInscrit() && !(inscritClasseFiltre && !anneeSuivanteInscrit(inscritClasseFiltre));
+  const btn = document.getElementById("inscrit_btn_passage");
+  if (btn) btn.hidden = !visible;
+  document.getElementById("inscrit_actions_normal").hidden = inscritPassageMode;
+  document.getElementById("inscrit_actions_selection").hidden = !inscritPassageMode;
+}
+
+// Fait passer à l'année suivante les inscrits cochés (ayant réussi).
+async function onValiderInscritPassage() {
+  const selection = inscritsCache.filter((x) => inscritPassageSelection.has(String(x._row)));
+  if (selection.length === 0) {
+    alert("Cochez au moins un inscrit ayant réussi.");
     return;
   }
-
-  const selection = inscritsCache.filter((x) => inscritBulkSelection.has(String(x._row)));
-  const btn = document.getElementById("inscrit_btn_bulk_valider");
-
-  if (inscritBulkMode === "suivante") {
-    const nouvelleAnnee = anneeSuivanteInscrit(selection[0]["Année"]);
-    if (!nouvelleAnnee) {
-      alert("Aucune année suivante possible pour cette sélection.");
-      return;
+  if (!confirm(`Faire passer ${selection.length} inscrit(s) à l'année suivante ?`)) return;
+  const btn = document.getElementById("inscrit_btn_passage_valider");
+  setBtnSaving(btn, true);
+  try {
+    for (const insc of selection) {
+      const nouvelle = anneeSuivanteInscrit(insc["Année"]);
+      if (!nouvelle) continue;
+      await apiCallDirect("updateInscritPP", { _row: insc._row, record: recordInscrit(insc, { "Année": nouvelle }) });
     }
-    if (!confirm(`Faire passer ${selection.length} inscrit(s) en "${nouvelleAnnee}" ?`)) return;
-
-    setBtnSaving(btn, true);
-    try {
-      for (const insc of selection) {
-        const record = { CIN: insc["CIN"] || "", "Prénom": insc["Prénom"] || "", "Nom": insc["Nom"] || "",
-          "Coordonnées": insc["Coordonnées"] || "", "Année": nouvelleAnnee };
-        await apiCallDirect("updateInscritPP", { _row: insc._row, record });
-      }
-      exitInscritBulkMode();
-      await loadInscrits();
-    } catch (err) {
-      alert(`Erreur lors de la mise à jour groupée : ${err.message}`);
-    } finally {
-      setBtnSaving(btn, false);
-    }
-  } else if (inscritBulkMode === "archiver") {
-    // Même motif pour toute la sélection (choisi dans la modale d'archivage).
-    ouvrirArchivage("Inscrits", selection, async () => {
-      exitInscritBulkMode();
-      await loadInscrits();
-    });
+    exitInscritPassage();
+    await loadInscrits();
+  } catch (err) {
+    alert(`Erreur lors du passage : ${err.message}`);
+    await loadInscrits();
+  } finally {
+    setBtnSaving(btn, false);
   }
 }
 
 async function loadInscrits() {
   const tbody = document.getElementById("inscrit_table_body");
-  tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr>`;
+  tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr>`;
 
   try {
     inscritsCache = await apiCallDirect("listInscritsPP", {});
+    reappliquerInscritPending();
     renderInscritFilters();
     renderInscritTable();
   } catch (err) {
-    tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
   }
 }
 
-// Chips de filtre : une par classe présente (préfixe de "Année", ex. "LATI Pr2").
+// Chips de filtre : une par valeur de "Année" présente (ex. "LATI Pr2 3ème").
 function renderInscritFilters() {
   const wrap = document.getElementById("inscrit_classe_filters");
   if (!wrap) return;
-  const classes = [...new Set(inscritsCache.map((i) => parseAnneeInscrit(i["Année"]).prefixe).filter(Boolean))]
+  const classes = [...new Set(inscritsCache.map((i) => String(i["Année"] || "").trim()).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, "fr", { numeric: true }));
   if (inscritClasseFiltre && !classes.includes(inscritClasseFiltre)) inscritClasseFiltre = "";
   const chip = (label, val) => `
     <span class="demandes_specialite_chip${inscritClasseFiltre === val ? " is_active" : ""}" data-specialite="${escapeHtmlDemande(val)}">${escapeHtmlDemande(label)}</span>`;
   wrap.innerHTML = chip("Tous", "") + classes.map((c) => chip(c, c)).join("");
+  updateInscritActionsBar();
 }
 
 function renderInscritTable() {
@@ -3197,11 +3669,20 @@ function renderInscritTable() {
   const norm = (v) => String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const terme = norm(document.getElementById("inscrit_search")?.value).trim();
   const liste = inscritsCache.filter((i) => {
-    if (inscritClasseFiltre && parseAnneeInscrit(i["Année"]).prefixe !== inscritClasseFiltre) return false;
+    if (inscritClasseFiltre && String(i["Année"] || "").trim() !== inscritClasseFiltre) return false;
     if (!terme) return true;
-    return [i["CIN"], i["Prénom"], i["Nom"]].some((v) => norm(v).includes(terme));
+    return correspondRecherchePP(i, terme);
   });
 
+  // Tri : par spécialité/classe (préfixe de "Année", ex. "LATI Pr2"), puis
+  // alphabétiquement par prénom (puis nom), insensible à la casse/accents.
+  const cmp = (a, b) => String(a || "").localeCompare(String(b || ""), "fr", { numeric: true, sensitivity: "base" });
+  liste.sort((a, b) =>
+    cmp(parseAnneeInscrit(a["Année"]).prefixe, parseAnneeInscrit(b["Année"]).prefixe)
+    || cmp(a["Prénom"], b["Prénom"])
+    || cmp(a["Nom"], b["Nom"]));
+
+  majBoutonListeInscrits(liste);
   if (liste.length === 0) {
     tbody.innerHTML = "";
     if (emptyEl) emptyEl.hidden = false;
@@ -3216,37 +3697,22 @@ function renderInscritTable() {
       .map((l) => `${l} : ${getCoordField(coord, l) || "—"}`)
       .join("\n");
     const annee = insc["Année"] || "";
-    const nouvelleAnnee = anneeSuivanteInscrit(annee);
     const rowKey = String(insc._row);
-
-    let actionsCell;
-    if (inscritBulkMode) {
-      // Mode remontée : une case désactivée si l'inscrit est déjà en
-      // dernière année (pas d'année suivante possible pour lui).
-      if (inscritBulkMode === "suivante" && !nouvelleAnnee) {
-        actionsCell = `<input type="checkbox" class="inscrit_row_checkbox" disabled title="Déjà en dernière année" />`;
-      } else {
-        const checked = inscritBulkSelection.has(rowKey) ? "checked" : "";
-        actionsCell = `<input type="checkbox" class="inscrit_row_checkbox" data-row="${rowKey}" data-annee="${escapeHtmlDemande(annee)}" ${checked} />`;
-      }
-    } else {
-      const btnAnneeSuivante = nouvelleAnnee
-        ? `<button type="button" class="btn_success inscrit_row_annee_suivante" data-row="${insc._row}">
-             <i class="bi bi-arrow-up-circle"></i> ${escapeHtmlDemande(nouvelleAnnee)}
-           </button>`
-        : "";
-      const btnArchiver = `<button type="button" class="btn_danger inscrit_row_archiver" data-row="${insc._row}">
-             <i class="bi bi-archive"></i> Archiver
-           </button>`;
-      actionsCell = `
-        <div class="inscrit_actions_group">
-          <button type="button" class="btn_info inscrit_row_afficher" data-row="${insc._row}">
-            <i class="bi bi-eye"></i> Afficher
-          </button>
-          ${btnAnneeSuivante}
-          ${btnArchiver}
-        </div>`;
-    }
+    const nouvelleAnnee = anneeSuivanteInscrit(annee);
+    const obsCell = badgeObservationInscrit(insc, inscritPending.has(cleInscritPending(insc)));
+    const actionsCell = inscritPassageMode
+      ? (nouvelleAnnee
+          ? `<input type="checkbox" class="inscrit_row_checkbox" data-row="${rowKey}" ${inscritPassageSelection.has(rowKey) ? "checked" : ""} title="A réussi : passe en ${escapeHtmlDemande(nouvelleAnnee)}" />`
+          : `<input type="checkbox" class="inscrit_row_checkbox" disabled title="Dernière année : pas de passage" />`)
+      : `
+      <div class="inscrit_actions_group">
+        <button type="button" class="btn_info inscrit_row_afficher" data-row="${insc._row}">
+          <i class="bi bi-eye"></i> Afficher
+        </button>
+        <button type="button" class="btn_danger inscrit_row_archiver" data-row="${insc._row}">
+          <i class="bi bi-archive"></i> Archiver
+        </button>
+      </div>`;
 
     return `
     <tr>
@@ -3255,6 +3721,7 @@ function renderInscritTable() {
       <td>${insc["Nom"] || ""}</td>
       <td><span class="demande_tel_tooltip" tabindex="0" data-tooltip="${escapeHtmlDemande(tooltip)}">${tel || "—"}</span></td>
       <td>${escapeHtmlDemande(annee)}</td>
+      <td>${obsCell}</td>
       <td class="inscrit_actions_cell">${actionsCell}</td>
     </tr>`;
   }).join("");
