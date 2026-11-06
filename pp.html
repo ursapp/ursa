@@ -24,6 +24,20 @@
        sur l'attribut natif [hidden]. */
     [hidden] { display: none !important; }
 
+    /* Section en lecture seule (quelqu'un d'autre est en train de la modifier) :
+       les boutons de modification sont grisés et inactifs. */
+    section.pp_lecture_seule :is(
+      #demande_btn_import, #demande_btn_nouveau, #demande_btn_supprimer, .demande_row_vers_dossier, .demande_row_supprimer,
+      #dossier_btn_enregistrer, #dossier_btn_nouveau, .dossier_obs_toggle, .dossier_row_vers_inscrit, .dossier_row_archiver,
+      #inscrit_btn_enregistrer, #inscrit_btn_nouveau, #inscrit_btn_passage, .inscrit_obs_toggle, .inscrit_lien_btn, .inscrit_row_archiver,
+      button[type="submit"]
+    ) { opacity: .4; pointer-events: none; cursor: not-allowed; }
+    .pp_verrou_bandeau {
+      margin: 0 0 var(--space_3); padding: var(--space_3) var(--space_4); border-radius: var(--radius_md, 8px);
+      background: #fef3c7; color: #92400e; font-size: var(--fs_sm); font-weight: 600;
+      display: flex; align-items: center; gap: var(--space_3);
+    }
+
     /* Badge d'état des classes (colonne "État" du tableau) */
     .etat_badge {
       display: inline-block;
@@ -1472,8 +1486,123 @@ async function onSubmitCampagneForm(e) {
 /* ---------------- Une seule section visible à la fois ---------------- */
 /* Ordre : Campagne - Demandes (active par défaut) - Dossiers - Inscrits - Classes. */
 
+/* ---------------- Verrou des sections (un seul éditeur à la fois) ----------------
+   Dès l'affichage de "Demandes", "Dossiers" ou "Inscrits", la page demande le
+   verrou au serveur (action presencePP, voir Code.gs). Premier arrivé = éditeur ;
+   les suivants sont en lecture seule : boutons de modification désactivés, écritures
+   refusées, bandeau d'information. Le verrou est renouvelé toutes les 20 s ;
+   un lecteur retente à la même cadence et devient éditeur dès que la place est libre
+   (les données sont alors rechargées). En cas d'erreur réseau / serveur, on ne bloque
+   pas le travail (mode éditeur). */
+const PP_SECTIONS_VERROU = ["demandes", "dossiers", "inscrits"];
+// Identifiant de l'onglet, conservé au rechargement (F5) pour ne pas se bloquer soi-même.
+const PP_CLIENT_ID = (() => {
+  try {
+    let id = sessionStorage.getItem("pp_client_id");
+    if (!id) { id = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem("pp_client_id", id); }
+    return id;
+  } catch (e) { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+})();
+const ppVerrou = { courant: "", etat: {}, par: {}, timer: null };
+
+function ppSectionLectureSeule() {
+  const id = ppVerrou.courant;
+  return PP_SECTIONS_VERROU.includes(id) && ppVerrou.etat[id] !== "editeur";
+}
+
+function ppUtilisateurCourant() {
+  const t = (document.getElementById("sidebar_user_badge")?.textContent || "").trim();
+  return t && t !== "--" ? t : "Un autre utilisateur";
+}
+
+function ppPresence(op, section) {
+  return apiCallDirect("presencePP", { op, section, clientId: PP_CLIENT_ID, user: ppUtilisateurCourant() });
+}
+
+function ppAppliquerEtatVerrou(section) {
+  const el = document.getElementById(section);
+  if (!el) return;
+  const etat = ppVerrou.etat[section];
+  el.classList.toggle("pp_lecture_seule", !!etat && etat !== "editeur");
+  let bandeau = el.querySelector(":scope > .pp_verrou_bandeau");
+  if (etat === "lecture") {
+    if (!bandeau) {
+      bandeau = document.createElement("div");
+      bandeau.className = "pp_verrou_bandeau";
+      bandeau.setAttribute("role", "status");
+      el.prepend(bandeau);
+    }
+    const titre = el.querySelector(".panel_header h2")?.textContent.trim() || section;
+    const par = ppVerrou.par[section] ? `<strong>${escapeHtmlDemande(ppVerrou.par[section])}</strong>` : "Un autre utilisateur";
+    bandeau.innerHTML = `<i class="bi bi-lock-fill"></i><span>Lecture seule — ${par} modifie actuellement « ${escapeHtmlDemande(titre)} ». Les modifications sont désactivées ; elles seront de nouveau possibles dès son départ (vérification automatique).</span>`;
+  } else if (bandeau) {
+    bandeau.remove();
+  }
+}
+
+const PP_CHARGEURS_VERROU = { demandes: () => loadDemandes(), dossiers: () => loadDossiers(), inscrits: () => loadInscrits() };
+
+async function ppVerrouVerifier(section) {
+  try {
+    const r = await ppPresence("acquire", section);
+    if (ppVerrou.courant !== section) {                 // l'utilisateur a changé de section entre-temps
+      if (r.editeur) ppPresence("release", section).catch(() => {});
+      return;
+    }
+    const avant = ppVerrou.etat[section];
+    ppVerrou.etat[section] = r.editeur ? "editeur" : "lecture";
+    ppVerrou.par[section] = r.par || "";
+    ppAppliquerEtatVerrou(section);
+    if (r.editeur && avant === "lecture") PP_CHARGEURS_VERROU[section]?.();   // place libérée : données fraîches
+  } catch (err) {
+    if (ppVerrou.courant === section && ppVerrou.etat[section] !== "editeur") {
+      ppVerrou.etat[section] = "editeur";               // en cas de doute on ne bloque pas
+      ppAppliquerEtatVerrou(section);
+    }
+  }
+}
+
+function ppVerrouQuitter(section) {
+  clearInterval(ppVerrou.timer);
+  ppVerrou.timer = null;
+  const etait = ppVerrou.etat[section];
+  delete ppVerrou.etat[section];
+  ppAppliquerEtatVerrou(section);
+  if (etait === "editeur") ppPresence("release", section).catch(() => {});
+}
+
+function ppVerrouEntrer(id) {
+  if (ppVerrou.courant === id) return;
+  if (PP_SECTIONS_VERROU.includes(ppVerrou.courant)) ppVerrouQuitter(ppVerrou.courant);
+  ppVerrou.courant = id;
+  if (!PP_SECTIONS_VERROU.includes(id)) return;
+  ppVerrou.etat[id] = "verif";                         // lecture seule le temps de la vérification
+  ppAppliquerEtatVerrou(id);
+  ppVerrouVerifier(id);
+  ppVerrou.timer = setInterval(() => ppVerrouVerifier(id), 20000);
+}
+
+// Fermeture de l'onglet : libère le verrou tout de suite (sinon il expire seul).
+window.addEventListener("pagehide", () => {
+  const id = ppVerrou.courant;
+  if (!PP_SECTIONS_VERROU.includes(id) || ppVerrou.etat[id] !== "editeur") return;
+  try {
+    navigator.sendBeacon(GAS_API_URL, new Blob([JSON.stringify({ action: "presencePP", op: "release", section: id, clientId: PP_CLIENT_ID })], { type: "text/plain;charset=utf-8" }));
+  } catch (e) { /* le verrou expirera seul */ }
+});
+
+// Enter dans un formulaire d'une section en lecture seule : on bloque aussi.
+document.addEventListener("submit", (e) => {
+  if (ppSectionLectureSeule() && e.target.closest("section.pp_lecture_seule")) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    alert("Lecture seule : un autre utilisateur modifie cette section.");
+  }
+}, true);
+
 function showPPSection(id) {
   document.querySelectorAll("main.app_content > section.panel").forEach((s) => { s.hidden = s.id !== id; });
+  ppVerrouEntrer(id);
   document.querySelectorAll(".sidebar_section_link[href^='#']").forEach((l) =>
     l.classList.toggle("is_active", l.getAttribute("href") === `#${id}`));
   history.replaceState(null, "", `#${id}`);
@@ -4496,6 +4625,11 @@ function renderPPClasseTable(query) {
 }
 
 async function apiCallDirect(action, payload = {}) {
+  // Filet de sécurité : aucune écriture Demandes / Dossiers / Inscrits tant que
+  // la section affichée est en lecture seule (voir "Verrou des sections").
+  if (/^(create|update|delete|archiver)(Demande|Dossier|Inscrit)PP$/.test(action) && ppSectionLectureSeule()) {
+    throw new Error("Lecture seule : un autre utilisateur modifie cette section.");
+  }
   const res = await fetch(GAS_API_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
