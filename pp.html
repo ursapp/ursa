@@ -33,10 +33,12 @@
       button[type="submit"]
     ) { opacity: .4; pointer-events: none; cursor: not-allowed; }
     .pp_verrou_bandeau {
-      margin: 0 0 var(--space_3); padding: var(--space_3) var(--space_4); border-radius: var(--radius_md, 8px);
+      display: inline-flex; align-items: center; gap: var(--space_2, 6px);
+      margin-right: auto; padding: 2px 10px; border-radius: 999px;
       background: #fef3c7; color: #92400e; font-size: var(--fs_sm); font-weight: 600;
-      display: flex; align-items: center; gap: var(--space_3);
+      white-space: nowrap; min-width: 0;
     }
+    .pp_verrou_bandeau span { overflow: hidden; text-overflow: ellipsis; }
 
     /* Badge d'état des classes (colonne "État" du tableau) */
     .etat_badge {
@@ -1511,8 +1513,16 @@ function ppSectionLectureSeule() {
 }
 
 function ppUtilisateurCourant() {
-  const t = (document.getElementById("sidebar_user_badge")?.textContent || "").trim();
+  const badge = document.getElementById("sidebar_user_badge");
+  const nom = String(getCurrentUser()?.Nom || "").trim();  // même valeur que l'infobulle du badge
+  if (nom) return nom;
+  const t = (badge?.textContent || "").trim();
   return t && t !== "--" ? t : "Un autre utilisateur";
+}
+
+// Prénom affiché dans l'indicateur de lecture seule (1er mot du nom complet).
+function ppPrenom(nomComplet) {
+  return String(nomComplet || "").trim().split(/\s+/)[0] || "";
 }
 
 function ppPresence(op, section) {
@@ -1524,17 +1534,20 @@ function ppAppliquerEtatVerrou(section) {
   if (!el) return;
   const etat = ppVerrou.etat[section];
   el.classList.toggle("pp_lecture_seule", !!etat && etat !== "editeur");
-  let bandeau = el.querySelector(":scope > .pp_verrou_bandeau");
-  if (etat === "lecture") {
+  const header = el.querySelector(":scope > .panel_header");
+  let bandeau = header?.querySelector(":scope > .pp_verrou_bandeau");
+  if (etat === "lecture" && header) {
     if (!bandeau) {
       bandeau = document.createElement("div");
       bandeau.className = "pp_verrou_bandeau";
       bandeau.setAttribute("role", "status");
-      el.prepend(bandeau);
+      const h2 = header.querySelector("h2");
+      if (h2) h2.after(bandeau); else header.prepend(bandeau);
     }
-    const titre = el.querySelector(".panel_header h2")?.textContent.trim() || section;
-    const par = ppVerrou.par[section] ? `<strong>${escapeHtmlDemande(ppVerrou.par[section])}</strong>` : "Un autre utilisateur";
-    bandeau.innerHTML = `<i class="bi bi-lock-fill"></i><span>Lecture seule — ${par} modifie actuellement « ${escapeHtmlDemande(titre)} ». Les modifications sont désactivées ; elles seront de nouveau possibles dès son départ (vérification automatique).</span>`;
+    const prenom = ppPrenom(ppVerrou.par[section]);
+    const qui = prenom ? escapeHtmlDemande(prenom) : "Un autre utilisateur";
+    bandeau.title = "Les modifications sont désactivées ; elles seront de nouveau possibles dès son départ (vérification automatique).";
+    bandeau.innerHTML = `<i class="bi bi-lock-fill"></i><span>Lecture seule — <strong>${qui}</strong> fait des modifications</span>`;
   } else if (bandeau) {
     bandeau.remove();
   }
