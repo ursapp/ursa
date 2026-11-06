@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/navbar.css" />
+  <link rel="stylesheet" href="css/spinner.css" />
+  <script src="js/spinner.js"></script>
   <style>
     [hidden] { display: none !important; }
 
@@ -620,7 +622,7 @@
   </style>
   <script src="js/session.js"></script>
 </head>
-<body>
+<body data-no-dirty>
 
   <header class="navbar navbar_metier">
     <div class="page_title_group">
@@ -628,7 +630,7 @@
       <h1 class="page_title">Formation à distance</h1>
     </div>
     <div class="navbar_status" id="navbar_status">
-      <span class="loading_state navbar_load" id="navbar_loading" hidden>Chargement...</span>
+      <span class="spinner spinner_sm navbar_load" id="navbar_loading" hidden role="status" aria-label="Chargement"></span>
       <span class="navbar_alert" id="navbar_alert_save" hidden>
         <i class="bi bi-exclamation-triangle-fill"></i> Données à enregistrer !
       </span>
@@ -1618,7 +1620,6 @@
   <script src="js/modal_forms.js"></script>
   <script src="js/sticky_metiers.js"></script>
   <script src="js/section_toggles.js"></script>
-  <script src="js/ui_common.js"></script>
   <script>
     // ************************************************************
     // GESTION DES REGROUPEMENTS (semaines + séquences) et TUTORAT
@@ -2666,7 +2667,7 @@
             <td>${escapeHtml(adresse)}</td>
             <td>${escapeHtml(matieresEnseignees)}</td>
             <td>
-              <button type="button" class="btn_ghost enseignant_row_editer" data-nom="${escapeHtml(nomComplet)}" title="Modifier">
+              <button type="button" class="row_action row_action_edit enseignant_row_editer" data-nom="${escapeHtml(nomComplet)}" title="Modifier">
                 <i class="bi bi-pencil"></i>
               </button>
             </td>
@@ -2884,7 +2885,7 @@
           <td>${escapeHtml(et.telephone2)}</td>
           <td>${escapeHtml(et.email)}</td>
           <td>
-            <button type="button" class="btn_ghost inscrits_row_editer" data-index="${i}" title="Modifier">
+            <button type="button" class="row_action row_action_edit inscrits_row_editer" data-index="${i}" title="Modifier">
               <i class="bi bi-pencil"></i>
             </button>
           </td>
@@ -3086,7 +3087,7 @@
           <td>${escapeHtml(it.rib)}</td>
           <td>${escapeHtml(it.banque)}</td>
           ${(CLASS_GUEST_MODE && estClasseFacturee()) ? '' : `<td>
-            <button type="button" class="btn_ghost frais_row_editer" data-index="${i}" title="Modifier">
+            <button type="button" class="row_action row_action_edit frais_row_editer" data-index="${i}" title="Modifier">
               <i class="bi bi-pencil"></i>
             </button>
           </td>`}
@@ -3708,7 +3709,7 @@
             <td>${totalPourcentFI(m)}%</td>
             <td>${m.enseignant ? m.enseignant : '<span class="pr_warn">Non assigné</span>'}</td>
             <td>
-              <button type="button" class="btn_ghost matiere_row_editer" data-index="${i}" title="Modifier">
+              <button type="button" class="row_action row_action_edit matiere_row_editer" data-index="${i}" title="Modifier">
                 <i class="bi bi-pencil"></i>
               </button>
             </td>
@@ -6673,16 +6674,16 @@
                 <span>Étudiant : <strong>${stats.etudiant.toFixed(1)} h</strong></span>
               </span>
               <span class="week_actions">
-                <button type="button" class="btn_ghost reg_week_toggle" title="${isCollapsed ? 'Afficher la semaine' : 'Masquer la semaine'}" aria-label="${isCollapsed ? 'Afficher la semaine' : 'Masquer la semaine'}">
+                <button type="button" class="row_action row_action_view reg_week_toggle" title="${isCollapsed ? 'Afficher la semaine' : 'Masquer la semaine'}" aria-label="${isCollapsed ? 'Afficher la semaine' : 'Masquer la semaine'}">
                   <i class="bi bi-eye${isCollapsed ? '' : '-slash'}"></i>
                 </button>
-                <button type="button" class="btn_ghost reg_week_edit" data-index="${index}" title="Modifier">
+                <button type="button" class="row_action row_action_edit reg_week_edit" data-index="${index}" title="Modifier">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button type="button" class="btn_ghost reg_week_attendance" data-index="${index}" title="Imprimer la feuille de présence">
+                <button type="button" class="row_action row_action_print reg_week_attendance" data-index="${index}" title="Imprimer la feuille de présence">
                   <i class="bi bi-clipboard2-check"></i>
                 </button>
-                <button type="button" class="btn_danger_small reg_week_delete" data-index="${index}" title="Supprimer la semaine">
+                <button type="button" class="row_action row_action_delete reg_week_delete" data-index="${index}" title="Supprimer la semaine">
                   <i class="bi bi-trash3"></i>
                 </button>
               </span>
@@ -8016,16 +8017,16 @@
                 <span>Séances : <strong>${seances.length}</strong></span>
               </span>
               <span class="week_actions">
-                <button type="button" class="btn_ghost exam_toggle" title="Afficher / masquer">
+                <button type="button" class="row_action row_action_view exam_toggle" title="Afficher / masquer">
                   <i class="bi bi-eye"></i>
                 </button>
-                <button type="button" class="btn_ghost exam_edit" data-index="${index}" title="Modifier">
+                <button type="button" class="row_action row_action_edit exam_edit" data-index="${index}" title="Modifier">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button type="button" class="btn_ghost exam_attendance" data-index="${index}" title="Imprimer la feuille de présence">
+                <button type="button" class="row_action row_action_print exam_attendance" data-index="${index}" title="Imprimer la feuille de présence">
                   <i class="bi bi-clipboard2-check"></i>
                 </button>
-                <button type="button" class="btn_danger_small exam_delete" data-index="${index}" title="Supprimer l'examen">
+                <button type="button" class="row_action row_action_delete exam_delete" data-index="${index}" title="Supprimer l'examen">
                   <i class="bi bi-trash3"></i>
                 </button>
               </span>
@@ -8482,13 +8483,13 @@
                 <span>Jours : <strong>${joursList.filter(j => jours[j] && jours[j].matiere).length}/${joursList.length}</strong></span>
               </span>
               <span class="week_actions">
-                <button type="button" class="btn_ghost tut_week_toggle" title="${isCollapsed ? 'Afficher la semaine' : 'Masquer la semaine'}" aria-label="${isCollapsed ? 'Afficher la semaine' : 'Masquer la semaine'}">
+                <button type="button" class="row_action row_action_view tut_week_toggle" title="${isCollapsed ? 'Afficher la semaine' : 'Masquer la semaine'}" aria-label="${isCollapsed ? 'Afficher la semaine' : 'Masquer la semaine'}">
                   <i class="bi bi-eye${isCollapsed ? '' : '-slash'}"></i>
                 </button>
-                <button type="button" class="btn_ghost tut_week_edit" data-index="${index}" title="Modifier">
+                <button type="button" class="row_action row_action_edit tut_week_edit" data-index="${index}" title="Modifier">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button type="button" class="btn_danger_small tut_week_delete" data-index="${index}" title="Supprimer la semaine">
+                <button type="button" class="row_action row_action_delete tut_week_delete" data-index="${index}" title="Supprimer la semaine">
                   <i class="bi bi-trash3"></i>
                 </button>
               </span>
@@ -9130,7 +9131,7 @@
 
     // Affiche/masque un spinner sur un bouton "Enregistrer" pendant l'appel
     // serveur (utilisé par tous les boutons de sauvegarde des .btns_metiers).
-    // setBtnSaving() : voir js/ui_common.js (partagé par toutes les pages).
+    // setBtnSaving() : voir js/spinner.js (partagé par toutes les pages).
 
     async function apiCallDirect(action, payload = {}) {
       const res = await fetch(GAS_API_URL, {
