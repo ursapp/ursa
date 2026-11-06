@@ -10,18 +10,10 @@
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/sidebar.css" />
   <link rel="stylesheet" href="css/navbar.css" />
+  <link rel="stylesheet" href="css/spinner.css" />
+  <script src="js/spinner.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    /* Spinner de chargement des sections : présent dans le HTML statique,
-       donc visible dès le premier rendu (avant l'exécution du JS). */
-    @keyframes pp_spin { to { transform: rotate(360deg); } }
-    .loading_state { display: inline-flex; align-items: center; gap: .6rem; }
-    .loading_state::before {
-      content: ""; width: 1.1rem; height: 1.1rem; flex: none;
-      border: 2px solid var(--border_soft, #ccc); border-top-color: var(--color_teal, #0a8f8f);
-      border-radius: 50%; animation: pp_spin .7s linear infinite;
-    }
-    @media (prefers-reduced-motion: reduce) { .loading_state::before { animation-duration: 2s; } }
     /* ============================================================
        Styles propres à pp.html
        ============================================================ */
@@ -144,8 +136,6 @@
       border: 1px solid var(--border_soft); border-radius: var(--radius_sm);
       background: var(--color_paper_raised); color: var(--text_primary);
     }
-    .classe_form_grid.is_loading { opacity: .55; pointer-events: none; }
-    .classe_form_grid.is_loading::before { content: "Chargement…"; grid-column: 1 / -1; font-size: .85rem; color: var(--text_muted, #666); }
     .classe_form_grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -571,7 +561,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="campagne_table_body"><tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr></tbody>
+          <tbody id="campagne_table_body"><tr class="table_state_row"><td colspan="7"><span class="spinner" role="status" aria-label="Chargement"></span></td></tr></tbody>
         </table>
         <div class="empty_state" id="campagne_empty" hidden>
           <i class="bi bi-inbox"></i>Aucune campagne enregistrée.
@@ -685,7 +675,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="demande_table_body"><tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr></tbody>
+          <tbody id="demande_table_body"><tr class="table_state_row"><td colspan="6"><span class="spinner" role="status" aria-label="Chargement"></span></td></tr></tbody>
         </table>
         <div class="empty_state" id="demande_empty" hidden>
           <i class="bi bi-inbox"></i>Aucune demande enregistrée.
@@ -704,7 +694,7 @@
               <i class="bi bi-plus-lg"></i> Nouveau dossier
             </button>
             <button type="button" class="btn_info no_mobile" id="dossier_btn_liste" hidden title="Liste des dossiers de la spécialité affichée">
-              <i class="bi bi-list-check"></i> Liste
+              <i class="bi bi-list-check"></i> Listes
             </button>
           </div>
         </div>
@@ -803,7 +793,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="dossier_table_body"><tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr></tbody>
+          <tbody id="dossier_table_body"><tr class="table_state_row"><td colspan="7"><span class="spinner" role="status" aria-label="Chargement"></span></td></tr></tbody>
         </table>
         <div class="empty_state" id="dossier_empty" hidden>
           <i class="bi bi-inbox"></i>Aucun dossier enregistré.
@@ -822,7 +812,7 @@
               <i class="bi bi-plus-lg"></i> Nouvel inscrit
             </button>
             <button type="button" class="btn_info no_mobile" id="inscrit_btn_liste" hidden title="Liste des inscrits de la classe affichée">
-              <i class="bi bi-list-check"></i> Liste
+              <i class="bi bi-list-check"></i> Listes
             </button>
             <button type="button" class="btn_success" id="inscrit_btn_passage" hidden>
               <i class="bi bi-arrow-up-circle"></i> Passage
@@ -956,7 +946,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="inscrit_table_body"><tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr></tbody>
+          <tbody id="inscrit_table_body"><tr class="table_state_row"><td colspan="7"><span class="spinner" role="status" aria-label="Chargement"></span></td></tr></tbody>
         </table>
         <div class="empty_state" id="inscrit_empty" hidden>
           <i class="bi bi-inbox"></i>Aucun inscrit enregistré.
@@ -998,7 +988,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="pp_classe_table_body"><tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr></tbody>
+          <tbody id="pp_classe_table_body"><tr class="table_state_row"><td colspan="6"><span class="spinner" role="status" aria-label="Chargement"></span></td></tr></tbody>
         </table>
         <div class="empty_state" id="pp_classe_empty" hidden>
           <i class="bi bi-inbox"></i>Aucune classe ni module enregistré.
@@ -1389,7 +1379,7 @@ function wireCampagneUi() {
 
 async function loadCampagnes() {
   const tbody = document.getElementById("campagne_table_body");
-  tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr>`;
+  tbody.innerHTML = `${Spinner.tableRow(7)}`;
 
   try {
     campagnesCache = await apiCallDirect("listCampagnesPP", {});
@@ -1754,7 +1744,7 @@ async function onSubmitArchiveForm(e) {
 
 async function loadDemandes() {
   const tbody = document.getElementById("demande_table_body");
-  tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr>`;
+  tbody.innerHTML = `${Spinner.tableRow(6)}`;
 
   try {
     demandesCache = await apiCallDirect("listDemandesPP", {});
@@ -1937,7 +1927,16 @@ function formaterProfessionDossier(texte, statut) {
 // Valeurs d'observation d'un même "état" (modifiables par bascule dans le tableau).
 const OBS_FAMILLE_INCOMPLET = ["Incomplet", "Contacté pour complément"];
 const OBS_FAMILLE_COMPLET = ["Complet", "Contacté pour frais", "Frais versés"];
-const OBS_FAMILLE_ACCEPTABLE = ["Acceptable", "Contacté pour complément et frais", "Frais versés sous réserve"];
+// Ancien libellé de la Sheet -> nouveau ("Frais versés sous réserve" renommé).
+const OBS_ANCIEN_SOUS_RESERVE = "Frais versés sous réserve";
+function normaliserObsDossiers(liste) {
+  (liste || []).forEach((d) => {
+    if (String(d["Observations"] || "").trim() === OBS_ANCIEN_SOUS_RESERVE) d["Observations"] = "Frais versés (incomplet)";
+  });
+  return liste;
+}
+
+const OBS_FAMILLE_ACCEPTABLE = ["Acceptable", "Contacté pour complément et frais", "Frais versés (incomplet)"];
 const OBS_FAMILLES = [OBS_FAMILLE_COMPLET, OBS_FAMILLE_ACCEPTABLE, OBS_FAMILLE_INCOMPLET];
 
 // État de l'observation d'après les pièces : { calc, acceptable }.
@@ -2014,9 +2013,9 @@ function valeurObservationDossier() {
   if (choix.value === "Autre") return form.elements["Observations"].value.trim();
   // Observation du tableau à l'ouverture (obsInitiale) : on garde son état détaillé
   // ("Frais versés"...) et on le transpose, de même rang, dans la famille choisie.
-  // Ex. "Frais versés sous réserve" (Acceptable) -> dossier devenu complet -> "Frais versés".
+  // Ex. "Frais versés (incomplet)" (Acceptable) -> dossier devenu complet -> "Frais versés".
   // Famille Incomplet : pas de versement possible depuis un dossier incomplet, donc
-  // "Frais versés" / "Frais versés sous réserve" (rang 3) retombent sur "Incomplet".
+  // "Frais versés" / "Frais versés (incomplet)" (rang 3) retombent sur "Incomplet".
   const initiale = form.dataset.obsInitiale || "";
   const cible = choix.value === "Complet" ? OBS_FAMILLE_COMPLET : choix.value === "Acceptable" ? OBS_FAMILLE_ACCEPTABLE : OBS_FAMILLE_INCOMPLET;
   const source = OBS_FAMILLES.find((f) => f.includes(initiale));
@@ -2313,11 +2312,11 @@ function wireDossiersUi() {
 
 // Tri du cache : spécialité, puis observation (Incomplet, Contacté pour complément,
 // Complet, Acceptable, Incomplet, Contacté pour frais, Contacté pour complément,
-// Contacté pour complément et frais, Frais versés sous réserve, Frais versés ; les autres à la fin). Appliqué
+// Contacté pour complément et frais, Frais versés (incomplet), Frais versés ; les autres à la fin). Appliqué
 // seulement au chargement : une bascule locale ne déplace pas la ligne avant le
 // prochain chargement. Tri stable : à égalité, l'ordre de la base est conservé.
 function trierDossiersCache() {
-  const ordreObs = ["Complet", "Acceptable", "Incomplet", "Contacté pour frais", "Contacté pour complément", "Contacté pour complément et frais", "Frais versés sous réserve", "Frais versés"];
+  const ordreObs = ["Complet", "Acceptable", "Incomplet", "Contacté pour frais", "Contacté pour complément", "Contacté pour complément et frais", "Frais versés (incomplet)", "Frais versés"];
   const rangObs = (d) => { const i = ordreObs.indexOf(String(d["Observations"] || "").trim()); return i === -1 ? ordreObs.length : i; };
   dossiersCache.sort((a, b) =>
     String(a["Spécialité"] || "").trim().localeCompare(String(b["Spécialité"] || "").trim(), "fr")
@@ -2327,9 +2326,9 @@ function trierDossiersCache() {
 async function loadDossiers() {
   const tbody = document.getElementById("dossier_table_body");
   if (!tbody) return;
-  tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr>`;
+  tbody.innerHTML = `${Spinner.tableRow(7)}`;
   try {
-    dossiersCache = await apiCallDirect("listDossiersPP", {});
+    dossiersCache = normaliserObsDossiers(await apiCallDirect("listDossiersPP", {}));
     reappliquerDossierPending();
     trierDossiersCache();
     renderDossierFilters();
@@ -2355,7 +2354,8 @@ function renderDossierFilters() {
    Bouton "Liste" : visible seulement quand les dossiers affichés (filtre de
    spécialité, recherche) appartiennent à une seule spécialité. La modale liste
    tous les dossiers de cette spécialité, filtrables : Tous (défaut) /
-   Complets / Incomplets, chaque filtre suivi de son nombre. */
+   Complets / Incomplets / Frais versés (même dossier incomplet) / Sans frais,
+   chaque filtre suivi de son nombre. */
 
 let dossierListeSpecialite = "";
 let dossierListeFiltre = "tous";
@@ -2408,15 +2408,22 @@ function renderListeDossiers() {
       || String(a.d["Prénom"] || "").localeCompare(String(b.d["Prénom"] || ""), "fr"));
 
   const nbComplets = lignes.filter((l) => l.manquantes.length === 0).length;
-  const compteurs = { tous: lignes.length, complets: nbComplets, incomplets: lignes.length - nbComplets };
+  // "Frais versés" compte aussi les dossiers incomplets dont les frais sont versés.
+  const fraisVerses = (d) => ["Frais versés", "Frais versés (incomplet)"].includes(String(d["Observations"] || "").trim());
+  const nbVerses = lignes.filter((l) => fraisVerses(l.d)).length;
+  const compteurs = { tous: lignes.length, complets: nbComplets, incomplets: lignes.length - nbComplets,
+    verses: nbVerses, nonverses: lignes.length - nbVerses };
   const chip = (cle, libelle) => `
     <span class="demandes_specialite_chip${dossierListeFiltre === cle ? " is_active" : ""}" data-filtre="${cle}">${libelle} <strong>${compteurs[cle]}</strong></span>`;
   document.getElementById("dossier_liste_filtres").innerHTML =
-    chip("tous", "Tous") + chip("complets", "Complets") + chip("incomplets", "Incomplets");
+    chip("tous", "Tous") + chip("complets", "Complets") + chip("incomplets", "Incomplets")
+    + chip("verses", "Frais versés") + chip("nonverses", "Sans frais");
 
   const visibles = lignes.filter((l) =>
     dossierListeFiltre === "complets" ? l.manquantes.length === 0
       : dossierListeFiltre === "incomplets" ? l.manquantes.length > 0
+      : dossierListeFiltre === "verses" ? fraisVerses(l.d)
+      : dossierListeFiltre === "nonverses" ? !fraisVerses(l.d)
       : true);
 
   document.getElementById("dossier_liste_vide").hidden = visibles.length > 0;
@@ -2473,13 +2480,13 @@ const OBS_CLASSES = {
   "Contacté pour frais": "is_facture",                   // bleu
   "Contacté pour complément": "obs_compl",               // rouge rosé
   "Contacté pour complément et frais": "obs_compl_frais", // bleu / rouge
-  "Frais versés sous réserve": "obs_reserve",            // vert d'eau
+  "Frais versés (incomplet)": "obs_reserve",            // vert d'eau
   "Frais versés": "is_actif"                             // vert
 };
 
 // Valeur suivante de la bascule :
 //   Complet -> Contacté pour frais -> Frais versés -> Complet ;
-//   Acceptable -> Contacté pour complément et frais -> Frais versés sous réserve -> Acceptable ;
+//   Acceptable -> Contacté pour complément et frais -> Frais versés (incomplet) -> Acceptable ;
 //   Incomplet <-> Contacté pour complément. "" si l'observation n'est pas basculable.
 function observationSuivanteDossier(obs) {
   for (const famille of OBS_FAMILLES) {
@@ -2557,7 +2564,7 @@ async function enregistrerObservationsDossiers() {
   const problemes = [];
   try {
     // 1. Relecture de la base : les n° de ligne ont pu changer depuis le chargement.
-    const frais = await apiCallDirect("listDossiersPP", {});
+    const frais = normaliserObsDossiers(await apiCallDirect("listDossiersPP", {}));
     const parCle = new Map(frais.map((d) => [cleDossierPending(d), d]));
     const aEcrire = [];
     const conflits = [];
@@ -2647,7 +2654,7 @@ function renderDossierTable() {
         <button type="button" class="btn_info dossier_row_afficher" data-row="${d._row}">
           <i class="bi bi-eye"></i> Afficher
         </button>
-        ${["Frais versés", "Frais versés sous réserve"].includes(String(d["Observations"] || "").trim()) ? `<button type="button" class="btn_ghost dossier_row_vers_inscrit" data-row="${d._row}">
+        ${["Frais versés", "Frais versés (incomplet)"].includes(String(d["Observations"] || "").trim()) ? `<button type="button" class="btn_ghost dossier_row_vers_inscrit" data-row="${d._row}">
           <i class="bi bi-arrow-right-circle"></i> Vers Inscrits
         </button>` : ""}
         <button type="button" class="btn_danger dossier_row_archiver" data-row="${d._row}">
@@ -3634,7 +3641,7 @@ async function onValiderInscritPassage() {
 
 async function loadInscrits() {
   const tbody = document.getElementById("inscrit_table_body");
-  tbody.innerHTML = `<tr class="table_state_row"><td colspan="7"><span class="loading_state">Chargement...</span></td></tr>`;
+  tbody.innerHTML = `${Spinner.tableRow(7)}`;
 
   try {
     inscritsCache = await apiCallDirect("listInscritsPP", {});
@@ -4165,21 +4172,6 @@ async function onSubmitNouvelleClasse(e) {
   }
 }
 
-// Affiche/masque un spinner sur le bouton "Enregistrer" pendant l'appel serveur.
-function setBtnSaving(btn, saving, savingLabel = "Enregistrement...") {
-  if (!btn) return;
-  if (saving) {
-    if (btn.dataset.originalHtml === undefined) btn.dataset.originalHtml = btn.innerHTML;
-    btn.innerHTML = `<span class="btn_saving_spinner"></span> ${savingLabel}`;
-    btn.classList.add("btn_saving");
-    btn.disabled = true;
-  } else {
-    if (btn.dataset.originalHtml !== undefined) btn.innerHTML = btn.dataset.originalHtml;
-    btn.classList.remove("btn_saving");
-    btn.disabled = false;
-  }
-}
-
 // Calcule les offsets sticky des sections à barre de filtres (Demandes,
 // Dossiers) : la barre se cale sous l'en-tête de section, les en-têtes du
 // tableau sous la barre.
@@ -4377,7 +4369,7 @@ async function loadPPModules() {
 
 async function loadPPClasses() {
   const tbody = document.getElementById("pp_classe_table_body");
-  tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="loading_state">Chargement...</span></td></tr>`;
+  tbody.innerHTML = `${Spinner.tableRow(6)}`;
 
   try {
     ppClassesPromise = Promise.all([
