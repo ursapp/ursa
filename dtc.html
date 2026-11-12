@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Droits de tirage collectifs — URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/sidebar.css" />
+  <link rel="stylesheet" href="css/navbar.css" />
+  <link rel="stylesheet" href="css/spinner.css" />
+  <script src="js/spinner.js"></script>
+  <style>
+/* ============================================================
+   DTC.CSS — propre à dtc.html
+   Section "Commissions" : une commission = une date + des
+   partenaires (cases à cocher, onglet "partdtc" de la Sheet Base)
+   + pour chaque partenaire, la liste des thèmes qu'il réalisera.
+   ============================================================ */
+
+.dtc_editer_footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space_3);
+  padding: var(--space_4);
+  border-top: 1px solid var(--border_soft);
+}
+
+.dtc_modal_wide { max-width: 1180px; width: 100%; }
+
+.dtc_date_field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space_2);
+  font-size: var(--fs_sm);
+  color: var(--text_secondary);
+  max-width: 240px;
+  margin-bottom: var(--space_4);
+}
+.dtc_date_field input,
+.dtc_date_field select {
+  font-family: inherit;
+  font-size: var(--fs_base);
+  padding: var(--space_2) var(--space_3);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper_raised);
+  color: var(--text_primary);
+}
+
+.dtc_cols {
+  display: grid;
+  grid-template-columns: minmax(0, 0.5fr) minmax(0, 0.9fr) minmax(0, 1.6fr);
+  gap: var(--space_4);
+}
+@media (max-width: 900px) {
+  .dtc_cols { grid-template-columns: 1fr; }
+}
+
+.dtc_col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space_2);
+  min-width: 0;
+}
+.dtc_col_head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space_2);
+  min-height: 32px;
+  font-size: var(--fs_sm);
+  font-weight: 600;
+  color: var(--text_secondary);
+}
+
+.dtc_list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space_3);
+  height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space_2);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper);
+}
+
+.dtc_list_cons { height: 220px; }
+.dtc_modal_cons { max-width: 1040px; width: 100%; }
+.dtc_fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space_4);
+  margin-bottom: var(--space_4);
+}
+.dtc_fields .dtc_date_field { max-width: none; margin-bottom: 0; }
+.dtc_fields.dtc_fields_num_dom { grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); }
+    .dtc_cons_offres { margin-top: var(--space_2); }
+    .dtc_cons_offres_head { display: flex; align-items: center; justify-content: space-between; gap: var(--space_3); margin-bottom: var(--space_3); font-size: var(--fs_sm); color: var(--text_secondary); }
+    .dtc_cons_offre_row { display: grid; grid-template-columns: 64px minmax(0, 2fr) minmax(0, 1fr) auto; gap: var(--space_3); align-items: center; margin-bottom: var(--space_2); }
+    .dtc_cons_offre_row input { font-family: inherit; font-size: var(--fs_base); padding: var(--space_2) var(--space_3); border: 1px solid var(--border_soft); border-radius: var(--radius_sm); background: var(--color_paper_raised); color: var(--text_primary); min-width: 0; }
+    .dtc_cons_offre_num { font-family: var(--font_mono); font-size: var(--fs_sm); color: var(--text_secondary); }
+    .dtc_cons_offres_vide { font-size: var(--fs_sm); font-style: italic; color: var(--text_secondary); margin: 0; }
+    @media (max-width: 720px) { .dtc_cons_offre_row { grid-template-columns: 1fr auto; } .dtc_cons_offre_num { display: none; } }
+.dtc_field_full { max-width: none; margin-bottom: var(--space_4); }
+@media (max-width: 720px) {
+  .dtc_fields, .dtc_fields.dtc_fields_num_dom { grid-template-columns: 1fr; }
+}
+.dtc_ar { direction: rtl; unicode-bidi: plaintext; }
+
+.dtc_part_item {
+  display: flex;
+  align-items: center;
+  gap: var(--space_2);
+  padding: var(--space_2) var(--space_3);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper_raised);
+  cursor: pointer;
+  font-size: var(--fs_sm);
+}
+.dtc_part_item:hover { border-color: var(--color_seal); }
+.dtc_part_item.is_selected {
+  border-color: var(--color_seal);
+  background: color-mix(in srgb, var(--color_seal) 12%, var(--color_paper_raised));
+}
+.dtc_part_item input[type="checkbox"] { flex-shrink: 0; cursor: pointer; }
+.dtc_part_item label { display: flex; align-items: center; gap: var(--space_2); flex: 1; min-width: 0; cursor: pointer; }
+.dtc_part_nom { flex: 1; min-width: 0; }
+.dtc_part_count {
+  font-family: var(--font_mono);
+  font-size: var(--fs_xs);
+  color: var(--text_secondary);
+}
+
+.dtc_theme {
+  display: flex;
+  align-items: center;
+  gap: var(--space_2);
+  padding: var(--space_2) var(--space_3);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper_raised);
+  font-size: var(--fs_sm);
+}
+.dtc_theme.is_view { cursor: pointer; }
+.dtc_theme.is_view:hover { border-color: var(--color_seal); }
+.dtc_theme_txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.dtc_theme input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+  font-size: var(--fs_sm);
+  padding: var(--space_1) var(--space_2);
+  border: 1px solid var(--color_seal);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper_raised);
+  color: var(--text_primary);
+}
+.dtc_theme input[type="number"] {
+  flex: 0 0 64px;
+  width: 64px;
+  font-family: inherit;
+  font-size: var(--fs_sm);
+  padding: var(--space_1) var(--space_2);
+  border: 1px solid var(--color_seal);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper_raised);
+  color: var(--text_primary);
+}
+.dtc_theme_nb {
+  flex-shrink: 0;
+  font-family: var(--font_mono);
+  font-size: var(--fs_xs);
+  color: var(--text_secondary);
+  white-space: nowrap;
+}
+.dtc_theme_del {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--text_secondary);
+  font-size: var(--fs_base);
+  cursor: pointer;
+}
+.dtc_theme_del:hover { color: var(--color_danger); }
+
+.dtc_empty { color: var(--text_secondary); font-style: italic; font-size: var(--fs_sm); }
+.dtc_pad { padding: var(--space_3); margin: 0; }
+
+/* Tableaux (thèmes de la commission, thèmes fructueux, thèmes du plan) */
+.dtc_tbl_wrap {
+  height: 320px;
+  overflow: auto;
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper);
+}
+.dtc_tbl_wrap.dtc_tbl_wrap_cons { height: auto; min-height: 90px; max-height: 320px; }
+.dtc_tbl { width: 100%; border-collapse: collapse; font-size: var(--fs_sm); }
+.dtc_tbl th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color_paper_raised);
+  text-align: start;
+  font-weight: 600;
+  color: var(--text_secondary);
+  padding: var(--space_2) var(--space_3);
+  border-bottom: 1px solid var(--border_soft);
+  white-space: nowrap;
+}
+.dtc_tbl td {
+  padding: var(--space_2) var(--space_3);
+  border-bottom: 1px solid var(--border_soft);
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.dtc_tbl .num { text-align: center; white-space: nowrap; font-family: var(--font_mono); }
+.dtc_tbl .w_chk { width: 32px; text-align: center; }
+.dtc_tbl tr.is_view { cursor: pointer; }
+.dtc_tbl tr.is_view:hover td { background: color-mix(in srgb, var(--color_seal) 8%, transparent); }
+.dtc_tbl tr.is_sel td { background: color-mix(in srgb, var(--color_seal) 10%, transparent); }
+.dtc_tbl tfoot td {
+  position: sticky;
+  bottom: 0;
+  background: var(--color_paper_raised);
+  font-weight: 600;
+  border-top: 1px solid var(--border_soft);
+  border-bottom: none;
+}
+.dtc_tbl input[type="text"],
+.dtc_tbl input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: var(--fs_sm);
+  padding: var(--space_1) var(--space_2);
+  border: 1px solid var(--color_seal);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper_raised);
+  color: var(--text_primary);
+}
+.dtc_tbl input[type="number"] { min-width: 56px; text-align: center; }
+.dtc_tbl input:disabled { border-color: var(--border_soft); opacity: 0.5; }
+.dtc_tbl .w_act { width: 32px; text-align: center; }
+.dtc_tbl_com { table-layout: fixed; }
+.dtc_tbl_com th.num, .dtc_tbl_com td.num { width: 52px; padding-left: var(--space_1); padding-right: var(--space_1); }
+.dtc_tbl_com th.num { font-size: var(--fs_xs); }
+.dtc_tbl_com input[type="number"] { min-width: 0; padding-left: var(--space_1); padding-right: var(--space_1); }
+
+.dtc_search {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: var(--fs_base);
+  padding: var(--space_2) var(--space_3);
+  margin-bottom: var(--space_3);
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper_raised);
+  color: var(--text_primary);
+}
+.dtc_plan_recap { margin: 0 0 var(--space_4); font-size: var(--fs_sm); color: var(--text_secondary); }
+.dtc_fields.dtc_fields_2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Champs numériques sans « toupies » (flèches haut/bas) */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* Sections repliables (modale consultation) */
+.dtc_sect {
+  border: 1px solid var(--border_soft);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper);
+  margin-bottom: var(--space_4);
+}
+.dtc_sect > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space_2);
+  padding: var(--space_3) var(--space_4);
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  color: var(--text_primary);
+}
+.dtc_sect > summary::-webkit-details-marker { display: none; }
+.dtc_sect > summary::before {
+  content: "\25B8";
+  display: inline-block;
+  color: var(--text_secondary);
+  transition: transform 0.15s;
+}
+.dtc_sect[open] > summary::before { transform: rotate(90deg); }
+.dtc_sect_body { padding: var(--space_4); border-top: 1px solid var(--border_soft); }
+.dtc_sect .dtc_sect { background: var(--color_paper_raised); margin-bottom: var(--space_3); }
+.dtc_sect .dtc_sect:last-child { margin-bottom: 0; }
+.dtc_sect_tools { display: flex; justify-content: flex-end; margin-bottom: var(--space_3); }
+
+/* Ouverture des offres : tableaux offres x documents */
+.dtc_tbl_wrap.dtc_tbl_wrap_off { height: auto; max-height: 440px; }
+.dtc_tbl_off th.dtc_off_col, .dtc_tbl_off td.dtc_off_cell { min-width: 150px; }
+.dtc_tbl_off td.dtc_off_cell { text-align: center; }
+.dtc_tbl_off td.dtc_lbl { text-align: right; direction: rtl; }
+.dtc_tbl_off td.dtc_grp { width: 110px; text-align: center; font-weight: 600; background: var(--color_paper_raised); }
+.dtc_tbl_off .w_num { width: 56px; text-align: center; }
+.dtc_tbl_off tr.dtc_row_bleu td { background: color-mix(in srgb, #4a9fd8 16%, transparent); }
+.dtc_tbl_off input[type="date"],
+.dtc_tbl_off select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: var(--fs_sm);
+  padding: var(--space_1) var(--space_2);
+  border: 1px solid var(--color_seal);
+  border-radius: var(--radius_sm);
+  background: var(--color_paper_raised);
+  color: var(--text_primary);
+}
+.dtc_off_head { display: flex; align-items: center; justify-content: space-between; gap: var(--space_2); }
+.dtc_off_theme { font-weight: 400; font-size: var(--fs_xs); white-space: normal; }
+.dtc_off_card { margin-bottom: var(--space_4); }
+.dtc_off_card:last-child { margin-bottom: 0; }
+.dtc_off_titre { font-weight: 600; font-size: var(--fs_sm); margin-bottom: var(--space_2); }
+.dtc_heures { display: flex; gap: var(--space_1); }
+.dtc_heures input { min-width: 0 !important; }
+.dtc_elim { font-weight: 700; }
+  </style>
+  <script src="js/session.js"></script>
+  <script src="js/permissions.js"></script>
+</head>
+<body data-nav-mode="toggle">
+
+  <div class="sidebar_overlay" id="sidebar_overlay"></div>
+
+  <header class="navbar">
+    <button type="button" class="hamburger_btn"><i class="bi bi-list"></i></button>
+    <div class="page_title_group">
+      <span class="page_eyebrow">DTC · Droits de tirage collectifs</span>
+      <h1 class="page_title">Droits de tirage collectifs</h1>
+    </div>
+    <div class="navbar_actions">
+      <span class="navbar_breadcrumb">
+        <a href="index.html">Accueil</a> <i class="bi bi-chevron-right"></i> Droits de tirage collectifs
+      </span>
+    </div>
+  </header>
+
+  <div class="app_shell">
+    <aside class="sidebar" id="sidebar_root">
+      <button type="button" class="sidebar_close_btn" aria-label="Fermer le menu">
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <nav class="sidebar_nav" data-page="dtc">
+        <script src="js/sidebar_menu.js"></script>
+      </nav>
+
+      <div class="sidebar_footer">
+        <span class="sidebar_footer_user"><span class="user_badge" id="sidebar_user_badge" title="Non connecté">--</span></span>
+        <span>CNFCPP © 2026</span>
+      </div>
+    </aside>
+
+    <main class="app_content">
+
+      <section id="commissions" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-people"></i> Commissions</h2>
+          <button type="button" id="dtc_btn_nouvelle_commission" class="btn_seal no_mobile"><i class="bi bi-plus-lg"></i> Nouvelle commission</button>
+        </div>
+
+        <table class="data_table" id="dtc_commissions_table">
+          <thead>
+            <tr>
+              <th>Année</th>
+              <th>Date</th>
+              <th>Partenaire - الشريك</th>
+              <th>Domaines - المجالات</th>
+              <th>Thèmes - المحاور</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty_state" id="dtc_commissions_empty" hidden>
+          <i class="bi bi-people"></i>Aucune commission enregistrée.
+        </div>
+      </section>
+
+      <section id="consultations" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-megaphone"></i> Consultations</h2>
+          <button type="button" id="dtc_btn_nouvelle_consultation" class="btn_seal no_mobile"><i class="bi bi-plus-lg"></i> Nouvelle consultation</button>
+        </div>
+
+        <table class="data_table" id="dtc_consultations_table">
+          <thead>
+            <tr>
+              <th>N° de consultation</th>
+              <th>Domaine</th>
+              <th>Date d'annonce</th>
+              <th>Date de clôture</th>
+              <th>Date de prorogation</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty_state" id="dtc_consultations_empty" hidden>
+          <i class="bi bi-megaphone"></i>Aucune consultation enregistrée.
+        </div>
+      </section>
+
+      <section id="plans" class="panel">
+        <div class="panel_header">
+          <h2><i class="bi bi-inbox-fill"></i> Plans</h2>
+          <button type="button" id="dtc_btn_nouveau_plan" class="btn_seal no_mobile"><i class="bi bi-plus-lg"></i> Nouveau plan</button>
+        </div>
+
+        <table class="data_table" id="dtc_plans_table">
+          <thead>
+            <tr>
+              <th>N° plan</th>
+              <th>Partenaire</th>
+              <th>Domaine</th>
+              <th>Date</th>
+              <th>Thèmes</th>
+              <th>Groupes</th>
+              <th>H. théo.</th>
+              <th>H. prat.</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty_state" id="dtc_plans_empty" hidden>
+          <i class="bi bi-inbox"></i>Aucun plan enregistré.
+        </div>
+      </section>
+
+      <!-- Modale consultation (dataset.consultationId vide = nouvelle). Une consultation
+           porte sur un domaine (d'un partenaire, d'une commission) ; ses thèmes
+           fructueux sont cochés parmi les thèmes de ce domaine. -->
+      <div class="modal_overlay" id="dtc_modal_consultation">
+        <div class="modal_dialog dtc_modal_cons">
+          <div class="modal_header">
+            <h3 id="dtc_consultation_titre">Nouvelle consultation</h3>
+            <button type="button" class="modal_close" data-close-modal="dtc_modal_consultation"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <div class="dtc_fields dtc_fields_num_dom">
+              <label class="dtc_date_field">N° de consultation
+                <input type="text" id="dtc_cons_num" placeholder="ex. 5" />
+              </label>
+              <label class="dtc_date_field">Domaine
+                <select id="dtc_cons_domaine"></select>
+              </label>
+            </div>
+            <div class="dtc_fields">
+              <label class="dtc_date_field">Date d'annonce
+                <input type="date" id="dtc_cons_annonce" />
+              </label>
+              <label class="dtc_date_field">Date de clôture
+                <input type="date" id="dtc_cons_cloture" />
+              </label>
+              <label class="dtc_date_field">Date de prorogation
+                <input type="date" id="dtc_cons_proroge" />
+              </label>
+            </div>
+            <div class="dtc_fields">
+              <label class="dtc_date_field">État
+                <select id="dtc_cons_etat">
+                  <option value="">----</option>
+                  <option value="lancée">Lancée</option>
+                  <option value="prorogée">Prorogée</option>
+                  <option value="évaluation">Évaluation</option>
+                  <option value="fructueuse">Fructueuse</option>
+                  <option value="infructueuse">Infructueuse</option>
+                </select>
+              </label>
+            </div>
+            <div class="dtc_cons_offres">
+              <div class="dtc_cons_offres_head">
+                <strong>Offres</strong>
+                <button type="button" class="btn_info" id="dtc_cons_btn_add_offre"><i class="bi bi-plus-lg"></i> Ajouter offre</button>
+              </div>
+              <div id="dtc_cons_offres_list"></div>
+            </div>
+          </div>
+          <div class="dtc_editer_footer">
+            <button type="button" class="btn_success" id="dtc_consultation_btn_enregistrer"><i class="bi bi-check-lg"></i> Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modale "Nouvelle commission" / "Éditer la commission" (dataset.commissionId
+           vide = nouvelle). Gauche : date + partenaires (cases à cocher alimentées
+           par l'onglet "partdtc" ; un clic sur le nom sélectionne le partenaire).
+           Droite : thèmes du partenaire sélectionné. -->
+      <div class="modal_overlay" id="dtc_modal_commission">
+        <div class="modal_dialog dtc_modal_wide">
+          <div class="modal_header">
+            <h3 id="dtc_commission_titre">Nouvelle commission</h3>
+            <button type="button" class="modal_close" data-close-modal="dtc_modal_commission"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <label class="dtc_date_field">Date
+              <input type="date" id="dtc_commission_date" />
+            </label>
+            <div class="dtc_cols">
+              <div class="dtc_col">
+                <div class="dtc_col_head">
+                  <span>Partenaire - الشريك</span>
+                  <button type="button" class="btn_ghost" id="dtc_btn_ajouter_partenaire"><i class="bi bi-plus-lg"></i> Ajouter</button>
+                </div>
+                <ul class="dtc_list" id="dtc_partenaires_list"></ul>
+              </div>
+
+              <div class="dtc_col">
+                <div class="dtc_col_head">
+                  <span>Domaines - المجالات</span>
+                  <button type="button" class="btn_ghost" id="dtc_btn_ajouter_domaine" disabled><i class="bi bi-plus-lg"></i> Ajouter</button>
+                </div>
+                <ul class="dtc_list" id="dtc_domaines_list">
+                  <li class="dtc_empty">Sélectionnez un partenaire.</li>
+                </ul>
+              </div>
+
+              <div class="dtc_col">
+                <div class="dtc_col_head">
+                  <span id="dtc_themes_titre">Thèmes - المحاور</span>
+                  <button type="button" class="btn_ghost" id="dtc_btn_ajouter_theme" disabled><i class="bi bi-plus-lg"></i> Ajouter</button>
+                </div>
+                <div class="dtc_tbl_wrap" id="dtc_themes_list">
+                  <p class="dtc_empty dtc_pad">Sélectionnez un domaine.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="dtc_editer_footer">
+            <button type="button" class="btn_success" id="dtc_commission_btn_enregistrer"><i class="bi bi-check-lg"></i> Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Choix des partenaires à ajouter (cases à cocher, onglet "partdtc") -->
+      <div class="modal_overlay" id="dtc_modal_choix_part" data-no-dirty>
+        <div class="modal_dialog">
+          <div class="modal_header">
+            <h3>Ajouter des partenaires</h3>
+            <button type="button" class="modal_close" data-close-modal="dtc_modal_choix_part"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <ul class="dtc_list" id="dtc_choix_list"></ul>
+          </div>
+          <div class="dtc_editer_footer">
+            <button type="button" class="btn_success" id="dtc_choix_btn_valider"><i class="bi bi-check-lg"></i> Ajouter</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modale plan (dataset.planId vide = nouveau). Comme "Nouveau plan" de dti.html, qui part d'un
+           calcul de formation initiale : ici on part d'une consultation contenant des thèmes fructueux.
+           Un plan = une seule consultation ; ses thèmes sont les thèmes fructueux (cabinet et formateur
+           repris de la consultation, modifiables). -->
+      <div class="modal_overlay" id="dtc_modal_plan">
+        <div class="modal_dialog dtc_modal_cons">
+          <div class="modal_header">
+            <h3 id="dtc_plan_titre">Nouveau plan</h3>
+            <button type="button" class="modal_close" data-close-modal="dtc_modal_plan"><i class="bi bi-x-lg"></i></button>
+          </div>
+          <div class="modal_body">
+            <div id="dtc_plan_choix">
+              <input type="text" class="dtc_search" id="dtc_plan_search" placeholder="Rechercher une consultation (partenaire, domaine, N°)…" />
+              <ul class="dtc_list dtc_list_cons" id="dtc_plan_list"></ul>
+            </div>
+            <p class="dtc_plan_recap" id="dtc_plan_recap" hidden></p>
+            <div class="dtc_fields dtc_fields_2" style="margin-top: var(--space_4);">
+              <label class="dtc_date_field">Date de la demande
+                <input type="date" id="dtc_plan_date" />
+              </label>
+              <label class="dtc_date_field">N° plan
+                <input type="text" id="dtc_plan_num" placeholder="ex. 3" />
+              </label>
+            </div>
+            <div class="dtc_col_head"><span>Thèmes du plan</span></div>
+            <div class="dtc_tbl_wrap dtc_tbl_wrap_cons" id="dtc_plan_themes">
+              <p class="dtc_empty dtc_pad">Choisissez un domaine.</p>
+            </div>
+          </div>
+          <div class="dtc_editer_footer">
+            <button type="button" class="btn_success" id="dtc_plan_btn_enregistrer" disabled><i class="bi bi-check-lg"></i> Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cabinets (onglet "cabinets" de la Sheet Base) : suggestions, saisie libre possible -->
+      <datalist id="dtc_cabinets_dl"></datalist>
+
+    </main>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/sidebar_toggle.js"></script>
+  <script src="js/sticky_panels.js"></script>
+  <script src="js/navbar_breadcrumb.js"></script>
+  <script src="js/modal_forms.js"></script>
+  <script>
+/* ============================================================
+   DTC.JS
+   Section "Commissions". Toutes les commissions DTC vivent dans un
+   unique fichier Drive (listCommissionsDTC / enregistrerCommissionDTC,
+   Code.gs), sur le modèle des commissions DTI. Les partenaires
+   proposés viennent de l'onglet "partdtc" de la Sheet Base
+   (listPartDTC), identifiés par leur "Etablissement".
+   Commission = { id, date, partenaires: [{ etablissement, sigle,
+     domaines: [{ nom (arabe), themes: [{ nom, groupes, heuresTheo, heuresPrat }] }] }] }
+   Consultation : + details: [{ nom, groupes, heuresTheo, heuresPrat, cabinet, formateur }] (thèmes fructueux).
+   Plan = { id, consultationId, numCons, commissionId, etablissement, sigle, domaine, dateCommission, date, numPlan,
+     themes: [{ nom, groupes, heuresTheo, heuresPrat, cabinet, formateur }] } (fichier Drive unique, comme les commissions).
+   ============================================================ */
+
+let dtcPartenairesCache = null;   // lignes de "partdtc"
+let dtcCommissionsCache = {};     // clé = id
+let dtcBrouillon = {};            // { etablissement: { sigle, domaines: [{ nom, themes: [] }] } }
+let dtcSelection = null;          // etablissement sélectionné
+let dtcDomSel = null;             // index du domaine sélectionné (partenaire sélectionné)
+let dtcEdit = null;               // { k: "dom"|"theme", i } — ligne en cours d'édition
+let dtcConsultationsCache = {};   // clé = id
+let dtcEntreesDomaines = [];      // domaines proposés dans la modale consultation
+let dtcCabinetsCache = null;      // lignes de l'onglet "cabinets"
+let dtcPlansCache = {};           // clé = id
+let dtcPlanEntrees = [];          // domaines proposés dans la modale plan
+let dtcPlanEntree = null;         // domaine choisi (ou celui du plan affiché)
+let dtcPlanThemes = [];           // thèmes du plan en cours d'édition
+let dtcChargement = Promise.resolve();
+
+document.addEventListener("DOMContentLoaded", () => {
+  initSectionToggle();
+  dtcChargement = Promise.allSettled([loadCommissionsDTC(), loadConsultationsDTC(), loadPlansDTC()]);
+  wireDtcModals();
+  document.getElementById("dtc_btn_nouvelle_commission")?.addEventListener("click", () => ouvrirModalCommissionDTC(null));
+  document.getElementById("dtc_btn_nouvelle_consultation")?.addEventListener("click", () => ouvrirModalConsultation(null));
+  document.getElementById("dtc_btn_nouveau_plan")?.addEventListener("click", () => ouvrirModalPlan(null));
+  document.getElementById("dtc_plan_search")?.addEventListener("input", renderChoixPlan);
+  document.getElementById("dtc_plan_btn_enregistrer")?.addEventListener("click", enregistrerPlanDTC);
+  document.getElementById("dtc_consultation_btn_enregistrer")?.addEventListener("click", enregistrerConsultationDTC);
+  document.getElementById("dtc_cons_btn_add_offre")?.addEventListener("click", () => ajouterLigneOffre());
+  document.getElementById("dtc_btn_ajouter_domaine")?.addEventListener("click", ajouterDomaine);
+  document.getElementById("dtc_btn_ajouter_theme")?.addEventListener("click", ajouterTheme);
+  document.getElementById("dtc_btn_ajouter_partenaire")?.addEventListener("click", ouvrirChoixPartenaires);
+  document.getElementById("dtc_choix_btn_valider")?.addEventListener("click", validerChoixPartenaires);
+  document.getElementById("dtc_commission_btn_enregistrer")?.addEventListener("click", enregistrerCommissionDTC);
+  renderUserBadge(document.getElementById("sidebar_user_badge"));
+  injecterBoutonDeconnexion(document.getElementById("sidebar_user_badge"));
+});
+
+function esc(s) {
+  return String(s === null || s === undefined ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function formaterDateFr(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ""));
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || "----");
+}
+
+/* ---------------- Une seule section visible à la fois ---------------- */
+
+function initSectionToggle() {
+  const links = document.querySelectorAll(".sidebar_section_link[href^='#']");
+  const sections = document.querySelectorAll("main.app_content > section.panel");
+  const ids = Array.from(sections).map((s) => s.id);
+
+  function showSection(id) {
+    sections.forEach((s) => { s.hidden = s.id !== id; });
+    links.forEach((l) => l.classList.toggle("is_active", l.getAttribute("href") === `#${id}`));
+  }
+
+  links.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const id = link.getAttribute("href").slice(1);
+      showSection(id);
+      history.replaceState(null, "", `#${id}`);
+    });
+  });
+
+  // Ancre inconnue (sections pas encore construites : conventions, demandes...) → 1re section.
+  const hash = window.location.hash ? window.location.hash.slice(1) : "";
+  showSection(ids.includes(hash) ? hash : ids[0]);
+}
+
+/* ---------------- Liste des commissions ---------------- */
+
+async function loadCommissionsDTC() {
+  const tbody = document.querySelector("#dtc_commissions_table tbody");
+  const emptyEl = document.getElementById("dtc_commissions_empty");
+  if (!tbody) return;
+
+  tbody.innerHTML = `${Spinner.tableRow(6)}`;
+  if (emptyEl) emptyEl.hidden = true;
+
+  try {
+    const commissions = await apiCall("listCommissionsDTC", {});
+    dtcCommissionsCache = {};
+    commissions.forEach((c) => { dtcCommissionsCache[c.id] = c; });
+
+    if (commissions.length === 0) {
+      tbody.innerHTML = "";
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+
+    commissions.sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+    tbody.innerHTML = commissions.map((c) => {
+      const parts = c.partenaires || [];
+      const nbDomaines = parts.reduce((n, p) => n + (p.domaines || []).length, 0);
+      const nbThemes = parts.reduce((n, p) => n + (p.domaines || []).reduce((m, d) => m + (d.themes || []).length, 0), 0);
+      return `
+      <tr>
+        <td>${esc(String(c.date || "").slice(0, 4))}</td>
+        <td>${esc(formaterDateFr(c.date))}</td>
+        <td>${parts.length}</td>
+        <td>${nbDomaines}</td>
+        <td>${nbThemes}</td>
+        <td><div class="row_btns">
+          <button type="button" class="btn_info" data-editer-commission-id="${esc(c.id)}">
+            <i class="bi bi-eye"></i> Afficher
+          </button>
+        </div></td>
+      </tr>`;
+    }).join("");
+
+    tbody.querySelectorAll("[data-editer-commission-id]").forEach((btn) => {
+      btn.addEventListener("click", () => ouvrirModalCommissionDTC(dtcCommissionsCache[btn.dataset.editerCommissionId]));
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="error_state">Erreur de chargement : ${esc(err.message)}</span></td></tr>`;
+  }
+}
+
+/* ---------------- Consultations ---------------- */
+/* Consultation = { id, commissionId, etablissement, sigle, domaine, dateCommission,
+   themes: [noms], fructueux: [noms], numCons, dateAnnonce, dateCloture, dateProrogation }.
+   Les thèmes sont copiés à la création : la consultation reste lisible si la
+   commission est modifiée ensuite. */
+
+async function loadConsultationsDTC() {
+  const tbody = document.querySelector("#dtc_consultations_table tbody");
+  const emptyEl = document.getElementById("dtc_consultations_empty");
+  if (!tbody) return;
+
+  tbody.innerHTML = `${Spinner.tableRow(6)}`;
+  if (emptyEl) emptyEl.hidden = true;
+
+  try {
+    const consultations = await apiCall("listConsultationsDTC", {});
+    dtcConsultationsCache = {};
+    consultations.forEach((c) => { dtcConsultationsCache[c.id] = c; });
+
+    if (consultations.length === 0) {
+      tbody.innerHTML = "";
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+
+    // Les consultations sans date d'annonce (Prévues) restent en tête de liste.
+    consultations.sort((a, b) => String(b.dateAnnonce || "9999-12-31").localeCompare(String(a.dateAnnonce || "9999-12-31")));
+    tbody.innerHTML = consultations.map((c) => {
+      return `
+      <tr>
+        <td>${esc(c.numCons || "----")}</td>
+        <td><span class="dtc_ar">${esc(c.domaine)}</span></td>
+        <td>${esc(formaterDateFr(c.dateAnnonce))}</td>
+        <td>${esc(formaterDateFr(c.dateCloture))}</td>
+        <td>${esc(formaterDateFr(c.dateProrogation))}</td>
+        <td><div class="row_btns">
+          <button type="button" class="btn_primary" data-editer-consultation-id="${esc(c.id)}">
+            <i class="bi bi-pencil-square"></i> Editer
+          </button>
+          <a class="btn_info" href="cons.html?id=${encodeURIComponent(c.id)}">
+            <i class="bi bi-eye"></i> Afficher
+          </a>
+        </div></td>
+      </tr>`;
+    }).join("");
+
+    tbody.querySelectorAll("[data-editer-consultation-id]").forEach((btn) => {
+      btn.addEventListener("click", () => ouvrirModalConsultation(dtcConsultationsCache[btn.dataset.editerConsultationId]));
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="6"><span class="error_state">Erreur de chargement : ${esc(err.message)}</span></td></tr>`;
+  }
+}
+
+// État d'une consultation selon la date du jour :
+// Prévue (sans date d'annonce, ou avant l'annonce) → Annoncée / Prorogée (en cours) → après la clôture
+// (ou la prorogation) : Fructueuse si au moins un thème fructueux, sinon Infructueuse.
+function dateDuJourISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Consultation terminée = la date de clôture (ou de prorogation, si elle existe) est
+// atteinte : fin <= date du jour. Le jour même de la clôture, on peut déjà décider du sort des thèmes.
+function consultationTerminee(dateCloture, dateProrogation) {
+  const fin = dateProrogation || dateCloture || "";
+  return !!fin && fin <= dateDuJourISO();
+}
+
+function etatConsultation(c) {
+  const aujourdhui = dateDuJourISO();
+  const annonce = c.dateAnnonce || "";
+  const fin = c.dateProrogation || c.dateCloture || "";
+
+  if (!annonce || aujourdhui < annonce) return "Prévue"; // sans date d'annonce : consultation prévue, non datée
+  if (!fin || aujourdhui < fin) return c.dateProrogation ? "Prorogée" : "Annoncée";
+  return (c.fructueux || []).length >= 1 ? "Fructueuse" : "Infructueuse";
+}
+
+// Domaines disponibles = ceux des partenaires de toutes les commissions.
+// Thème normalisé : { nom, groupes (>= 1), heuresTheo (>= 0), heuresPrat (>= 0) } ; les anciennes données
+// (texte seul, ou un seul champ "heures") restent lisibles : l'ancien total est lu comme heures théoriques.
+function normTheme(t) {
+  if (typeof t === "string") return { nom: t, groupes: 1, heuresTheo: 0, heuresPrat: 0 };
+  const theo = (t?.heuresTheo !== undefined && t?.heuresTheo !== null && t?.heuresTheo !== "") ? t.heuresTheo : t?.heures;
+  return {
+    nom: String(t?.nom || ""),
+    groupes: Math.max(1, parseInt(t?.groupes, 10) || 1),
+    heuresTheo: Math.max(0, parseFloat(theo) || 0),
+    heuresPrat: Math.max(0, parseFloat(t?.heuresPrat) || 0)
+  };
+}
+
+function fmtNb(n) { return String(Math.round((Number(n) || 0) * 100) / 100); }
+
+function cleDomaine(cid, etab, domaine) { return `${cid}|${etab}|${domaine}`; }
+
+// Domaines disponibles = ceux des partenaires de toutes les commissions.
+function construireEntreesDomaines() {
+  const out = [];
+  Object.values(dtcCommissionsCache).forEach((c) => {
+    (c.partenaires || []).forEach((p) => {
+      (p.domaines || []).forEach((d) => {
+        out.push({
+          cid: c.id,
+          etab: p.etablissement,
+          sigle: p.sigle || "",
+          domaine: d.nom,
+          date: c.date || "",
+          themes: (d.themes || []).map(normTheme)
+        });
+      });
+    });
+  });
+  out.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  return out;
+}
+
+// Suggestions de cabinets (onglet "cabinets") : le champ reste en saisie libre si la liste est indisponible.
+function nomCabinet(row) {
+  for (const k of ["المؤسسة", "Cabinet", "Nom", "Raison sociale", "Dénomination", "Etablissement"]) {
+    if (row[k]) return String(row[k]).trim();
+  }
+  const k = Object.keys(row).find((h) => h !== "_row" && String(row[h] || "").trim() !== "");
+  return k ? String(row[k]).trim() : "";
+}
+
+async function chargerCabinetsDTC() {
+  const dl = document.getElementById("dtc_cabinets_dl");
+  if (!dl) return;
+  try {
+    if (!dtcCabinetsCache) dtcCabinetsCache = await apiCall("listCabinets", {});
+  } catch (err) {
+    return;
+  }
+  const noms = [...new Set(dtcCabinetsCache.map(nomCabinet).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  dl.innerHTML = noms.map((n) => `<option value="${esc(n)}"></option>`).join("");
+}
+
+// ---- Modale Editer : état (stocké) et offres ----
+const DTC_ETATS = ["lancée", "prorogée", "évaluation", "fructueuse", "infructueuse"];
+
+function etatCapitalise(e) { return e ? e.charAt(0).toUpperCase() + e.slice(1) : ""; }
+
+// Valeur du select : état enregistré ; sinon dérivé des dates pour les anciennes consultations.
+function etatParDefaut(c) {
+  if (c && c.etat) return c.etat;
+  if (!c) return "";
+  const m = { "Annoncée": "lancée", "Prorogée": "prorogée", "Fructueuse": "fructueuse", "Infructueuse": "infructueuse" };
+  return m[etatConsultation(c)] || "";
+}
+
+function renumeroterOffres() {
+  const rows = document.querySelectorAll("#dtc_cons_offres_list .dtc_cons_offre_row");
+  rows.forEach((r, i) => { r.querySelector(".dtc_cons_offre_num").textContent = `Offre ${i + 1}`; });
+  const vide = document.getElementById("dtc_cons_offres_vide");
+  if (vide) vide.hidden = rows.length > 0;
+}
+
+// idx = position de l'offre existante (conserve ses documents/coûts à l'enregistrement) ; absent = nouvelle offre.
+function ajouterLigneOffre(o, idx) {
+  const box = document.getElementById("dtc_cons_offres_list");
+  const row = document.createElement("div");
+  row.className = "dtc_cons_offre_row";
+  row.dataset.idx = idx === undefined ? "" : String(idx);
+  row.innerHTML = `
+    <span class="dtc_cons_offre_num"></span>
+    <input type="text" dir="auto" placeholder="Nom de la structure" value="${esc(o ? o.nom : "")}" />
+    <input type="date" value="${esc(o ? o.dateRecu : "")}" title="Date de réception" />
+    <button type="button" class="btn_danger" title="Supprimer l'offre"><i class="bi bi-trash"></i></button>`;
+  row.querySelector("button").addEventListener("click", () => {
+    if (row.dataset.idx !== "" && !confirm("Supprimer cette offre et toutes ses données saisies ?")) return;
+    row.remove();
+    renumeroterOffres();
+  });
+  box.appendChild(row);
+  renumeroterOffres();
+  if (idx === undefined) row.querySelector("input").focus();
+}
+
+function renderOffresEdition(offres) {
+  const box = document.getElementById("dtc_cons_offres_list");
+  box.innerHTML = `<p class="dtc_cons_offres_vide" id="dtc_cons_offres_vide">Aucune offre.</p>`;
+  offres.forEach((o, i) => ajouterLigneOffre(o, i));
+  renumeroterOffres();
+}
+
+// Reconstruit la liste : les offres existantes gardent leurs documents/coûts, seuls nom et date changent.
+function lireOffresEdition(anciennes) {
+  const out = [];
+  document.querySelectorAll("#dtc_cons_offres_list .dtc_cons_offre_row").forEach((row) => {
+    const [nom, date] = row.querySelectorAll("input");
+    const existante = row.dataset.idx !== "";
+    if (!existante && !nom.value.trim() && !date.value) return; // ligne vide ignorée
+    const base = existante ? (anciennes[Number(row.dataset.idx)] || {}) : {};
+    out.push({ admin: {}, tech: {}, couts: {}, ...base, nom: nom.value.trim(), dateRecu: date.value });
+  });
+  return out;
+}
+
+function ouvrirModalConsultation(record) {
+  const modal = document.getElementById("dtc_modal_consultation");
+  const select = document.getElementById("dtc_cons_domaine");
+  modal.dataset.consultationId = record?.id || "";
+  document.getElementById("dtc_consultation_titre").textContent = record ? "Consultation" : "Nouvelle consultation";
+
+  // Nouvelle consultation : seulement les domaines qui n'ont pas encore de consultation.
+  const dejaPris = new Set(Object.values(dtcConsultationsCache).map((c) => cleDomaine(c.commissionId, c.etablissement, c.domaine)));
+  const entrees = construireEntreesDomaines().filter((e) => record || !dejaPris.has(cleDomaine(e.cid, e.etab, e.domaine)));
+  let idx = -1;
+  if (record) {
+    idx = entrees.findIndex((e) => e.cid === record.commissionId && e.etab === record.etablissement && e.domaine === record.domaine);
+    if (idx === -1) {
+      // Domaine disparu de la commission : on reprend la copie enregistrée.
+      entrees.push({
+        cid: record.commissionId,
+        etab: record.etablissement,
+        sigle: record.sigle || "",
+        domaine: record.domaine,
+        date: record.dateCommission || "",
+        themes: (record.themes || []).map((nom) => {
+          const det = (record.details || []).find((d) => d.nom === nom);
+          return normTheme({ nom, groupes: det?.groupes, heures: det?.heures, heuresTheo: det?.heuresTheo, heuresPrat: det?.heuresPrat });
+        })
+      });
+      idx = entrees.length - 1;
+    }
+  }
+  dtcEntreesDomaines = entrees;
+
+  select.innerHTML = `<option value="">— Choisir un domaine —</option>` + entrees.map((e, i) =>
+    `<option value="${i}">${esc(`${e.sigle || e.etab} - ${e.domaine}`)}</option>`).join("");
+  select.value = idx >= 0 ? String(idx) : "";
+  select.disabled = !!record;
+  document.getElementById("dtc_cons_num").value = record?.numCons || "";
+  document.getElementById("dtc_cons_annonce").value = record?.dateAnnonce || "";
+  document.getElementById("dtc_cons_cloture").value = record?.dateCloture || "";
+  document.getElementById("dtc_cons_proroge").value = record?.dateProrogation || "";
+  document.getElementById("dtc_cons_etat").value = etatParDefaut(record);
+  renderOffresEdition(record?.offres || []);
+  openFormModal("dtc_modal_consultation");
+}
+
+function entreeDomaineCourante() {
+  const v = document.getElementById("dtc_cons_domaine").value;
+  return v === "" ? null : dtcEntreesDomaines[Number(v)];
+}
+
+async function enregistrerConsultationDTC() {
+  const modal = document.getElementById("dtc_modal_consultation");
+  const entree = entreeDomaineCourante();
+  const annonce = document.getElementById("dtc_cons_annonce").value;
+  const cloture = document.getElementById("dtc_cons_cloture").value;
+  const proroge = document.getElementById("dtc_cons_proroge").value;
+
+  if (!entree) { alert("Choisissez un domaine."); return; }
+  // Dates facultatives : sans date d'annonce, la consultation est "Prévue".
+  if (cloture && !annonce) { alert("Renseignez la date d'annonce avant la date de clôture."); return; }
+  if (proroge && !cloture) { alert("Renseignez la date de clôture avant la prorogation."); return; }
+  if (annonce && cloture && cloture < annonce) { alert("La clôture ne peut pas précéder l'annonce."); return; }
+  if (proroge && proroge < cloture) { alert("La prorogation ne peut pas précéder la clôture."); return; }
+
+  // Édition : les données non éditées ici (ouverture, offres, thèmes fructueux) sont conservées telles quelles.
+  const ancien = dtcConsultationsCache[modal.dataset.consultationId] || {};
+  const consultation = {
+    ...ancien,
+    id: modal.dataset.consultationId || undefined,
+    commissionId: entree.cid,
+    etablissement: entree.etab,
+    sigle: entree.sigle,
+    domaine: entree.domaine,
+    dateCommission: entree.date,
+    themes: entree.themes.map((t) => t.nom),
+    fructueux: ancien.fructueux || [],
+    details: ancien.details || [],
+    numCons: document.getElementById("dtc_cons_num").value.trim(),
+    dateAnnonce: annonce,
+    dateCloture: cloture,
+    dateProrogation: proroge || "",
+    dateOuverture: ancien.dateOuverture || "",
+    offres: lireOffresEdition(ancien.offres || []),
+    etat: document.getElementById("dtc_cons_etat").value
+  };
+
+  const btn = document.getElementById("dtc_consultation_btn_enregistrer");
+  setBtnSaving(btn, true);
+  try {
+    await apiCall("enregistrerConsultationDTC", { consultation });
+    closeModal("dtc_modal_consultation");
+    await loadConsultationsDTC();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+/* ---------------- Modale commission ---------------- */
+
+function ouvrirModalCommissionDTC(record) {
+  const modal = document.getElementById("dtc_modal_commission");
+  modal.dataset.commissionId = record?.id || "";
+  document.getElementById("dtc_commission_titre").textContent = record ? "Éditer la commission" : "Nouvelle commission";
+  document.getElementById("dtc_commission_date").value = record?.date || new Date().toISOString().slice(0, 10);
+
+  dtcBrouillon = {};
+  (record?.partenaires || []).forEach((p) => {
+    dtcBrouillon[p.etablissement] = {
+      sigle: p.sigle || "",
+      domaines: (p.domaines || []).map((d) => ({
+        nom: d.nom || "",
+        themes: (d.themes || []).map(normTheme)
+      }))
+    };
+  });
+  dtcSelection = null;
+  dtcDomSel = null;
+  dtcEdit = null;
+  renderTout();
+  openFormModal("dtc_modal_commission");
+}
+
+function renderTout() {
+  renderPartenaires();
+  renderDomaines();
+  renderThemes();
+  // Le brouillon a pu changer : met à jour l'alerte "Données à enregistrer".
+  refreshModalAlert("dtc_modal_commission");
+}
+
+function cleEtab(p) { return String(p["Etablissement"] || "").trim(); }
+
+function sigleDe(cle) {
+  if (dtcBrouillon[cle]) return dtcBrouillon[cle].sigle || "";
+  const p = (dtcPartenairesCache || []).find((x) => cleEtab(x) === cle);
+  return String(p?.["Sigle"] || "").trim();
+}
+
+function nbThemesPartenaire(cle) {
+  return (dtcBrouillon[cle]?.domaines || []).reduce((n, d) => n + d.themes.length, 0);
+}
+
+/* ---------------- Colonne Partenaires ---------------- */
+
+function renderPartenaires() {
+  const list = document.getElementById("dtc_partenaires_list");
+  const cles = Object.keys(dtcBrouillon);
+
+  if (cles.length === 0) {
+    list.innerHTML = `<li class="dtc_empty">Aucun partenaire. Cliquez sur « Ajouter ».</li>`;
+    return;
+  }
+
+  // Sigle seul (nom d'établissement si pas de sigle) ; corbeille uniquement sur le partenaire sélectionné.
+  list.innerHTML = cles.map((cle) => {
+    const sel = dtcSelection === cle;
+    return `
+      <li class="dtc_part_item${sel ? " is_selected" : ""}" data-cle="${esc(cle)}" title="${esc(cle)}">
+        <span class="dtc_part_nom">${esc(dtcBrouillon[cle].sigle || cle)}</span>
+        ${sel ? `<button type="button" class="dtc_theme_del" title="Retirer"><i class="bi bi-trash3"></i></button>` : ""}
+      </li>`;
+  }).join("");
+
+  list.querySelectorAll(".dtc_part_item").forEach((li) => {
+    const cle = li.dataset.cle;
+    li.addEventListener("click", () => selectionnerPartenaire(cle));
+    li.querySelector(".dtc_theme_del")?.addEventListener("click", (e) => { e.stopPropagation(); retirerPartenaire(cle); });
+  });
+}
+
+function selectionnerPartenaire(cle) {
+  dtcSelection = cle;
+  const doms = dtcBrouillon[cle].domaines;
+  dtcDomSel = doms.length ? 0 : null;
+  dtcEdit = null;
+  renderTout();
+}
+
+function retirerPartenaire(cle) {
+  const nb = nbThemesPartenaire(cle);
+  if (nb > 0 && !confirm(`Retirer ce partenaire supprimera ses ${nb} thème(s). Continuer ?`)) return;
+  delete dtcBrouillon[cle];
+  dtcSelection = null;
+  dtcDomSel = null;
+  dtcEdit = null;
+  renderTout();
+}
+
+/* ---------------- Choix des partenaires à ajouter ---------------- */
+
+async function ouvrirChoixPartenaires() {
+  const list = document.getElementById("dtc_choix_list");
+  list.innerHTML = `<li class="dtc_empty">${Spinner.html()}</li>`;
+  openFormModal("dtc_modal_choix_part");
+  try {
+    if (!dtcPartenairesCache) dtcPartenairesCache = await apiCall("listPartDTC", {});
+    renderChoixPartenaires();
+  } catch (err) {
+    list.innerHTML = `<li><span class="error_state">Erreur : ${esc(err.message)}</span></li>`;
+  }
+}
+
+function renderChoixPartenaires() {
+  const list = document.getElementById("dtc_choix_list");
+  const dispo = (dtcPartenairesCache || []).filter((p) => cleEtab(p) && !dtcBrouillon[cleEtab(p)]);
+
+  if (dispo.length === 0) {
+    list.innerHTML = `<li class="dtc_empty">Aucun partenaire à ajouter.</li>`;
+    return;
+  }
+  list.innerHTML = dispo.map((p) => {
+    const cle = cleEtab(p);
+    const sigle = String(p["Sigle"] || "").trim();
+    return `<li class="dtc_part_item"><label><input type="checkbox" value="${esc(cle)}" /><span class="dtc_part_nom">${esc(sigle ? `${sigle} — ${cle}` : cle)}</span></label></li>`;
+  }).join("");
+}
+
+function validerChoixPartenaires() {
+  document.querySelectorAll("#dtc_choix_list input[type=checkbox]:checked").forEach((cb) => {
+    dtcBrouillon[cb.value] = { sigle: sigleDe(cb.value), domaines: [] };
+  });
+  closeModal("dtc_modal_choix_part");
+  renderPartenaires();
+}
+
+/* ---------------- Colonne Domaine (saisi en arabe) ---------------- */
+
+function renderDomaines() {
+  const list = document.getElementById("dtc_domaines_list");
+  const btn = document.getElementById("dtc_btn_ajouter_domaine");
+  const part = dtcBrouillon[dtcSelection];
+
+  if (!part) {
+    btn.disabled = true;
+    list.innerHTML = `<li class="dtc_empty">Sélectionnez un partenaire.</li>`;
+    return;
+  }
+  btn.disabled = false;
+  if (part.domaines.length === 0) {
+    list.innerHTML = `<li class="dtc_empty">Aucun domaine. Cliquez sur « Ajouter ».</li>`;
+    return;
+  }
+
+  list.innerHTML = part.domaines.map((d, i) => {
+    if (dtcEdit?.k === "dom" && dtcEdit.i === i) return ligneEdition("dom", i, d.nom);
+    const sel = i === dtcDomSel;
+    return `
+      <li class="dtc_part_item${sel ? " is_selected" : ""}" data-i="${i}">
+        <span class="dtc_part_nom" dir="rtl" lang="ar">${esc(d.nom)}</span>
+        ${sel ? `<button type="button" class="dtc_theme_del" data-act="edit" title="Éditer"><i class="bi bi-pencil-square"></i></button>
+                 <button type="button" class="dtc_theme_del" data-act="del" title="Supprimer"><i class="bi bi-trash3"></i></button>` : ""}
+      </li>`;
+  }).join("");
+
+  list.querySelectorAll(".dtc_part_item").forEach((li) => {
+    const i = Number(li.dataset.i);
+    li.addEventListener("click", () => selectionnerDomaine(i));
+    li.querySelector("[data-act=edit]")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dtcEdit = { k: "dom", i };
+      renderDomaines();
+      focusEdition();
+    });
+    li.querySelector("[data-act=del]")?.addEventListener("click", (e) => { e.stopPropagation(); supprimerLigne("dom", i); });
+  });
+  brancherEdition(list);
+}
+
+function selectionnerDomaine(i) {
+  dtcDomSel = i;
+  dtcEdit = null;
+  renderDomaines();
+  renderThemes();
+}
+
+function ajouterDomaine() {
+  const part = dtcBrouillon[dtcSelection];
+  if (!part) return;
+  part.domaines.push({ nom: "", themes: [] });
+  dtcDomSel = part.domaines.length - 1;
+  dtcEdit = { k: "dom", i: dtcDomSel };
+  renderDomaines();
+  renderThemes();
+  focusEdition();
+}
+
+/* ---------------- Colonne Thèmes (du domaine sélectionné) ---------------- */
+
+function domaineCourant() {
+  const part = dtcBrouillon[dtcSelection];
+  return part && dtcDomSel !== null ? part.domaines[dtcDomSel] : null;
+}
+
+// Thèmes du domaine sélectionné = tableau (thème - nb groupes - heures théoriques - heures pratiques) ; clic sur une ligne pour l'éditer.
+function renderThemes() {
+  const box = document.getElementById("dtc_themes_list");
+  const titre = document.getElementById("dtc_themes_titre");
+  const btnAjout = document.getElementById("dtc_btn_ajouter_theme");
+  const dom = domaineCourant();
+
+  if (!dom) {
+    titre.textContent = "Thèmes - المحاور";
+    btnAjout.disabled = true;
+    box.innerHTML = `<p class="dtc_empty dtc_pad">Sélectionnez un domaine.</p>`;
+    return;
+  }
+
+  titre.textContent = "Thèmes - المحاور";
+  btnAjout.disabled = false;
+
+  if (dom.themes.length === 0) {
+    box.innerHTML = `<p class="dtc_empty dtc_pad">Aucun thème. Cliquez sur « Ajouter ».</p>`;
+    return;
+  }
+
+  const rows = dom.themes.map((t, i) => (dtcEdit?.k === "theme" && dtcEdit.i === i)
+    ? ligneEdition("theme", i, t.nom, t.groupes, t.heuresTheo, t.heuresPrat)
+    : `<tr class="is_view" data-i="${i}" title="Cliquer pour éditer ou supprimer">
+         <td dir="auto">${esc(t.nom)}</td>
+         <td class="num">${t.groupes}</td>
+         <td class="num">${fmtNb(t.heuresTheo)}</td>
+         <td class="num">${fmtNb(t.heuresPrat)}</td>
+         <td class="w_act"></td>
+       </tr>`).join("");
+
+  box.innerHTML = `
+    <table class="dtc_tbl dtc_tbl_com">
+      <thead><tr><th>Thème</th><th class="num">Groupes</th><th class="num">H. théo.</th><th class="num">H. prat.</th><th class="w_act"></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  box.querySelectorAll("tr.is_view").forEach((tr) => {
+    tr.addEventListener("click", () => { dtcEdit = { k: "theme", i: Number(tr.dataset.i) }; renderThemes(); focusEdition(); });
+  });
+  brancherEdition(box);
+}
+
+function ajouterTheme() {
+  const dom = domaineCourant();
+  if (!dom) return;
+  dom.themes.push({ nom: "", groupes: 1, heuresTheo: 0, heuresPrat: 0 });
+  dtcEdit = { k: "theme", i: dom.themes.length - 1 };
+  renderThemes();
+  focusEdition();
+}
+
+/* ---------------- Édition en ligne (domaines et thèmes) ---------------- */
+
+function ligneEdition(k, i, valeur, groupes, heuresTheo, heuresPrat) {
+  if (k === "dom") {
+    return `
+    <li class="dtc_theme" data-k="dom" data-i="${i}">
+      <input type="text" value="${esc(valeur)}" dir="rtl" lang="ar" placeholder="المجال" />
+      <button type="button" class="dtc_theme_del" title="Supprimer"><i class="bi bi-trash3"></i></button>
+    </li>`;
+  }
+  return `
+    <tr data-k="theme" data-i="${i}">
+      <td><input type="text" value="${esc(valeur)}" dir="auto" placeholder="Intitulé du thème" /></td>
+      <td class="num"><input type="number" min="1" step="1" value="${esc(groupes)}" title="Nombre de groupes" /></td>
+      <td class="num"><input type="number" min="0" step="any" value="${esc(heuresTheo)}" title="Heures théoriques" /></td>
+      <td class="num"><input type="number" min="0" step="any" value="${esc(heuresPrat)}" title="Heures pratiques" /></td>
+      <td class="w_act"><button type="button" class="dtc_theme_del" title="Supprimer"><i class="bi bi-trash3"></i></button></td>
+    </tr>`;
+}
+
+function valeurCourante(k, i) {
+  if (k === "dom") return dtcBrouillon[dtcSelection]?.domaines[i]?.nom || "";
+  return domaineCourant()?.themes[i]?.nom || "";
+}
+
+function brancherEdition(list) {
+  const row = list.querySelector("[data-k]");
+  if (!row) return;
+  const k = row.dataset.k;
+  const i = Number(row.dataset.i);
+  const input = row.querySelector("input[type=text]");
+  const nbs = row.querySelectorAll("input[type=number]");
+  const del = row.querySelector(".dtc_theme_del");
+  const valider = () => validerEdition(k, i, input.value, nbs[0]?.value, nbs[1]?.value, nbs[2]?.value);
+
+  row.querySelectorAll("input").forEach((inp) => {
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); valider(); }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        const t = k === "theme" ? domaineCourant().themes[i] : null;
+        validerEdition(k, i, valeurCourante(k, i), t?.groupes, t?.heuresTheo, t?.heuresPrat);
+      }
+    });
+    inp.addEventListener("blur", (e) => {
+      if (e.relatedTarget && row.contains(e.relatedTarget)) return; // focus reste dans la ligne (autre champ, corbeille)
+      valider();
+    });
+  });
+  del.addEventListener("click", () => supprimerLigne(k, i));
+}
+
+function focusEdition() {
+  const input = document.querySelector("#dtc_modal_commission [data-k] input");
+  if (input) { input.focus(); input.select(); }
+}
+
+// Valide la saisie. Vide : un élément nouveau est retiré ; un domaine existant garde son nom.
+function validerEdition(k, i, valeur, groupes, heuresTheo, heuresPrat) {
+  if (!dtcEdit || dtcEdit.k !== k || dtcEdit.i !== i) return;
+  const v = String(valeur || "").trim();
+  const part = dtcBrouillon[dtcSelection];
+  dtcEdit = null;
+
+  if (k === "dom") {
+    const d = part.domaines[i];
+    if (v) d.nom = v;
+    else if (!d.nom) { part.domaines.splice(i, 1); dtcDomSel = null; }
+  } else {
+    const themes = domaineCourant().themes;
+    const g = Math.max(1, parseInt(groupes, 10) || 1);
+    const ht = Math.max(0, parseFloat(heuresTheo) || 0);
+    const hp = Math.max(0, parseFloat(heuresPrat) || 0);
+    if (v) themes[i] = { nom: v, groupes: g, heuresTheo: ht, heuresPrat: hp }; else themes.splice(i, 1);
+  }
+  renderDomaines();
+  renderThemes();
+  refreshModalAlert("dtc_modal_commission");
+}
+
+function supprimerLigne(k, i) {
+  const part = dtcBrouillon[dtcSelection];
+  if (k === "dom") {
+    const nb = part.domaines[i].themes.length;
+    if (nb > 0 && !confirm(`Supprimer ce domaine supprimera ses ${nb} thème(s). Continuer ?`)) return;
+    part.domaines.splice(i, 1);
+    dtcDomSel = null;
+  } else {
+    domaineCourant().themes.splice(i, 1);
+  }
+  dtcEdit = null;
+  renderDomaines();
+  renderThemes();
+  refreshModalAlert("dtc_modal_commission");
+}
+
+/* ---------------- Enregistrement ---------------- */
+
+async function enregistrerCommissionDTC() {
+  const modal = document.getElementById("dtc_modal_commission");
+  const date = document.getElementById("dtc_commission_date").value;
+
+  // Valide un éventuel élément encore en saisie.
+  const row = document.querySelector("#dtc_modal_commission [data-k]");
+  if (row && dtcEdit) {
+    const nbs = row.querySelectorAll("input[type=number]");
+    validerEdition(dtcEdit.k, dtcEdit.i, row.querySelector("input[type=text]").value, nbs[0]?.value, nbs[1]?.value, nbs[2]?.value);
+  }
+
+  if (!date) {
+    alert("La date est obligatoire.");
+    return;
+  }
+  const cles = Object.keys(dtcBrouillon);
+  if (cles.length === 0) {
+    alert("Ajoutez au moins un partenaire.");
+    return;
+  }
+
+  const commission = {
+    id: modal.dataset.commissionId || undefined,
+    date,
+    partenaires: cles.map((cle) => ({
+      etablissement: cle,
+      sigle: dtcBrouillon[cle].sigle || "",
+      domaines: dtcBrouillon[cle].domaines
+        .filter((d) => d.nom)
+        .map((d) => ({ nom: d.nom, themes: d.themes.filter((t) => t.nom).map((t) => ({ nom: t.nom, groupes: t.groupes, heuresTheo: t.heuresTheo, heuresPrat: t.heuresPrat })) }))
+    }))
+  };
+
+  const btn = document.getElementById("dtc_commission_btn_enregistrer");
+  setBtnSaving(btn, true);
+  try {
+    await apiCall("enregistrerCommissionDTC", { commission });
+    closeModal("dtc_modal_commission");
+    await loadCommissionsDTC();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+/* ---------------- Utilitaires modales (identiques à dti.html) ---------------- */
+
+// Croix, clic en dehors et Échap : js/modal_forms.js (confirmation + alerte).
+function wireDtcModals() {
+  // Modales à état JS : le brouillon fait partie de l'instantané.
+  registerModalState("dtc_modal_commission", () => JSON.stringify(dtcBrouillon));
+  registerModalState("dtc_modal_plan", () => JSON.stringify([dtcPlanEntree ? (dtcPlanEntree.consultationId || cleDomaine(dtcPlanEntree.cid, dtcPlanEntree.etab, dtcPlanEntree.domaine)) : null, dtcPlanThemes]));
+}
+
+/* ---------------- Plans ---------------- */
+
+async function loadPlansDTC() {
+  const tbody = document.querySelector("#dtc_plans_table tbody");
+  const emptyEl = document.getElementById("dtc_plans_empty");
+  if (!tbody) return;
+
+  tbody.innerHTML = `${Spinner.tableRow(9)}`;
+  if (emptyEl) emptyEl.hidden = true;
+
+  try {
+    const plans = await apiCall("listPlansDTC", {});
+    dtcPlansCache = {};
+    plans.forEach((p) => { dtcPlansCache[p.id] = p; });
+
+    if (plans.length === 0) {
+      tbody.innerHTML = "";
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+
+    plans.sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+    tbody.innerHTML = plans.map((p) => {
+      const themes = p.themes || [];
+      const totG = themes.reduce((n, t) => n + (Number(t.groupes) || 0), 0);
+      const nt = themes.map(normTheme);
+      const totHT = nt.reduce((n, t) => n + t.heuresTheo, 0);
+      const totHP = nt.reduce((n, t) => n + t.heuresPrat, 0);
+      return `
+      <tr>
+        <td>${esc(p.numPlan || "----")}</td>
+        <td>${esc(p.sigle || p.etablissement)}</td>
+        <td><span class="dtc_ar">${esc(p.domaine)}</span></td>
+        <td>${esc(formaterDateFr(p.date))}</td>
+        <td>${themes.length}</td>
+        <td>${totG}</td>
+        <td>${fmtNb(totHT)}</td>
+        <td>${fmtNb(totHP)}</td>
+        <td><div class="row_btns">
+          <button type="button" class="btn_info" data-afficher-plan-id="${esc(p.id)}">
+            <i class="bi bi-eye"></i> Afficher
+          </button>
+        </div></td>
+      </tr>`;
+    }).join("");
+
+    tbody.querySelectorAll("[data-afficher-plan-id]").forEach((btn) => {
+      btn.addEventListener("click", () => ouvrirModalPlan(dtcPlansCache[btn.dataset.afficherPlanId]));
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="9"><span class="error_state">Erreur de chargement : ${esc(err.message)}</span></td></tr>`;
+  }
+}
+
+function normThemePlan(t) {
+  return { ...normTheme(t), cabinet: String(t?.cabinet || ""), formateur: String(t?.formateur || "") };
+}
+
+// Consultations proposées pour un nouveau plan : celles qui contiennent des thèmes fructueux et qui n'ont pas
+// encore de plan (un plan = une seule consultation). Les plans anciens, sans consultationId, sont rapprochés par domaine.
+function entreesPlanDepuisConsultations() {
+  const plans = Object.values(dtcPlansCache);
+  const pris = new Set(plans.map((p) => p.consultationId).filter(Boolean));
+  const prisDomaine = new Set(plans.filter((p) => !p.consultationId).map((p) => cleDomaine(p.commissionId, p.etablissement, p.domaine)));
+  const domaines = construireEntreesDomaines();
+
+  return Object.values(dtcConsultationsCache)
+    .filter((c) => (c.fructueux || []).length > 0)
+    .filter((c) => !pris.has(c.id) && !prisDomaine.has(cleDomaine(c.commissionId, c.etablissement, c.domaine)))
+    .map((c) => {
+      const dom = domaines.find((e) => e.cid === c.commissionId && e.etab === c.etablissement && e.domaine === c.domaine);
+      const det = {};
+      (c.details || []).forEach((d) => { det[d.nom] = d; });
+      const themes = c.fructueux.map((nom) => {
+        const ref = det[nom] || dom?.themes.find((t) => t.nom === nom) || {};
+        return normThemePlan({ nom, groupes: ref.groupes, heures: ref.heures, heuresTheo: ref.heuresTheo, heuresPrat: ref.heuresPrat, cabinet: det[nom]?.cabinet, formateur: det[nom]?.formateur });
+      });
+      return {
+        consultationId: c.id,
+        numCons: c.numCons || "",
+        dateCloture: c.dateProrogation || c.dateCloture || "",
+        cid: c.commissionId,
+        etab: c.etablissement,
+        sigle: c.sigle || "",
+        domaine: c.domaine,
+        date: c.dateCommission || "",
+        themes
+      };
+    })
+    .sort((a, b) => String(b.dateCloture).localeCompare(String(a.dateCloture)));
+}
+
+async function ouvrirModalPlan(record) {
+  await dtcChargement;
+  const modal = document.getElementById("dtc_modal_plan");
+  const choix = document.getElementById("dtc_plan_choix");
+  const recap = document.getElementById("dtc_plan_recap");
+  modal.dataset.planId = record?.id || "";
+  document.getElementById("dtc_plan_titre").textContent = record ? "Plan" : "Nouveau plan";
+
+  if (record) {
+    dtcPlanEntree = {
+      consultationId: record.consultationId || "",
+      numCons: record.numCons || "",
+      cid: record.commissionId,
+      etab: record.etablissement,
+      sigle: record.sigle || "",
+      domaine: record.domaine,
+      date: record.dateCommission || ""
+    };
+    dtcPlanThemes = (record.themes || []).map(normThemePlan);
+    dtcPlanEntrees = [];
+    choix.hidden = true;
+    recap.hidden = false;
+    recap.innerHTML = `${esc(record.sigle || record.etablissement)} — <span class="dtc_ar">${esc(record.domaine)}</span>${record.numCons ? ` · Consultation N° ${esc(record.numCons)}` : ""}`;
+  } else {
+    dtcPlanEntree = null;
+    dtcPlanThemes = [];
+    dtcPlanEntrees = entreesPlanDepuisConsultations();
+    choix.hidden = false;
+    recap.hidden = true;
+    document.getElementById("dtc_plan_search").value = "";
+    renderChoixPlan();
+  }
+  document.getElementById("dtc_plan_date").value = record?.date || "";
+  document.getElementById("dtc_plan_num").value = record?.numPlan || "";
+  document.getElementById("dtc_plan_btn_enregistrer").disabled = !dtcPlanEntree;
+  renderPlanThemes();
+  chargerCabinetsDTC();
+  openFormModal("dtc_modal_plan");
+}
+
+function renderChoixPlan() {
+  const list = document.getElementById("dtc_plan_list");
+  const q = document.getElementById("dtc_plan_search").value.trim().toLowerCase();
+  const items = dtcPlanEntrees
+    .map((e, i) => ({ e, i }))
+    .filter(({ e }) => !q || `${e.sigle} ${e.etab} ${e.domaine} ${e.numCons}`.toLowerCase().includes(q));
+
+  if (items.length === 0) {
+    list.innerHTML = `<li class="dtc_empty">${dtcPlanEntrees.length ? "Aucun résultat." : "Aucune consultation avec thèmes fructueux sans plan."}</li>`;
+    return;
+  }
+  list.innerHTML = items.map(({ e, i }) => `
+    <li class="dtc_part_item${e === dtcPlanEntree ? " is_selected" : ""}" data-i="${i}">
+      <span class="dtc_part_nom">${esc(e.sigle || e.etab)} — <span class="dtc_ar">${esc(e.domaine)}</span></span>
+      <span class="dtc_part_count">${e.numCons ? `N° ${esc(e.numCons)} · ` : ""}clôture ${esc(formaterDateFr(e.dateCloture))} · ${e.themes.length} thème(s) fructueux</span>
+    </li>`).join("");
+
+  list.querySelectorAll(".dtc_part_item").forEach((li) => {
+    li.addEventListener("click", () => {
+      dtcPlanEntree = dtcPlanEntrees[Number(li.dataset.i)];
+      dtcPlanThemes = dtcPlanEntree.themes.map((t) => ({ ...t })); // copie : l'édition ne modifie pas la liste proposée
+      document.getElementById("dtc_plan_btn_enregistrer").disabled = false;
+      renderChoixPlan();
+      renderPlanThemes();
+      refreshModalAlert("dtc_modal_plan");
+    });
+  });
+}
+
+function majTotauxPlan() {
+  const g = document.getElementById("dtc_plan_tot_g");
+  const ht = document.getElementById("dtc_plan_tot_ht");
+  const hp = document.getElementById("dtc_plan_tot_hp");
+  if (g) g.textContent = dtcPlanThemes.reduce((n, t) => n + t.groupes, 0);
+  if (ht) ht.textContent = fmtNb(dtcPlanThemes.reduce((n, t) => n + t.heuresTheo, 0));
+  if (hp) hp.textContent = fmtNb(dtcPlanThemes.reduce((n, t) => n + t.heuresPrat, 0));
+}
+
+function renderPlanThemes() {
+  const box = document.getElementById("dtc_plan_themes");
+  if (!dtcPlanEntree) {
+    box.innerHTML = `<p class="dtc_empty dtc_pad">Choisissez un domaine.</p>`;
+    return;
+  }
+  if (dtcPlanThemes.length === 0) {
+    box.innerHTML = `<p class="dtc_empty dtc_pad">Aucun thème pour ce domaine.</p>`;
+    return;
+  }
+  const rows = dtcPlanThemes.map((t, i) => `
+    <tr>
+      <td dir="auto">${esc(t.nom)}</td>
+      <td class="num"><input type="number" min="1" step="1" data-f="groupes" data-i="${i}" value="${esc(t.groupes)}" /></td>
+      <td class="num"><input type="number" min="0" step="any" data-f="heuresTheo" data-i="${i}" value="${esc(t.heuresTheo)}" title="Heures théoriques" /></td>
+      <td class="num"><input type="number" min="0" step="any" data-f="heuresPrat" data-i="${i}" value="${esc(t.heuresPrat)}" title="Heures pratiques" /></td>
+      <td><input type="text" data-f="cabinet" data-i="${i}" list="dtc_cabinets_dl" placeholder="Cabinet" value="${esc(t.cabinet)}" /></td>
+      <td><input type="text" data-f="formateur" data-i="${i}" placeholder="Formateur(s)" value="${esc(t.formateur)}" /></td>
+    </tr>`).join("");
+
+  box.innerHTML = `
+    <table class="dtc_tbl">
+      <thead><tr><th>Thème</th><th class="num">Groupes</th><th class="num">H. théo.</th><th class="num">H. prat.</th><th>Cabinet</th><th>Formateur</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td>Total</td><td class="num" id="dtc_plan_tot_g"></td><td class="num" id="dtc_plan_tot_ht"></td><td class="num" id="dtc_plan_tot_hp"></td><td colspan="2"></td></tr></tfoot>
+    </table>`;
+  majTotauxPlan();
+
+  box.querySelectorAll("input").forEach((inp) => {
+    inp.addEventListener("input", () => {
+      const t = dtcPlanThemes[Number(inp.dataset.i)];
+      const f = inp.dataset.f;
+      if (f === "groupes") t.groupes = Math.max(1, parseInt(inp.value, 10) || 1);
+      else if (f === "heuresTheo" || f === "heuresPrat") t[f] = Math.max(0, parseFloat(inp.value) || 0);
+      else t[f] = inp.value;
+      majTotauxPlan();
+      refreshModalAlert("dtc_modal_plan");
+    });
+  });
+}
+
+async function enregistrerPlanDTC() {
+  const modal = document.getElementById("dtc_modal_plan");
+  if (!dtcPlanEntree) { alert("Choisissez un domaine."); return; }
+  if (dtcPlanThemes.length === 0) { alert("Ce plan n'a aucun thème."); return; }
+
+  const plan = {
+    id: modal.dataset.planId || undefined,
+    consultationId: dtcPlanEntree.consultationId,
+    numCons: dtcPlanEntree.numCons,
+    commissionId: dtcPlanEntree.cid,
+    etablissement: dtcPlanEntree.etab,
+    sigle: dtcPlanEntree.sigle,
+    domaine: dtcPlanEntree.domaine,
+    dateCommission: dtcPlanEntree.date,
+    date: document.getElementById("dtc_plan_date").value,
+    numPlan: document.getElementById("dtc_plan_num").value.trim(),
+    themes: dtcPlanThemes.map((t) => ({
+      nom: t.nom,
+      groupes: t.groupes,
+      heuresTheo: t.heuresTheo,
+      heuresPrat: t.heuresPrat,
+      cabinet: t.cabinet.trim(),
+      formateur: t.formateur.trim()
+    }))
+  };
+
+  const btn = document.getElementById("dtc_plan_btn_enregistrer");
+  setBtnSaving(btn, true);
+  try {
+    await apiCall("enregistrerPlanDTC", { plan });
+    closeModal("dtc_modal_plan");
+    await loadPlansDTC();
+  } catch (err) {
+    alert(`Erreur lors de l'enregistrement : ${err.message}`);
+  } finally {
+    setBtnSaving(btn, false);
+  }
+}
+
+function closeModal(id) {
+  closeFormModal(id);
+}
+
+  </script>
+</body>
+</html>
