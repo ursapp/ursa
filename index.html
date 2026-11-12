@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accueil - URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="css/smig.css" />
+  <link rel="stylesheet" href="css/spinner.css" />
+  <script src="js/spinner.js"></script>
+
+  <style>
+    /* ============================================================
+       Styles propres à index.html (tokens + reset + navbar + grille
+       de cartes). Fichier autonome : HTML + CSS + JS regroupés.
+       ============================================================ */
+
+    :root {
+      /* Couleurs de fond */
+      --color_paper: #eef1ee;
+      --color_paper_raised: #ffffff;
+      --color_ink: #16262a;
+      --color_ink_soft: #22383e;
+      --color_ink_softer: #2f4a51;
+
+      /* Accents */
+      --color_seal: #b08d57;
+      --color_seal_light: #d4b483;
+      --color_teal: #3c6e68;
+      --color_teal_light: #5c9089;
+
+      /* États */
+      --color_success: #3c6e68;
+      --color_warning: #b08d57;
+      --color_danger: #a1473f;
+      /* Paliers d'alerte "délai de clôture bilan" (index.html) : du plus
+         léger (attention, teinte "danger" éclaircie) au plus grave
+         (expired, quasi noir). */
+      --color_alert_attention: #c99790;
+      --color_alert_attention_bg: #f1ded9;
+      --color_alert_expired: #1a1210;
+      /* Rouge dense partagé : bouton "Suivi" (contrôle aujourd'hui) et carte
+         Crédit d'impôt (alerte "imminent"). */
+      --color_state_red: color-mix(in srgb, var(--color_danger) 32%, var(--color_paper_raised));
+      --color_state_orange_ink: #d97706;
+      --color_state_orange: color-mix(in srgb, var(--color_state_orange_ink) 34%, var(--color_paper_raised));
+      /* Palier "imminent" (cartes CI et DTC) : entre l'orange d'attention et le rouge d'expiration. */
+      --color_state_imminent_ink: #c2410c;
+      --color_state_imminent: color-mix(in srgb, var(--color_state_imminent_ink) 34%, var(--color_paper_raised));
+      --color_state_green: color-mix(in srgb, var(--color_teal) 30%, var(--color_paper_raised));
+
+      /* Texte */
+      --text_primary: #16262a;
+      --text_secondary: #55686c;
+      --text_inverse: #eef1ee;
+      --text_inverse_soft: #a9bdbc;
+
+      /* Bordures */
+      --border_soft: #dbe1dc;
+      --border_ink: #33474c;
+
+      /* Typographie */
+      --font_display: "Source Serif Pro", "Georgia", serif;
+      --font_body: "Inter", "Segoe UI", system-ui, sans-serif;
+      --font_mono: "IBM Plex Mono", "Consolas", monospace;
+
+      /* Échelle */
+      --fs_xs: 0.75rem;
+      --fs_sm: 0.85rem;
+      --fs_base: 0.95rem;
+      --fs_md: 1.1rem;
+      --fs_lg: 1.4rem;
+      --fs_xl: 1.9rem;
+
+      /* Espacements */
+      --space_1: 4px;
+      --space_2: 8px;
+      --space_3: 12px;
+      --space_4: 16px;
+      --space_5: 24px;
+      --space_6: 32px;
+      --space_7: 48px;
+
+      /* Rayon / ombre */
+      --radius_sm: 4px;
+      --radius_md: 8px;
+      --shadow_card: 0 1px 3px rgba(22, 38, 42, 0.08), 0 1px 2px rgba(22, 38, 42, 0.06);
+
+      /* Layout */
+      --navbar_height: 64px;
+
+      /* Transitions */
+      --ease_std: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--color_paper);
+      color: var(--text_primary);
+      font-family: var(--font_body);
+      font-size: var(--fs_base);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; }
+    ::selection { background: var(--color_seal_light); color: var(--color_ink); }
+
+    /* ---------- Navbar ---------- */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      height: var(--navbar_height);
+      background: var(--color_paper_raised);
+      border-bottom: 1px solid var(--border_soft);
+      display: flex;
+      align-items: center;
+      gap: var(--space_4);
+      padding: 0 var(--space_6);
+    }
+    @media (max-width: 1080px) {
+      .navbar { padding: 0 var(--space_4); }
+    }
+    .navbar[data-tone="dark"] {
+      background: var(--color_ink_soft);
+      border-bottom-color: var(--border_ink);
+      color: var(--text_inverse);
+    }
+    .navbar[data-tone="dark"] .page_title { color: var(--text_inverse); }
+
+    .page_title_group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .page_eyebrow {
+      font-family: var(--font_mono);
+      font-size: var(--fs_xs);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color_seal);
+    }
+    .page_title {
+      font-family: var(--font_display);
+      font-size: var(--fs_lg);
+      color: var(--text_primary);
+      margin: 0;
+    }
+
+    /* ---------- Contenu / grille de cartes ---------- */
+    .index_content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space_6);
+    }
+    @media (max-width: 1080px) {
+      .index_content { padding: var(--space_4); }
+    }
+
+    .index_grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space_4);
+    }
+    @media (max-width: 900px) {
+      .index_grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .index_grid { grid-template-columns: 1fr; }
+    }
+
+    .index_card {
+      background: var(--color_paper_raised);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_md);
+      box-shadow: var(--shadow_card);
+      padding: var(--space_4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_2);
+      transition: transform var(--ease_std), box-shadow var(--ease_std), background var(--ease_std);
+      cursor: pointer;
+    }
+    .index_card[hidden] { display: none !important; }
+    .index_card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(22, 38, 42, 0.12);
+    }
+    .index_card .index_card_top {
+      display: flex;
+      align-items: center;
+      gap: var(--space_3);
+    }
+    .index_card .index_card_top i {
+      font-size: 1.3rem;
+      color: var(--color_teal);
+    }
+    .index_card .index_card_top .index_card_code {
+      margin-left: auto;
+      font-family: var(--font_mono);
+      font-size: var(--fs_xs);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      padding: 1px 6px;
+      color: var(--text_secondary);
+    }
+    .index_card h3 {
+      font-family: var(--font_display);
+      font-size: var(--fs_md);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+    }
+    .index_card .index_card_sections {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_1);
+    }
+    .index_card .index_card_sections li a {
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      gap: var(--space_2);
+    }
+    .index_card .index_card_sections li a:hover { color: var(--color_seal); text-decoration: underline; }
+    .index_card .index_card_sections li a::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--border_soft);
+      flex-shrink: 0;
+    }
+
+    /* ---------- Carte "Prospections" : même style que les autres cartes ---------- */
+    .index_card .index_card_tagline {
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    /* ---------- Alerte "délai de clôture bilan" (carte Crédit d'impôt) —
+       la carte entière change de couleur de fond selon le palier le plus
+       grave en cours parmi les bilans Siliana concernés ; le détail (un
+       message par bilan) n'apparaît qu'au survol de la carte, dans un
+       bandeau centré du header. ---------- */
+    /* attention = orange de Suivi ("contrôle demain") ; imminent = orange-rouge ;
+       expired = rouge de Suivi ("contrôle aujourd'hui"). Même système pour
+       les cartes Crédit d'impôt (délai de clôture bilan) et DTC (clôture
+       des consultations). */
+    .index_card[data-alert-tier="attention"],
+    .index_card[data-alert-tier="imminent"],
+    .index_card[data-alert-tier="expired"] { border-color: transparent; }
+    .index_card[data-alert-tier="imminent"] { background: var(--color_state_imminent); }
+    .index_card[data-alert-tier="imminent"] .index_card_top i { color: var(--color_state_imminent_ink); }
+    .index_card[data-alert-tier="attention"] { background: var(--color_state_orange); }
+    .index_card[data-alert-tier="attention"] .index_card_top i { color: var(--color_state_orange_ink); }
+    .index_card[data-alert-tier="expired"] { background: var(--color_state_red); }
+    .index_card[data-alert-tier="expired"] .index_card_top i { color: var(--color_danger); }
+
+    /* ---------- Bandeau d'alerte du header, au centre, affiché au survol
+       de la carte concernée (fondu). ---------- */
+    .navbar_alert {
+      position: absolute;
+      left: 50%;
+      /* Ancré par le haut (et non centré) : quel que soit le nombre de
+         pastilles, la première garde la même marge haute confortable. */
+      top: 10px;
+      transform: translateX(-50%) translateY(-4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s;
+      z-index: 40;
+    }
+    .navbar_alert.is_visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+    .navbar_alert_line {
+      font-size: var(--fs_sm);
+      font-weight: 600;
+      color: #ffffff;
+      background: var(--color_danger);
+      border-radius: var(--radius_sm);
+      padding: 3px 12px;
+      white-space: nowrap;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    }
+    .navbar_alert_line[data-tier="attention"] { background: var(--color_state_orange_ink); }
+    .navbar_alert_line[data-tier="imminent"] { background: var(--color_state_imminent_ink); }
+    .navbar_alert_line[data-tier="expired"] { background: var(--color_danger); }
+    @media (max-width: 720px) {
+      .navbar_alert { display: none; }
+    }
+
+    /* ---------- Badge utilisateur (initiales, en cercle) ---------- */
+    .navbar_actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+    }
+    .user_badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--color_seal);
+      color: var(--color_ink);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font_mono);
+      font-size: var(--fs_xs);
+      font-weight: 700;
+      flex-shrink: 0;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+    }
+    .user_badge:hover { background: var(--color_seal_light); }
+
+    .btn_logout {
+      height: 32px;
+      border-radius: var(--radius_sm);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space_2);
+      padding: 0 var(--space_3);
+      flex-shrink: 0;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: transparent;
+      color: var(--text_inverse);
+      font-size: var(--fs_sm);
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background 120ms ease, border-color 120ms ease;
+    }
+    .btn_logout i { font-size: var(--fs_base); }
+    .btn_logout:hover {
+      background: var(--color_danger);
+      border-color: var(--color_danger);
+      color: var(--text_inverse);
+    }
+    /* Sur mobile, le bouton de déconnexion n'affiche que son icône */
+    @media (max-width: 560px) {
+      .btn_logout {
+        width: 32px;
+        padding: 0;
+        border-radius: 50%;
+        justify-content: center;
+      }
+      .btn_logout_label { display: none; }
+    }
+
+    /* ---------- État d'erreur commun (chargement : css/spinner.css) ---------- */
+    .error_state {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space_2);
+      font-size: var(--fs_sm);
+      line-height: 1.5;
+      color: var(--color_danger);
+    }
+    .error_state::before {
+      content: "!";
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color_danger);
+      color: var(--text_inverse);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--fs_xs);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .loading_state_block {
+      display: flex;
+      justify-content: center;
+      padding: var(--space_6);
+      text-align: center;
+    }
+
+    /* ---------- Modale de connexion (couvre toute la page) ----------
+       Tout est affiché en une seule fois : grille des profils
+       (Paramètres > "users", Initiales | Nom | M2p | ntfy | ...),
+       champ mot de passe, case "Rester connecté(e)", bouton. Un
+       profil sans M2p est désactivé (pas d'accès). Le profil choisi
+       est mis en évidence (.is_selected) dans la grille. */
+    .login_modal_overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(22, 38, 42, 0.88);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space_6);
+    }
+    .login_modal_overlay.is_visible { display: flex; }
+
+    .login_modal {
+      background: var(--color_paper_raised);
+      border-radius: var(--radius_md);
+      width: 100%;
+      max-width: 440px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      padding: var(--space_6);
+    }
+    .login_modal_header h2 {
+      margin: 0 0 var(--space_2) 0;
+      font-family: var(--font_display);
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+      justify-content: center;
+    }
+    .login_modal_note {
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+      margin: 0 0 var(--space_5) 0;
+      font-style: italic;
+      text-align: center;
+    }
+
+    .login_users_grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--space_4);
+      padding: 0 0 var(--space_5) 0;
+    }
+    .login_user_badge {
+      width: 52px;
+      height: 52px;
+      font-size: var(--fs_md);
+      box-shadow: 0 0 0 2px transparent;
+      transition: box-shadow 120ms ease, transform 120ms ease, opacity 120ms ease;
+    }
+    .login_user_badge:not(.is_disabled):hover { transform: translateY(-2px); }
+    .login_user_badge.is_selected {
+      box-shadow: 0 0 0 3px var(--color_teal_light);
+      background: var(--color_seal_light);
+    }
+    .login_user_badge.is_disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .login_user_badge.is_disabled:hover { background: var(--color_seal); }
+
+    .login_password_form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_4);
+      padding-top: var(--space_5);
+      border-top: 1px solid var(--border_soft);
+    }
+    .login_password_form label {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_2);
+      font-size: var(--fs_sm);
+      font-weight: 600;
+      color: var(--text_secondary);
+    }
+    .login_password_form input[type="password"] {
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper_raised);
+      color: var(--text_primary);
+      transition: outline-color 120ms ease;
+    }
+    .login_password_form input[type="password"]:focus {
+      outline: 2px solid var(--color_teal_light);
+      outline-offset: 1px;
+    }
+    .login_password_form input[type="password"]:disabled {
+      background: var(--color_paper);
+      color: var(--text_secondary);
+      cursor: not-allowed;
+    }
+    .login_remember_row {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center;
+      gap: var(--space_2);
+      font-size: var(--fs_sm);
+      font-weight: 400;
+      color: var(--text_secondary);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .login_remember_row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--color_seal);
+      cursor: pointer;
+    }
+    .login_password_error {
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+      color: var(--color_danger);
+      font-size: var(--fs_sm);
+      margin: 0;
+    }
+    .login_password_form_actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space_4);
+      margin-top: var(--space_1);
+    }
+    .btn_login {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space_2);
+      flex-shrink: 0;
+      padding: var(--space_2) var(--space_5);
+      border: none;
+      border-radius: var(--radius_sm);
+      background: var(--color_seal);
+      color: var(--color_ink);
+      font-family: inherit;
+      font-size: var(--fs_sm);
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: var(--shadow_card);
+      transition: background 120ms ease, transform 120ms ease;
+    }
+    .btn_login:hover { background: var(--color_seal_light); }
+    .btn_login:active { transform: translateY(1px); }
+    /* ---------- Ligne de raccourcis (boutons courts, sous la grille) ---------- */
+    .index_shortcuts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space_3);
+      margin-top: var(--space_4);
+      width: 100%;
+      max-width: 100%;
+    }
+    .index_shortcut_btn {
+      flex: 1 1 0;
+      min-width: 0;
+      height: 44px;
+      box-sizing: border-box;
+      background: var(--color_paper_raised);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_md);
+      box-shadow: var(--shadow_card);
+      padding: 0 var(--space_3);
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+      font-size: var(--fs_sm);
+      font-weight: 600;
+      color: var(--text_primary);
+      transition: transform var(--ease_std), box-shadow var(--ease_std), background var(--ease_std);
+    }
+    .index_shortcut_btn i { font-size: 1.1rem; color: var(--color_teal); }
+    .index_shortcut_btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(22, 38, 42, 0.12);
+    }
+    .index_shortcut_btn[hidden] { display: none !important; }
+    /* Bouton "Suivi" coloré selon la prochaine date de contrôle :
+       aujourd'hui (rouge) / demain (orange) / programmé (vert) ; sans pastille = aucun contrôle à venir. */
+    .index_shortcut_btn.is_ctrl_aujourdhui { background: var(--color_state_red); border-color: transparent; }
+    .index_shortcut_btn.is_ctrl_aujourdhui i { color: var(--color_danger); }
+    .index_shortcut_btn.is_ctrl_demain { background: var(--color_state_orange); border-color: transparent; }
+    .index_shortcut_btn.is_ctrl_demain i { color: var(--color_state_orange_ink); }
+    .index_shortcut_btn.is_ctrl_programme { background: var(--color_state_green); border-color: transparent; }
+    /* Sur mobile, les boutons de raccourci n'affichent que leur icône */
+    @media (max-width: 560px) {
+      .index_shortcut_btn {
+        flex: 0 0 auto;
+        width: 44px;
+        font-size: 0;
+        gap: 0;
+        padding: 0;
+        justify-content: center;
+      }
+      .index_shortcut_btn i { font-size: 1.1rem; }
+    }
+
+    /* ---------- Modale : structure générique (recopiée depuis fi.html) ---------- */
+    .fi_modal_overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(22, 38, 42, 0.55);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space_5);
+    }
+    .fi_modal_overlay.is_visible { display: flex; }
+    .fi_modal {
+      background: var(--color_paper_raised);
+      border-radius: var(--radius_md);
+      width: 100%;
+      max-width: 480px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    .fi_modal_header { padding: var(--space_4); border-bottom: 1px solid var(--border_soft); display: flex; align-items: center; justify-content: space-between; }
+    .fi_modal_header h3 { margin: 0; font-family: var(--font_display); font-size: var(--fs_md); }
+    .fi_modal_close { background: transparent; border: none; font-size: var(--fs_lg); color: var(--text_secondary); }
+    .fi_modal_close:hover { color: var(--color_danger); }
+    .fi_modal_body { padding: var(--space_4); max-height: 60vh; overflow-y: auto; }
+    .fi_modal_footer { padding: var(--space_4); border-top: 1px solid var(--border_soft); display: flex; justify-content: flex-end; gap: var(--space_3); }
+
+    /* ---------- Modale "Suivi" : Gantt des actions confirmées ---------- */
+    .idx_suivi_modal { width: fit-content; min-width: 320px; max-width: 96vw; }
+    .idx_suivi_spinner { display: flex; align-items: center; justify-content: center; min-height: 160px; }
+    .idx_suivi_modal .fi_modal_body { max-height: 70vh; padding: 0; overflow: auto; }
+    .idx_gantt { --idx_controle: #d97706; display: grid; width: max-content; min-width: 100%; font-size: var(--fs_xs); }
+    .idx_gantt_cell { border-bottom: 1px solid var(--border_soft); min-height: 44px; position: relative; }
+    .idx_gantt_head { position: sticky; top: 0; z-index: 3; background: var(--color_paper_raised); min-height: 22px; text-align: center; color: var(--text_secondary); font-weight: 600; border-left: 1px solid var(--border_soft); }
+    .idx_gantt_head.is_month { top: 0; text-align: left; padding-left: var(--space_2); }
+    .idx_gantt_head.is_day { top: 22px; line-height: 1.25; }
+    .idx_gantt_head.is_month { white-space: nowrap; overflow: hidden; }
+    .idx_gantt_wd { display: block; font-weight: 500; font-size: .85em; opacity: .85; }
+    .idx_gantt_head.is_today { color: var(--color_danger); font-weight: 800; }
+    .idx_gantt_head.is_today .idx_gantt_wd { font-weight: 800; opacity: 1; }
+    /* Ligne des jours : vert clair = jour couvert par au moins une formation ;
+       orange clair = jour de contrôle (prioritaire sur le vert). */
+    .idx_gantt_head.is_formation { background: color-mix(in srgb, var(--color_teal) 28%, var(--color_paper_raised)); }
+    .idx_gantt_head.is_controle { background: color-mix(in srgb, var(--idx_controle) 32%, var(--color_paper_raised)); }
+    /* Colonne d'un jour de contrôle : bande orange clair sur toute la hauteur (sans position:relative, pour rester sous les barres). */
+    .idx_gantt_colctrl { min-height: 44px; background: color-mix(in srgb, var(--idx_controle) 14%, transparent); }
+    .idx_gantt_label { position: sticky; left: 0; z-index: 2; background: var(--color_paper_raised); padding: var(--space_2) var(--space_3); border-right: 1px solid var(--border_soft); }
+    .idx_gantt_label.is_corner { z-index: 4; top: 0; grid-row: span 2; font-weight: 600; color: var(--text_secondary); }
+    .idx_gantt_label b { display: block; font-size: var(--fs_sm); }
+    .idx_gantt_label span { display: block; color: var(--text_secondary); }
+    .idx_gantt_bar { align-self: center; height: 22px; margin: 0 1px; background: var(--color_teal); border-radius: var(--radius_sm); opacity: .9; }
+    .idx_gantt_controle { align-self: center; justify-self: center; z-index: 1; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; color: var(--idx_controle); font-size: 1.05rem; line-height: 1; filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); cursor: grab; touch-action: none; user-select: none; }
+    .idx_gantt_controle.is_drag { cursor: grabbing; z-index: 5; transform-origin: center; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+    .idx_suivi_legende { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space_1) var(--space_4); padding: var(--space_2) var(--space_4); border-top: 1px solid var(--border_soft); font-size: var(--fs_xs); color: var(--text_secondary); }
+    .idx_suivi_legende i { color: var(--idx_controle, #d97706); margin-right: var(--space_1); }
+    .idx_gantt_bar.is_libre { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: copy; transition: opacity .5s; }
+    .idx_gantt_bar.is_libre.is_appui { opacity: .55; }
+    .idx_gantt_today { background: rgba(200, 60, 60, 0.07); }
+    .idx_suivi_vide { padding: var(--space_4); color: var(--text_secondary); }
+
+    /* ---------- Modale Calculette de stage (recopiée depuis fi.html, mode autonome) ---------- */
+    .idx_calculette_modal .fi_modal_body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space_3) var(--space_4);
+    }
+    .fi_stage_field { display: flex; flex-direction: column; gap: var(--space_1); }
+    .fi_stage_field label { font-size: var(--fs_xs); color: var(--text_secondary); font-weight: 600; }
+    .fi_stage_field input {
+      font-family: inherit;
+      font-size: var(--fs_sm);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      text-align: center;
+    }
+    .fi_stage_field input:read-only { background: var(--color_paper); color: var(--text_secondary); }
+    .fi_stage_field_wide { grid-column: 1 / -1; }
+
+    /* ---------- Modale "Spécialités PP" : liste + formulaire d'ajout ---------- */
+    .idx_spec_modal { max-width: 920px; }
+    .idx_spec_modal .fi_modal_body { max-height: 65vh; }
+    .idx_spec_table { width: 100%; border-collapse: collapse; font-size: var(--fs_sm); }
+    .idx_spec_table th, .idx_spec_table td {
+      padding: var(--space_2) var(--space_2);
+      border-bottom: 1px solid var(--border_soft);
+      text-align: center;
+      vertical-align: top;
+    }
+    .idx_spec_table th {
+      position: sticky;
+      top: calc(var(--space_4) * -1);
+      background: var(--color_paper_raised);
+      color: var(--text_secondary);
+      font-size: var(--fs_xs);
+      font-weight: 600;
+      box-shadow: inset 0 -1px 0 var(--border_soft);
+      border-bottom: none;
+    }
+    .idx_spec_table th:first-child, .idx_spec_table td:first-child { text-align: left; font-weight: 600; }
+    .idx_spec_table td.is_oui { color: var(--color_teal); font-weight: 700; }
+    .idx_spec_table td.is_cond { color: var(--text_secondary); font-style: italic; }
+    .idx_spec_empty { color: var(--text_secondary); font-size: var(--fs_sm); text-align: center; margin: 0; }
+    .idx_spec_form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space_3) var(--space_4);
+      margin-top: var(--space_4);
+      padding-top: var(--space_4);
+      border-top: 1px solid var(--border_soft);
+    }
+    .idx_spec_form[hidden] { display: none; }
+    .idx_spec_form h4 { grid-column: 1 / -1; margin: 0; font-family: var(--font_display); font-size: var(--fs_base); }
+    .idx_spec_form .fi_stage_field input[type="text"] { text-align: left; }
+    .idx_spec_checks { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space_2) var(--space_5); }
+    .idx_spec_checks label {
+      display: inline-flex; align-items: center; gap: var(--space_2);
+      font-size: var(--fs_sm); color: var(--text_primary); cursor: pointer;
+    }
+    .idx_spec_checks label small { color: var(--text_secondary); }
+    .idx_spec_error { grid-column: 1 / -1; color: var(--color_danger); font-size: var(--fs_sm); margin: 0; }
+    .idx_spec_error[hidden] { display: none; }
+    @media (max-width: 560px) {
+      .idx_spec_form { grid-template-columns: 1fr; }
+    }
+
+    /* ---------- Modale "Chercher un contact" ---------- */
+    .idx_contact_search {
+      width: 100%;
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: var(--space_2) var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+    }
+    .idx_contact_search:focus { outline: 2px solid var(--color_teal_light); outline-offset: 1px; }
+    .idx_contact_meta { font-size: var(--fs_xs); color: var(--text_secondary); margin: var(--space_2) 0; }
+    .idx_contact_item {
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      padding: var(--space_2) var(--space_3);
+      margin-bottom: var(--space_2);
+    }
+    .idx_contact_top { display: flex; align-items: center; gap: var(--space_2); flex-wrap: wrap; }
+    .idx_contact_nom { font-weight: 600; font-size: var(--fs_sm); }
+    .idx_contact_tag {
+      font-family: var(--font_mono);
+      font-size: var(--fs_xs);
+      color: var(--text_secondary);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      padding: 0 6px;
+    }
+    .idx_contact_coord {
+      margin: var(--space_1) 0 0 0;
+      font-size: var(--fs_sm);
+      color: var(--color_teal);
+      white-space: pre-line;
+      user-select: all;
+    }
+
+    .btn_ghost {
+      background: transparent;
+      color: var(--text_primary);
+      border: 1px solid var(--border_soft);
+      padding: var(--space_1) var(--space_3);
+      border-radius: var(--radius_sm);
+      font-size: var(--fs_sm);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space_2);
+    }
+    .btn_ghost:hover { border-color: var(--color_seal); color: var(--color_seal); }
+  </style>
+</head>
+<body>
+
+  <header class="navbar" data-tone="dark">
+    <div class="page_title_group">
+      <span class="page_eyebrow">Accueil</span>
+      <h1 class="page_title">CNFCPP - UR Siliana</h1>
+    </div>
+    <div class="navbar_alert" id="navbar_card_alert"></div>
+    <div class="navbar_actions">
+      <span class="user_badge" id="header_user_badge" title="Non connecté">--</span>
+      <button type="button" class="btn_logout" id="header_btn_logout" hidden title="Se déconnecter">
+        <span class="btn_logout_label">Se déconnecter</span>
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="index_content">
+    <div class="index_grid">
+
+      <article class="index_card" data-href="prosp.html" data-page="prosp">
+        <div class="index_card_top">
+          <i class="bi bi-bullseye"></i>
+          <span class="index_card_code">PROSP</span>
+        </div>
+        <h3>Prospections</h3>
+        <p class="index_card_tagline">Contacts, relances et suivi du statut des entreprises</p>
+      </article>
+
+      <article class="index_card" data-href="ci.html" data-page="ci">
+        <div class="index_card_top">
+          <i class="bi bi-percent"></i>
+          <span class="index_card_code">CI</span>
+        </div>
+        <h3>Crédit d'impôt</h3>
+        <ul class="index_card_sections">
+          <li><a href="ci.html#tdb">Tableau de bord</a></li>
+          <li><a href="ci.html#bilans_siliana">Bilans Siliana</a></li>
+          <li><a href="ci.html#bilans_tunis">Bilans Tunis</a></li>
+        </ul>
+      </article>
+
+      <article class="index_card" data-href="dti.html" data-page="dti">
+        <div class="index_card_top">
+          <i class="bi bi-building"></i>
+          <span class="index_card_code">DTI</span>
+        </div>
+        <h3>Droits de tirage individuels</h3>
+        <ul class="index_card_sections">
+          <li><a href="dti.html#formation_initiale">Formation initiale</a></li>
+          <li><a href="dti.html#plans">Plans</a></li>
+          <li><a href="dti.html#commission">Commission</a></li>
+        </ul>
+      </article>
+
+      <article class="index_card" data-href="dtc.html" data-page="dtc">
+        <div class="index_card_top">
+          <i class="bi bi-buildings"></i>
+          <span class="index_card_code">DTC</span>
+        </div>
+        <h3>Droits de tirage collectifs</h3>
+        <ul class="index_card_sections">
+          <li><a href="dtc.html#commissions">Commissions</a></li>
+          <li><a href="dtc.html#consultations">Consultations</a></li>
+          <li><a href="dtc.html#plans">Plans</a></li>
+        </ul>
+      </article>
+
+      <article class="index_card" data-href="pp.html" data-page="pp">
+        <div class="index_card_top">
+          <i class="bi bi-mortarboard"></i>
+          <span class="index_card_code">PP</span>
+        </div>
+        <h3>Promotion professionnelle</h3>
+        <ul class="index_card_sections">
+          <li><a href="pp.html#demandes">Demandes</a></li>
+          <li><a href="pp.html#dossiers">Dossiers</a></li>
+          <li><a href="pp.html#inscrits">Inscrits</a></li>
+          <li><a href="pp.html#classes">Classes</a></li>
+        </ul>
+      </article>
+
+      <article class="index_card" data-href="part.html" data-page="part">
+        <div class="index_card_top">
+          <i class="bi bi-diagram-3"></i>
+          <span class="index_card_code">PART</span>
+        </div>
+        <h3>Partenaires</h3>
+        <ul class="index_card_sections">
+          <li><a href="part.html#entreprises">Entreprises</a></li>
+          <li><a href="part.html#cabinets_formation">Cabinets de formation</a></li>
+          <li><a href="part.html#organismes">Organismes</a></li>
+          <li><a href="part.html#partenaires_pp">Partenaires PP</a></li>
+        </ul>
+      </article>
+
+      <article class="index_card" data-href="docs.html" data-page="docs">
+        <div class="index_card_top">
+          <i class="bi bi-file-earmark-text"></i>
+          <span class="index_card_code">DOCS</span>
+        </div>
+        <h3>Documents</h3>
+        <ul class="index_card_sections">
+          <li><a href="docs.html#convpp">Conventions PP</a></li>
+          <li><a href="docs.html#notes">Notes de service</a></li>
+          <li><a href="docs.html#manuels">Manuels de procédures</a></li>
+        </ul>
+      </article>
+
+    </div>
+    <div class="index_shortcuts">
+      <button type="button" class="index_shortcut_btn" id="idx_btn_calculette">
+        <i class="bi bi-calculator"></i> Calculette de stage
+      </button>
+      <button type="button" class="index_shortcut_btn" id="idx_btn_smig">
+        <i class="bi bi-gear"></i> Réglage SMIG
+      </button>
+      <button type="button" class="index_shortcut_btn" id="idx_btn_specialites" hidden title="Spécialités de la promotion professionnelle et pièces de leur dossier">
+        <i class="bi bi-mortarboard"></i> Spécialités PP
+      </button>
+      <button type="button" class="index_shortcut_btn" id="idx_btn_suivi" title="Planning des actions confirmées">
+        <i class="bi bi-calendar3-range"></i> Suivi
+      </button>
+      <button type="button" class="index_shortcut_btn" id="idx_btn_contact">
+        <i class="bi bi-search"></i> Chercher un contact
+      </button>
+    </div>
+  </main>
+
+  <!-- Modale Calculette de stage : recopiée du mode autonome ("Calculette") de
+       fi.html — calcul de la durée entre deux dates jj/mm (convention "mois de
+       26 jours"). Les champs N°/durée déclarée/durée agréée/genre, propres à un
+       dossier de stage, ne sont pas repris ici (masqués côté fi.html en mode
+       autonome, donc absents du même résultat visuel). -->
+  <div class="fi_modal_overlay" id="idx_modal_calculette">
+    <div class="fi_modal idx_calculette_modal">
+      <div class="fi_modal_header">
+        <h3>Calculette de stage</h3>
+        <button type="button" class="fi_modal_close" data-close-modal="idx_modal_calculette"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body">
+        <div class="fi_stage_field">
+          <label>Début</label>
+          <input type="text" id="idx_stage_deb" placeholder="jj/mm" />
+        </div>
+        <div class="fi_stage_field">
+          <label>Fin</label>
+          <input type="text" id="idx_stage_fin" placeholder="jj/mm" />
+        </div>
+        <div class="fi_stage_field fi_stage_field_wide">
+          <label>Durée calculée</label>
+          <input type="text" id="idx_stage_cal" readonly />
+        </div>
+      </div>
+      <div class="fi_modal_footer">
+        <button type="button" class="btn_ghost" id="idx_stage_btn_reset">Réinitialiser</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale Contact : structure recopiée de idx_modal_calculette ci-dessus.
+       Contenu (recherche/liste de contacts) à implémenter plus tard ; pour
+       l'instant, seul l'état de chargement est affiché. -->
+  <div class="fi_modal_overlay" id="idx_modal_contact">
+    <div class="fi_modal">
+      <div class="fi_modal_header">
+        <h3>Chercher un contact</h3>
+        <button type="button" class="fi_modal_close" data-close-modal="idx_modal_contact"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body">
+        <input type="search" class="idx_contact_search" id="idx_contact_input" placeholder="Nom, prénom, raison sociale..." autocomplete="off" />
+        <p class="idx_contact_meta" id="idx_contact_meta"></p>
+        <div id="idx_contact_results"><span class="spinner" role="status" aria-label="Chargement"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Suivi" : planning (Gantt) des actions confirmées des plans DTI de
+       l'année (date début/fin, horaire, lieu court). Données : listActionsConfirmees. -->
+  <div class="fi_modal_overlay" id="idx_modal_suivi">
+    <div class="fi_modal idx_suivi_modal">
+      <div class="fi_modal_header">
+        <h3>Suivi — actions confirmées <span id="idx_suivi_annee"></span></h3>
+        <button type="button" class="fi_modal_close" data-close-modal="idx_modal_suivi"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body" id="idx_suivi_corps"></div>
+      <div class="idx_suivi_legende">
+        <span><i class="bi bi-clipboard-check-fill"></i> Glisser l'icône : changer la date du contrôle</span>
+        <span><i class="bi bi-hand-index-thumb"></i> Appui prolongé sur une barre : créer le contrôle</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="fi_modal_overlay" id="fi_modal_smig">
+    <div class="fi_modal">
+      <div class="fi_modal_header">
+        <h3>Réglage Smig</h3>
+        <button type="button" class="fi_modal_close" data-close-modal="fi_modal_smig"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body">
+        <table class="fi_smig_table" id="fi_smig_table">
+          <thead>
+            <tr><th>Année</th><th>Smig 40h</th><th>Smig 48h</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="fi_smig_note">
+          l'année en cours est créée automatiquement.
+        </p>
+      </div>
+      <div class="fi_modal_footer fi_smig_footer">
+        <button type="button" class="btn_ghost" data-smig-copy hidden><i class="bi bi-clipboard-plus"></i> Copier SMIG</button>
+        <button type="button" class="btn_ghost" data-smig-save hidden><i class="bi bi-check-lg"></i> Enregistrer</button>
+        <!-- <button type="button" class="btn_ghost" data-smig-cancel>Annuler</button> -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Spécialités PP" : liste des spécialités de l'onglet "specialites"
+       (Sheet PP) avec les pièces du dossier demandées pour chacune, et ajout
+       d'une nouvelle spécialité. Ces pièces pilotent la modale "Vers dossiers"
+       et l'import Excel des dossiers de pp.html. -->
+  <div class="fi_modal_overlay" id="idx_modal_specialites" data-perm="pp">
+    <div class="fi_modal idx_spec_modal">
+      <div class="fi_modal_header">
+        <h3>Spécialités PP</h3>
+        <button type="button" class="fi_modal_close" data-close-modal="idx_modal_specialites"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="fi_modal_body">
+        <div id="idx_spec_liste"><span class="spinner" role="status" aria-label="Chargement"></span></div>
+
+        <form class="idx_spec_form" id="idx_spec_form" hidden>
+          <h4>Nouvelle spécialité</h4>
+          <div class="fi_stage_field fi_stage_field_wide">
+            <label for="idx_spec_nom">Spécialité</label>
+            <input type="text" id="idx_spec_nom" placeholder="ex. LTI4" required />
+          </div>
+          <div class="idx_spec_checks">
+            <label><input type="checkbox" name="Photos" /> Photos</label>
+            <label><input type="checkbox" name="Copies CIN" /> Copies CIN</label>
+            <label><input type="checkbox" name="Attestation travail" /> Attestation travail</label>
+            <label><input type="checkbox" name="Profession" /> Profession</label>
+            <label><input type="checkbox" name="Affiliation SS" /> Affiliation SS <small>(Oui / Expérience PROF / Non)</small></label>
+          </div>
+          <div class="fi_stage_field">
+            <label for="idx_spec_diplome">Diplôme exigé (choix séparés par « ou »)</label>
+            <input type="text" id="idx_spec_diplome" placeholder="ex. CAP ou Certificat de scolarité (vide = non demandé)" />
+          </div>
+          <p class="idx_spec_error" id="idx_spec_error" hidden></p>
+        </form>
+      </div>
+      <div class="fi_modal_footer">
+        <button type="button" class="btn_ghost" id="idx_spec_btn_ajouter"><i class="bi bi-plus-lg"></i> Ajouter</button>
+        <button type="button" class="btn_ghost" id="idx_spec_btn_enregistrer" hidden><i class="bi bi-check-lg"></i> Enregistrer</button>
+        <button type="button" class="btn_ghost" id="idx_spec_btn_annuler" hidden>Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale de connexion : tout est affiché en une seule fois (grille
+       des profils, mot de passe, "Rester connecté(e)", bouton). Profils
+       chargés depuis Paramètres > onglet "users" ; un profil sans M2p
+       apparaît grisé (pas d'accès). Ne se ferme QUE par une connexion
+       réussie — pas de clic extérieur possible. -->
+  <div class="login_modal_overlay" id="login_modal_overlay">
+    <div class="login_modal">
+      <div class="login_modal_header">
+        <h2><i class="bi bi-person-circle"></i> Qui êtes-vous ?</h2>
+        <p class="login_modal_note">Choisissez votre profil et saisissez votre mot de passe.</p>
+      </div>
+      <div class="login_users_grid" id="login_users_grid">
+        <span class="spinner" role="status" aria-label="Chargement"></span>
+      </div>
+
+      <form class="login_password_form" id="login_password_form">
+        <label>Mot de passe
+          <input type="password" id="login_password_input" autocomplete="current-password" disabled required />
+        </label>
+        <p class="login_password_error" id="login_password_error" hidden></p>
+        <div class="login_password_form_actions">
+          <label class="login_remember_row">
+            <input type="checkbox" id="login_remember_checkbox" /> Rester connecté(e)
+          </label>
+          <button type="submit" class="btn_login"><i class="bi bi-box-arrow-in-right"></i> Se connecter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/permissions.js"></script>
+  <script src="js/smig.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      //document.getElementById("header_user_badge").addEventListener("click", ouvrirModaleConnexion);
+      document.getElementById("header_btn_logout").addEventListener("click", (e) => {
+        e.stopPropagation();
+        seDeconnecter();
+      });
+      document.getElementById("login_password_form").addEventListener("submit", onSubmitLoginPassword);
+
+      // Cartes entièrement cliquables (data-href) : un clic sur un lien de
+      // section (index_card_sections) navigue vers l'ancre précise et ne
+      // déclenche pas la navigation générale de la carte.
+      document.querySelectorAll(".index_card[data-href]").forEach((carte) => {
+        carte.addEventListener("click", () => {
+          window.location.href = carte.dataset.href;
+        });
+        carte.querySelectorAll(".index_card_sections a").forEach((lien) => {
+          lien.addEventListener("click", (e) => e.stopPropagation());
+        });
+      });
+
+      // Bandeau d'alerte "délai de clôture bilan" (carte CI) : câblé une
+      // seule fois ici, le contenu (CI_ALERTES_SILIANA) est recalculé par
+      // verifierBilansSilianaEnRetard() à chaque connexion/déconnexion.
+      const carteCI = document.querySelector('.index_card[data-page="ci"]');
+      carteCI?.addEventListener("mouseenter", () => afficherBandeauAlerte(CI_ALERTES_SILIANA));
+      carteCI?.addEventListener("mouseleave", masquerBandeauAlerte);
+      // Idem pour la carte DTC (clôture des consultations).
+      const carteDTC = document.querySelector('.index_card[data-page="dtc"]');
+      carteDTC?.addEventListener("mouseenter", () => afficherBandeauAlerte(DTC_ALERTES));
+      carteDTC?.addEventListener("mouseleave", masquerBandeauAlerte);
+
+      // Pas de fermeture au clic extérieur : la modale ne disparaît que
+      // lorsqu'un profil est désigné (voir ouvrirModaleConnexion).
+      // Session ouverte avant l'introduction des droits (aucune colonne de droit) : on la referme.
+      if (getCurrentUser() && window.URSPerm && URSPerm.sessionObsolete()) clearCurrentUser();
+      mettreAJourEtatConnexion();
+      if (!getCurrentUser()) {
+        ouvrirModaleConnexion();
+      }
+
+      wireModaleCalculette();
+      wireModaleSpecialites();
+      wireModaleSuivi();
+      initSmigShared({
+        buttonId: "idx_btn_smig",
+        modalId: "fi_modal_smig",
+        tableId: "fi_smig_table",
+        currentYear: new Date().getFullYear(),
+        apiCaller: apiCall,
+        alerterSiVide: true
+      });
+    });
+
+    /* ============================================================
+       Calculette de stage (raccourci accueil) — recopiée du mode
+       autonome de fi.html : calcul de durée entre deux dates jj/mm,
+       convention "mois de 26 jours". Année de référence = année
+       civile en cours (pas de dossier ici pour la fournir).
+       ============================================================ */
+
+    function openModal(id) { document.getElementById(id)?.classList.add("is_visible"); }
+    function closeModal(id) { document.getElementById(id)?.classList.remove("is_visible"); }
+
+    function wireModaleCalculette() {
+      document.getElementById("idx_btn_calculette")?.addEventListener("click", () => {
+        reinitialiserCalculette();
+        openModal("idx_modal_calculette");
+        document.getElementById("idx_stage_deb").focus();
+      });
+      document.getElementById("idx_stage_deb")?.addEventListener("input", calculerDureeStageIdx);
+      document.getElementById("idx_stage_fin")?.addEventListener("input", calculerDureeStageIdx);
+      document.getElementById("idx_stage_deb")?.addEventListener("blur", (e) => {
+        e.target.value = normaliserDateStageIdx(e.target.value);
+        calculerDureeStageIdx();
+      });
+      document.getElementById("idx_stage_fin")?.addEventListener("blur", (e) => {
+        e.target.value = normaliserDateStageIdx(e.target.value);
+        calculerDureeStageIdx();
+      });
+      document.getElementById("idx_stage_btn_reset")?.addEventListener("click", reinitialiserCalculette);
+
+      document.getElementById("idx_btn_contact")?.addEventListener("click", () => {
+        openModal("idx_modal_contact");
+        const champ = document.getElementById("idx_contact_input");
+        champ.value = "";
+        // L'index est reconstruit par le serveur à chaque ouverture ;
+        // le résultat précédent s'affiche en attendant.
+        if (CONTACTS_IDX) rechercherContactsIdx();
+        champ.focus();
+        chargerContactsIdx().then(() => rechercherContactsIdx());
+      });
+      document.getElementById("idx_contact_input")?.addEventListener("input", rechercherContactsIdx);
+
+      document.querySelectorAll("[data-close-modal]").forEach((btn) => {
+        btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
+      });
+      document.querySelectorAll(".fi_modal_overlay").forEach((overlay) => {
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) closeModal(overlay.id);
+        });
+      });
+    }
+
+    /* ============================================================
+       SUIVI — Gantt des actions confirmées (plans DTI de l'année).
+       Une ligne par action, barre = dateDebut → dateFin ; la ligne
+       indique entreprise, réf, lieu court ("Siège de la société -
+       Siliana" → "Siliana") et horaire.
+       ============================================================ */
+    let SUIVI_ANNEE = new Date().getFullYear();
+    let SUIVI_JETON = 0;
+    let SUIVI_ACTIONS = []; // actions brutes renvoyées par listActionsConfirmees (modifiées en place lors d'un glisser du contrôle)
+
+    function wireModaleSuivi() {
+      document.getElementById("idx_btn_suivi")?.addEventListener("click", () => {
+        SUIVI_ANNEE = new Date().getFullYear();
+        openModal("idx_modal_suivi");
+        document.getElementById("idx_suivi_annee").textContent = SUIVI_ANNEE;
+        if (SUIVI_CHARGE) {
+          // Données déjà préchargées au démarrage : affichage immédiat, puis actualisation discrète.
+          rendreSuivi(true);
+          prechargerSuivi(true);
+        } else {
+          chargerSuivi();
+        }
+      });
+      setInterval(colorerBoutonSuivi, 5 * 60 * 1000); // le "aujourd'hui / demain" change à minuit
+    }
+
+    // Chargement des données du Suivi dès l'ouverture de l'index (une fois connecté),
+    // pour colorer le bouton sans attendre l'ouverture de la modale.
+    let SUIVI_CHARGE = false, SUIVI_EN_COURS = false;
+    async function prechargerSuivi(forcer, sansCouleur) {
+      if (SUIVI_EN_COURS || (SUIVI_CHARGE && !forcer)) return;
+      SUIVI_EN_COURS = true;
+      const annee = new Date().getFullYear();
+      try {
+        const actions = await apiCall("listActionsConfirmees", { annee });
+        SUIVI_ACTIONS = actionsASuivreSuivi(actions);
+        SUIVI_CHARGE = true;
+        if (!sansCouleur) colorerBoutonSuivi();
+        // Modale ouverte pendant l'actualisation : on redessine en conservant la position.
+        if (forcer && document.getElementById("idx_modal_suivi")?.classList.contains("is_visible")) rendreSuivi(false);
+      } catch (err) {
+        console.warn("Suivi : préchargement impossible :", err.message || err);
+      } finally {
+        SUIVI_EN_COURS = false;
+      }
+    }
+
+    // Prochaine date de contrôle (aujourd'hui ou à venir) -> classe du bouton.
+    function colorerBoutonSuivi() {
+      const btn = document.getElementById("idx_btn_suivi");
+      if (!btn) return;
+      const auj = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000); // jour local
+      const jours = SUIVI_ACTIONS.map((a) => jourUtcSuivi(a.dateControle)).filter((j) => j !== null && j >= auj);
+      btn.classList.remove("is_ctrl_aujourdhui", "is_ctrl_demain", "is_ctrl_programme");
+      let titre = "Planning des actions confirmées";
+      if (jours.includes(auj)) { btn.classList.add("is_ctrl_aujourdhui"); titre += " — contrôle aujourd'hui"; }
+      else if (jours.includes(auj + 1)) { btn.classList.add("is_ctrl_demain"); titre += " — contrôle demain"; }
+      else if (jours.length) { btn.classList.add("is_ctrl_programme"); titre += " — contrôle programmé"; }
+      btn.title = titre;
+    }
+
+    async function chargerSuivi() {
+      const corps = document.getElementById("idx_suivi_corps");
+      document.getElementById("idx_suivi_annee").textContent = SUIVI_ANNEE;
+      corps.innerHTML = `<div class="idx_suivi_spinner">${Spinner.html()}</div>`;
+      const jeton = ++SUIVI_JETON; // ignore une réponse périmée (changement d'année rapide)
+      try {
+        const actions = await apiCall("listActionsConfirmees", { annee: SUIVI_ANNEE });
+        if (jeton !== SUIVI_JETON) return;
+        SUIVI_ACTIONS = actionsASuivreSuivi(actions);
+        SUIVI_CHARGE = true;
+        rendreSuivi(true);
+      } catch (err) {
+        if (jeton !== SUIVI_JETON) return;
+        corps.innerHTML = `<p class="idx_suivi_vide">Erreur de chargement : ${escSuivi(err.message || err)}</p>`;
+      }
+    }
+
+    // Redessine le Gantt ; hors premier affichage, conserve la position de défilement.
+    function rendreSuivi(centrerSurAujourdhui) {
+      const corps = document.getElementById("idx_suivi_corps");
+      const gauche = corps.scrollLeft, haut = corps.scrollTop;
+      corps.innerHTML = construireGantt(SUIVI_ACTIONS);
+      if (centrerSurAujourdhui) {
+        const auj = corps.querySelector(".idx_gantt_head.is_today");
+        if (auj) corps.scrollLeft = Math.max(0, auj.offsetLeft - 300);
+      } else {
+        corps.scrollLeft = gauche;
+        corps.scrollTop = haut;
+      }
+      brancherGlisserControle(corps);
+      brancherAppuiLongControle(corps);
+      colorerBoutonSuivi();
+    }
+
+    // Appui prolongé (≈ 0,5 s) sur la barre d'une action sans contrôle : l'icône de
+    // contrôle est placée au jour pressé (borné à dateDebut → dateFin), puis enregistrée
+    // comme pour un glissement. Un déplacement du doigt/souris > 8 px annule (défilement).
+    function brancherAppuiLongControle(corps) {
+      const LARGEUR_JOUR = 26;
+      const DUREE_MS = 500;
+      corps.querySelectorAll(".idx_gantt_bar.is_libre").forEach((barre) => {
+        barre.addEventListener("contextmenu", (e) => e.preventDefault());
+        barre.addEventListener("pointerdown", (e) => {
+          if (e.button !== undefined && e.button !== 0) return;
+          const x0 = e.clientX, y0 = e.clientY;
+          const d1 = Number(barre.dataset.d1), d2 = Number(barre.dataset.d2);
+          let minuteur = null;
+
+          const annuler = () => {
+            clearTimeout(minuteur);
+            barre.classList.remove("is_appui");
+            barre.removeEventListener("pointermove", bouger);
+            barre.removeEventListener("pointerup", annuler);
+            barre.removeEventListener("pointercancel", annuler);
+            barre.removeEventListener("pointerleave", annuler);
+          };
+          const bouger = (ev) => {
+            if (Math.abs(ev.clientX - x0) > 8 || Math.abs(ev.clientY - y0) > 8) annuler();
+          };
+
+          barre.classList.add("is_appui");
+          barre.addEventListener("pointermove", bouger);
+          barre.addEventListener("pointerup", annuler);
+          barre.addEventListener("pointercancel", annuler);
+          barre.addEventListener("pointerleave", annuler);
+
+          minuteur = setTimeout(() => {
+            const gauche = barre.getBoundingClientRect().left;
+            const jour = Math.min(d2, Math.max(d1, d1 + Math.floor((x0 - gauche) / LARGEUR_JOUR)));
+            annuler();
+            enregistrerDateControleSuivi(barre.dataset.plan, barre.dataset.ref, jour);
+          }, DUREE_MS);
+        });
+      });
+    }
+
+    // Glisser l'icône de contrôle : déplacement par jours entiers, limité aux
+    // jours de la formation (dateDebut → dateFin) de sa ligne ; au relâchement,
+    // la nouvelle date est enregistrée dans le plan (action modifierDateControleAction).
+    function brancherGlisserControle(corps) {
+      const LARGEUR_JOUR = 26; // doit correspondre à repeat(n, 26px) de construireGantt
+      corps.querySelectorAll(".idx_gantt_controle").forEach((ic) => {
+        ic.addEventListener("pointerdown", (e) => {
+          if (e.button !== undefined && e.button !== 0) return;
+          e.preventDefault();
+          const d1 = Number(ic.dataset.d1), d2 = Number(ic.dataset.d2), depart = Number(ic.dataset.dc);
+          const origine = e.clientX;
+          let cible = depart;
+          ic.setPointerCapture(e.pointerId);
+          ic.classList.add("is_drag");
+
+          const deplacer = (ev) => {
+            const delta = Math.round((ev.clientX - origine) / LARGEUR_JOUR);
+            cible = Math.min(d2, Math.max(d1, depart + delta));
+            ic.style.transform = `translateX(${(cible - depart) * LARGEUR_JOUR}px)`;
+          };
+          const terminer = (ev) => {
+            ic.removeEventListener("pointermove", deplacer);
+            ic.removeEventListener("pointerup", terminer);
+            ic.removeEventListener("pointercancel", terminer);
+            ic.classList.remove("is_drag");
+            if (ev.type === "pointercancel" || cible === depart) { ic.style.transform = ""; return; }
+            enregistrerDateControleSuivi(ic.dataset.plan, ic.dataset.ref, cible);
+          };
+          ic.addEventListener("pointermove", deplacer);
+          ic.addEventListener("pointerup", terminer);
+          ic.addEventListener("pointercancel", terminer);
+        });
+      });
+    }
+
+    // Mise à jour immédiate de l'affichage, puis enregistrement ; en cas d'échec, retour à l'ancienne date.
+    async function enregistrerDateControleSuivi(planId, ref, jour) {
+      const action = SUIVI_ACTIONS.find((a) => a.planId === planId && String(a.ref) === String(ref));
+      if (!action) return;
+      const ancienne = action.dateControle;
+      const iso = new Date(jour * 86400000).toISOString().slice(0, 10);
+      action.dateControle = iso;
+      rendreSuivi(false);
+      try {
+        await apiCall("modifierDateControleAction", { fileId: planId, ref, dateControle: iso });
+      } catch (err) {
+        action.dateControle = ancienne;
+        rendreSuivi(false);
+        alert("Date de contrôle non enregistrée : " + (err.message || err));
+      }
+    }
+
+    // Suivi : on ne garde que les actions confirmées dont "Agréés suivi" est vide
+    // (un contrôle déjà fait — valeur renseignée, même 0 — est ignoré).
+    function actionsASuivreSuivi(actions) {
+      return (Array.isArray(actions) ? actions : [])
+        .filter((a) => String(a.agreesSuivi ?? "").trim() === "");
+    }
+
+    function escSuivi(v) {
+      return String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    }
+    function lieuCourtSuivi(l) {
+      const parts = String(l || "").split(/\s[-–—]\s/);
+      return parts[parts.length - 1].trim();
+    }
+    function jourUtcSuivi(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+      return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000 : null;
+    }
+
+    function construireGantt(actions) {
+      const lignes = actions
+        .map((a) => ({ ...a, d1: jourUtcSuivi(a.dateDebut), d2: jourUtcSuivi(a.dateFin), dc: jourUtcSuivi(a.dateControle) }))
+        .filter((a) => a.d1 !== null)
+        .map((a) => ({ ...a, d2: a.d2 === null || a.d2 < a.d1 ? a.d1 : a.d2 }))
+        .sort((x, y) => x.d1 - y.d1 || x.d2 - y.d2);
+      if (!lignes.length) return `<p class="idx_suivi_vide">Aucune action en attente de suivi.</p>`;
+
+      const min = Math.min(...lignes.map((a) => a.d1)) - 2;
+      let max = Math.max(...lignes.map((a) => a.d2)) + 2;
+      // Le dernier mois doit couvrir au moins 4 colonnes pour que "mois année" tienne sur une seule ligne.
+      const moisFin = new Date(max * 86400000).getUTCMonth();
+      let spanFin = 0;
+      while (new Date((max - spanFin) * 86400000).getUTCMonth() === moisFin && max - spanFin >= min) spanFin++;
+      if (spanFin < 4) max += 4 - spanFin;
+      const n = max - min + 1;
+      const auj = Math.floor(Date.now() / 86400000);
+      const JOURS = ["D", "L", "M", "M", "J", "V", "S"]; // initiales, dimanche = 0
+      const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+
+      // Jours couverts par au moins une formation / jours de contrôle (colonnes colorées)
+      const joursFormation = new Set(), joursControle = new Set();
+      lignes.forEach((a) => {
+        for (let d = a.d1; d <= a.d2; d++) joursFormation.add(d);
+        if (a.dc !== null) joursControle.add(a.dc);
+      });
+
+      let html = `<div class="idx_gantt" data-min="${min}" style="grid-template-columns: 230px repeat(${n}, 26px);">`;
+      html += `<div class="idx_gantt_label is_corner" style="grid-column:1;grid-row:1 / span 2;">Action</div>`;
+
+      // Ligne des mois (cellules fusionnées) puis ligne des jours
+      let col = 2;
+      while (col < n + 2) {
+        const d = new Date((min + col - 2) * 86400000);
+        const mois = d.getUTCMonth();
+        let span = 0;
+        while (col + span < n + 2 && new Date((min + col + span - 2) * 86400000).getUTCMonth() === mois) span++;
+        html += `<div class="idx_gantt_head is_month" style="grid-column:${col} / span ${span};grid-row:1;">${MOIS[mois]} ${d.getUTCFullYear()}</div>`;
+        col += span;
+      }
+      for (let i = 0; i < n; i++) {
+        const d = new Date((min + i) * 86400000);
+        const jour = min + i;
+        const classes = `${jour === auj ? " is_today" : ""}${joursFormation.has(jour) ? " is_formation" : ""}${joursControle.has(jour) ? " is_controle" : ""}`;
+        html += `<div class="idx_gantt_head is_day${classes}" style="grid-column:${i + 2};grid-row:2;"><span class="idx_gantt_wd">${JOURS[d.getUTCDay()]}</span>${d.getUTCDate()}</div>`;
+      }
+
+      lignes.forEach((a, r) => {
+        const row = r + 3;
+        const lieu = lieuCourtSuivi(a.lieu);
+        const info = [a.ref, lieu].filter(Boolean).join(" · ");
+        const infoBulle = [a.theme, `${a.dateDebut} → ${a.dateFin}`, a.horaire, a.lieu, a.cabinet, a.dc !== null ? `Contrôle : ${a.dateControle}${a.chargeControle ? " (" + a.chargeControle + ")" : ""}` : ""].filter(Boolean).join("\n");
+        html += `<div class="idx_gantt_label" style="grid-column:1;grid-row:${row};" title="${escSuivi(infoBulle)}"><b>${escSuivi(a.entreprise)}</b><span>${escSuivi(info)}</span><span>${escSuivi(a.horaire)}</span></div>`;
+        joursControle.forEach((jc) => {
+          if (jc >= min && jc <= max) html += `<div class="idx_gantt_colctrl" style="grid-column:${jc - min + 2};grid-row:${row};"></div>`;
+        });
+        if (auj >= min && auj <= max) html += `<div class="idx_gantt_cell idx_gantt_today" style="grid-column:${auj - min + 2};grid-row:${row};"></div>`;
+        // Action sans contrôle : la barre porte les données nécessaires au placement par appui prolongé.
+        const libre = a.dc === null;
+        const dataLibre = libre ? ` data-libre="1" data-plan="${escSuivi(a.planId)}" data-ref="${escSuivi(a.ref)}" data-d1="${a.d1}" data-d2="${a.d2}"` : "";
+        const titreBarre = libre ? infoBulle + "\nAppui prolongé : placer le contrôle à cette date" : infoBulle;
+        html += `<div class="idx_gantt_bar${libre ? " is_libre" : ""}"${dataLibre} style="grid-column:${a.d1 - min + 2} / ${a.d2 - min + 3};grid-row:${row};" title="${escSuivi(titreBarre)}"></div>`;
+        if (a.dc !== null && a.dc >= min && a.dc <= max) html += `<div class="idx_gantt_controle" data-plan="${escSuivi(a.planId)}" data-ref="${escSuivi(a.ref)}" data-d1="${a.d1}" data-d2="${a.d2}" data-dc="${a.dc}" style="grid-column:${a.dc - min + 2};grid-row:${row};" title="${escSuivi("Contrôle : " + a.dateControle + (a.chargeControle ? " (" + a.chargeControle + ")" : "") + " — glisser pour changer la date")}"><i class="bi bi-clipboard-check-fill"></i></div>`;
+      });
+      return html + `</div>`;
+    }
+
+    /* ============================================================
+       CHERCHER UN CONTACT — index reconstruit à chaque ouverture de la
+       modale par le script Apps Script (getcontact.gs), via l'action
+       backend "getContactsIndex". Recherche insensible aux accents/casse ;
+       tous les mots saisis doivent figurer dans le nom.
+       ============================================================ */
+    let CONTACTS_IDX = null;
+    let CONTACTS_IDX_PROMESSE = null;
+
+    function normaliserRechercheIdx(v) {
+      return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+    }
+
+    function chargerContactsIdx() {
+      if (CONTACTS_IDX_PROMESSE) return CONTACTS_IDX_PROMESSE;
+      const zone = document.getElementById("idx_contact_results");
+      if (!CONTACTS_IDX) zone.innerHTML = `${Spinner.html()}`;
+      CONTACTS_IDX_PROMESSE = apiCall("getContactsIndex", {})
+        .then((data) => { CONTACTS_IDX = data; })
+        .catch((err) => {
+          zone.innerHTML = `<p class="error_state">Erreur : ${echapperHtmlIdx(err.message)}</p>`;
+        })
+        .finally(() => { CONTACTS_IDX_PROMESSE = null; });
+      return CONTACTS_IDX_PROMESSE;
+    }
+
+    function rechercherContactsIdx() {
+      const zone = document.getElementById("idx_contact_results");
+      const meta = document.getElementById("idx_contact_meta");
+      if (!CONTACTS_IDX) return;
+
+      const mots = normaliserRechercheIdx(document.getElementById("idx_contact_input").value).split(" ").filter(Boolean);
+      meta.textContent = CONTACTS_IDX.generatedAt
+        ? `${CONTACTS_IDX.count} contacts — mis à jour le ${new Date(CONTACTS_IDX.generatedAt).toLocaleString("fr-FR")}`
+        : "";
+      if (!mots.length) {
+        zone.innerHTML = `<p class="idx_spec_empty">Saisissez un nom pour lancer la recherche.</p>`;
+        return;
+      }
+
+      const trouves = CONTACTS_IDX.contacts.filter((c) => mots.every((m) => c.k.includes(m)));
+      if (!trouves.length) {
+        zone.innerHTML = `<p class="idx_spec_empty">Aucun contact trouvé.</p>`;
+        return;
+      }
+      const LIMITE = 50;
+      zone.innerHTML = trouves.slice(0, LIMITE).map((c) => `
+        <div class="idx_contact_item">
+          <div class="idx_contact_top">
+            <span class="idx_contact_nom">${echapperHtmlIdx(c.n)}</span>
+            <span class="idx_contact_tag">${echapperHtmlIdx(c.r)} · ${echapperHtmlIdx(c.s)}</span>
+          </div>
+          <p class="idx_contact_coord">${echapperHtmlIdx(c.c)}</p>
+        </div>`).join("")
+        + (trouves.length > LIMITE ? `<p class="idx_spec_empty">${trouves.length - LIMITE} autres résultats : affinez la recherche.</p>` : "");
+    }
+
+    function reinitialiserCalculette() {
+      document.getElementById("idx_stage_deb").value = "";
+      document.getElementById("idx_stage_fin").value = "";
+      document.getElementById("idx_stage_cal").value = "";
+      document.getElementById("idx_stage_deb").focus();
+    }
+
+    function joursDansMoisIdx(annee, mois) {
+      return new Date(annee, mois, 0).getDate();
+    }
+
+    function parserDateStageJJMM(valeur) {
+      const parts = String(valeur || "").trim().split("/");
+      if (parts.length !== 2) return null;
+      const jour = parseInt(parts[0], 10);
+      const mois = parseInt(parts[1], 10);
+      if (!Number.isInteger(jour) || !Number.isInteger(mois)) return null;
+      return { jour, mois };
+    }
+
+    function normaliserDateStageIdx(valeur) {
+      const p = parserDateStageJJMM(valeur);
+      if (!p) return "";
+      const annee = new Date().getFullYear() - 1; // stage toujours sur l'année N-1
+      if (p.mois < 1 || p.mois > 12) return "";
+      if (p.jour < 1 || p.jour > joursDansMoisIdx(annee, p.mois)) return "";
+      return String(p.jour).padStart(2, "0") + "/" + String(p.mois).padStart(2, "0");
+    }
+
+    // Calcul de la durée en mois entre deux dates jj/mm (convention "mois de 26 jours").
+    function calculerDureeStageIdx() {
+      const annee = new Date().getFullYear() - 1; // stage toujours sur l'année N-1 (bissextile gérée par joursDansMoisIdx)
+      const debInput = document.getElementById("idx_stage_deb");
+      const finInput = document.getElementById("idx_stage_fin");
+      const calInput = document.getElementById("idx_stage_cal");
+
+      calInput.value = "";
+      if (!debInput.value.trim() || !finInput.value.trim()) return;
+
+      const deb = parserDateStageJJMM(debInput.value);
+      const fin = parserDateStageJJMM(finInput.value);
+      if (!deb || !fin) { calInput.value = "⚠️ Format invalide"; return; }
+      if (deb.mois < 1 || deb.mois > 12 || fin.mois < 1 || fin.mois > 12) { calInput.value = "⚠️ Mois invalide"; return; }
+      if (deb.jour < 1 || deb.jour > joursDansMoisIdx(annee, deb.mois) || fin.jour < 1 || fin.jour > joursDansMoisIdx(annee, fin.mois)) {
+        calInput.value = "⚠️ Jour invalide";
+        return;
+      }
+
+      const debutStage = new Date(annee, deb.mois - 1, deb.jour);
+      const finStage = new Date(annee, fin.mois - 1, fin.jour);
+      if (debutStage > finStage) { calInput.value = "⚠️ Début > fin"; return; }
+
+      let dureeTotale;
+      if (deb.jour === fin.jour) {
+        dureeTotale = (finStage.getMonth() - debutStage.getMonth()) + (finStage.getFullYear() - debutStage.getFullYear()) * 12;
+      } else {
+        let mois = 0;
+        let courant = new Date(debutStage);
+
+        while (true) {
+          const finMoisCourant = new Date(courant.getFullYear(), courant.getMonth() + 1, courant.getDate() - 1);
+          if (finMoisCourant <= finStage) {
+            mois += 1;
+            courant = new Date(courant.getFullYear(), courant.getMonth() + 1, courant.getDate());
+          } else {
+            break;
+          }
+        }
+
+        const dernierJourMoisComplet = new Date(courant.getFullYear(), courant.getMonth(), courant.getDate() - 1);
+        let joursRestants = Math.round((finStage - dernierJourMoisComplet) / 86400000);
+
+        if (joursRestants >= 26) {
+          mois += 1;
+          joursRestants = 0;
+        }
+        dureeTotale = Math.floor((mois + joursRestants / 26) * 100) / 100;
+      }
+
+      calInput.value = dureeTotale.toFixed(2);
+    }
+
+    // Affiche uniquement les cartes des modules auxquels l'utilisateur a accès
+    // (colonnes prosp/ci/dti/dtc/part/docs et pp.* de l'onglet "users" :
+    // vide = aucun accès, "Lecture", "Edition" — voir js/permissions.js).
+    // Dans la carte PP, seuls les liens des sections autorisées sont gardés.
+    // Sans utilisateur (pas encore connecté), aucune carte n'est affichée.
+    function appliquerPermissionsCartes(user) {
+      const P = window.URSPerm;
+      document.querySelectorAll(".index_card[data-page]").forEach((carte) => {
+        const page = carte.dataset.page;
+        const autorise = !!user && !!P && P.moduleVisible(page);
+        carte.hidden = !autorise;
+        carte.querySelectorAll(".index_card_sections li").forEach((li) => {
+          const m = (li.querySelector("a")?.getAttribute("href") || "").match(/#(.+)$/);
+          li.hidden = !!(autorise && m && !P.sectionVisible(page, m[1]));
+        });
+      });
+      // "Spécialités PP" : réservé aux utilisateurs ayant accès au module PP
+      // (en Lecture, la modale reste consultable mais sans ajout : data-perm="pp").
+      const btnSpec = document.getElementById("idx_btn_specialites");
+      if (btnSpec) btnSpec.hidden = !(user && P && P.peutVoir("pp"));
+      if (P) P.appliquer();
+    }
+
+    let loginUtilisateurSelectionne = null;
+
+    async function ouvrirModaleConnexion() {
+      document.getElementById("login_modal_overlay").classList.add("is_visible");
+      reinitialiserFormulaireConnexion();
+
+      const grid = document.getElementById("login_users_grid");
+      grid.innerHTML = `${Spinner.html()}`;
+
+      try {
+        const users = await apiCall("listUsers", {});
+
+        if (!users.length) {
+          grid.innerHTML = `<p>Aucun utilisateur configuré (onglet "users" de Paramètres).</p>`;
+          return;
+        }
+
+        grid.innerHTML = users.map((u, i) => {
+          const aAcces = String(u.M2p || "").trim() !== "";
+          return `
+          <button type="button" class="user_badge login_user_badge ${aAcces ? "" : "is_disabled"}"
+                  data-index="${i}" ${aAcces ? "" : "disabled"}
+                  title="${aAcces ? (u.Nom || "") : "Accès non configuré"}">
+            ${initialesUtilisateur(u)}
+          </button>`;
+        }).join("");
+
+        grid.querySelectorAll(".login_user_badge:not(.is_disabled)").forEach((btn) => {
+          btn.addEventListener("click", () => selectionnerProfilConnexion(users[Number(btn.dataset.index)], btn));
+        });
+      } catch (err) {
+        grid.innerHTML = `<p class="error_state">Erreur : ${err.message}</p>`;
+      }
+    }
+
+    function reinitialiserFormulaireConnexion() {
+      loginUtilisateurSelectionne = null;
+      document.getElementById("login_password_input").value = "";
+      document.getElementById("login_password_input").disabled = true;
+      document.getElementById("login_password_error").hidden = true;
+      document.getElementById("login_remember_checkbox").checked = false;
+    }
+
+    function selectionnerProfilConnexion(user, btn) {
+      loginUtilisateurSelectionne = user;
+      document.getElementById("login_password_error").hidden = true;
+      document.querySelectorAll(".login_user_badge").forEach((b) => b.classList.remove("is_selected"));
+      btn.classList.add("is_selected");
+      const champMotDePasse = document.getElementById("login_password_input");
+      champMotDePasse.disabled = false;
+      champMotDePasse.focus();
+    }
+
+    function onSubmitLoginPassword(e) {
+      e.preventDefault();
+      const user = loginUtilisateurSelectionne;
+      const saisie = document.getElementById("login_password_input").value;
+      const erreurEl = document.getElementById("login_password_error");
+
+      if (!user) {
+        erreurEl.innerHTML = `<i class="bi bi-exclamation-circle-fill"></i> Choisissez d'abord votre profil ci-dessus.`;
+        erreurEl.hidden = false;
+        return;
+      }
+      if (saisie !== String(user.M2p || "")) {
+        erreurEl.innerHTML = `<i class="bi bi-exclamation-circle-fill"></i> Mot de passe incorrect.`;
+        erreurEl.hidden = false;
+        return;
+      }
+
+      const resterConnecte = document.getElementById("login_remember_checkbox").checked;
+      setCurrentUser(user, resterConnecte);
+      mettreAJourEtatConnexion();
+      document.getElementById("login_modal_overlay").classList.remove("is_visible");
+    }
+
+    function mettreAJourEtatConnexion() {
+      renderUserBadge(document.getElementById("header_user_badge"));
+      document.getElementById("header_btn_logout").hidden = !getCurrentUser();
+      appliquerPermissionsCartes(getCurrentUser());
+      actualiserAlertesAccueil();
+    }
+
+    // Carte Crédit d'impôt et bouton Suivi : les deux jeux de données sont
+    // chargés en parallèle, puis les deux couleurs d'alerte sont appliquées
+    // dans la même passe (même instant, même transition).
+    let ALERTES_ACCUEIL_JETON = 0;
+    async function actualiserAlertesAccueil() {
+      const jeton = ++ALERTES_ACCUEIL_JETON;
+      const connecte = !!getCurrentUser();
+      await Promise.all([
+        verifierBilansSilianaEnRetard(true),
+        verifierConsultationsDTC(true),
+        connecte ? prechargerSuivi(false, true) : Promise.resolve()
+      ]);
+      if (jeton !== ALERTES_ACCUEIL_JETON) return; // réponse périmée (connexion/déconnexion rapide)
+      appliquerAlerteCarteCI();
+      appliquerAlerteCarteDTC();
+      if (connecte) colorerBoutonSuivi();
+    }
+
+    /* ============================================================
+       SPÉCIALITÉS PP (raccourci accueil)
+       Onglet "specialites" de la Sheet PP : une ligne par spécialité, avec en
+       colonnes les pièces du dossier demandées (Photos, Copies CIN, Attestation
+       travail, Profession, Diplôme, Affiliation SS ;
+       "oui" pour Affiliation SS = groupe de boutons radio Oui / Expérience
+       PROF / Non dans le dossier). Actions backend : listSpecialitesDetailPP /
+       createSpecialitePP (Code.gs).
+       ============================================================ */
+
+    const SPEC_COLONNES = ["Photos", "Copies CIN", "Attestation travail", "Profession", "Diplôme",
+      "Affiliation SS"];
+
+    function echapperHtmlIdx(str) {
+      return String(str || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function wireModaleSpecialites() {
+      document.getElementById("idx_btn_specialites")?.addEventListener("click", () => {
+        basculerFormSpecialite(false);
+        openModal("idx_modal_specialites");
+        chargerSpecialitesPPIdx();
+      });
+      document.getElementById("idx_spec_btn_ajouter")?.addEventListener("click", () => basculerFormSpecialite(true));
+      document.getElementById("idx_spec_btn_annuler")?.addEventListener("click", () => basculerFormSpecialite(false));
+      document.getElementById("idx_spec_btn_enregistrer")?.addEventListener("click", enregistrerSpecialitePPIdx);
+      document.getElementById("idx_spec_form")?.addEventListener("submit", (e) => { e.preventDefault(); enregistrerSpecialitePPIdx(); });
+    }
+
+    function basculerFormSpecialite(afficher) {
+      const form = document.getElementById("idx_spec_form");
+      form.hidden = !afficher;
+      document.getElementById("idx_spec_btn_ajouter").hidden = afficher;
+      document.getElementById("idx_spec_btn_enregistrer").hidden = !afficher;
+      document.getElementById("idx_spec_btn_annuler").hidden = !afficher;
+      document.getElementById("idx_spec_error").hidden = true;
+      if (afficher) {
+        form.reset();
+        document.getElementById("idx_spec_nom").focus();
+      }
+    }
+
+    async function chargerSpecialitesPPIdx() {
+      const conteneur = document.getElementById("idx_spec_liste");
+      conteneur.innerHTML = `${Spinner.html()}`;
+      try {
+        const lignes = await apiCall("listSpecialitesDetailPP", {});
+        if (!lignes.length) {
+          conteneur.innerHTML = `<p class="idx_spec_empty">Aucune spécialité enregistrée.</p>`;
+          return;
+        }
+        const cellule = (col, valeur) => {
+          const v = String(valeur || "").trim();
+          if (!v) return `<td></td>`;
+          if (v.toLowerCase() === "oui") return `<td class="is_oui">✓</td>`;
+          if (/^si\s/i.test(v)) return `<td class="is_cond">${echapperHtmlIdx(v)}</td>`;
+          return `<td>${echapperHtmlIdx(v)}</td>`;
+        };
+        conteneur.innerHTML = `
+          <table class="idx_spec_table">
+            <thead><tr><th>Spécialité</th>${SPEC_COLONNES.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
+            <tbody>
+              ${lignes.map((l) => `<tr><td>${echapperHtmlIdx(l["Spécialité"])}</td>${SPEC_COLONNES.map((c) => cellule(c, l[c])).join("")}</tr>`).join("")}
+            </tbody>
+          </table>`;
+      } catch (err) {
+        conteneur.innerHTML = `<p class="error_state">Erreur : ${echapperHtmlIdx(err.message)}</p>`;
+      }
+    }
+
+    async function enregistrerSpecialitePPIdx() {
+      const form = document.getElementById("idx_spec_form");
+      const erreurEl = document.getElementById("idx_spec_error");
+      const nom = document.getElementById("idx_spec_nom").value.trim();
+      if (!nom) {
+        erreurEl.textContent = "Le nom de la spécialité est obligatoire.";
+        erreurEl.hidden = false;
+        return;
+      }
+      // Même format que l'onglet : "oui", diplôme exigé, ou mention conditionnelle.
+      const coche = (n) => form.elements[n].checked;
+      const record = {
+        "Spécialité": nom,
+        "Photos": coche("Photos") ? "oui" : "",
+        "Copies CIN": coche("Copies CIN") ? "oui" : "",
+        "Attestation travail": coche("Attestation travail") ? "oui" : "",
+        "Profession": coche("Profession") ? "oui" : "",
+        "Diplôme": document.getElementById("idx_spec_diplome").value.trim(),
+        "Affiliation SS": coche("Affiliation SS") ? "oui" : ""
+      };
+      const btn = document.getElementById("idx_spec_btn_enregistrer");
+      btn.disabled = true;
+      try {
+        await apiCall("createSpecialitePP", { record });
+        basculerFormSpecialite(false);
+        await chargerSpecialitesPPIdx();
+      } catch (err) {
+        erreurEl.textContent = err.message;
+        erreurEl.hidden = false;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    /* ============================================================
+       ALERTE "DÉLAI DE CLÔTURE BILAN" (carte Crédit d'impôt)
+       Un bilan Siliana (antenne "sa") encore actif doit être clôturé par
+       l'entreprise dans les 2 mois qui suivent la date fin de sa dernière
+       action (formation initiale ou continue — voir
+       calculerDateDerniereActionISO() dans bilan.html). Trois paliers,
+       du plus léger au plus grave :
+         - 1,5 mois  : "attention"  (rappel doux)
+         - 1,75 mois : "imminent"   (délai bientôt dépassé)
+         - 2 mois     : "expired"   (délai dépassé)
+       La carte entière prend la couleur du palier le plus grave en
+       cours ; le détail (un message par bilan concerné) n'apparaît
+       qu'au survol, dans un bandeau centré du header.
+       ============================================================ */
+
+    const CI_ALERT_TIERS = { attention: 1, imminent: 2, expired: 3 };
+    const CI_ALERT_MESSAGES = {
+      attention: (abrev) => `Bilan ${abrev} : l'entreprise doit penser à clôturer`,
+      imminent: (abrev) => `Bilan ${abrev} : délai de clôture obligatoire imminent`,
+      expired: (abrev) => `Bilan ${abrev} : 2 mois écoulés depuis la fin de la dernière action`
+    };
+
+    let CI_ALERTES_SILIANA = [];
+
+    function moisEcoulesDepuis(dateIso) {
+      const d = new Date(`${dateIso}T00:00:00`);
+      if (Number.isNaN(d.getTime())) return null;
+      return (Date.now() - d.getTime()) / 86400000 / 30.4368; // moyenne jours/mois
+    }
+
+    function classerAlerteBilan(bilan) {
+      if (String(bilan.statut || "").trim().toLowerCase() !== "actif") return null;
+      if (!bilan.dateDerniereAction) return null;
+      const mois = moisEcoulesDepuis(bilan.dateDerniereAction);
+      if (mois === null) return null;
+      let tier = null;
+      if (mois >= 2) tier = "expired";
+      else if (mois >= 1.75) tier = "imminent";
+      else if (mois >= 1.5) tier = "attention";
+      if (!tier) return null;
+      const abreviation = bilan.abreviation || bilan.entreprise || "?";
+      return { tier, mois, message: CI_ALERT_MESSAGES[tier](abreviation) };
+    }
+
+    async function verifierBilansSilianaEnRetard(differer) {
+      const carte = document.querySelector('.index_card[data-page="ci"]');
+      if (!carte || carte.hidden) {
+        CI_ALERTES_SILIANA = [];
+        appliquerAlerteCarteCI();
+        return;
+      }
+
+      try {
+        const bilans = await apiCall("listBilansCI", { antenne: "sa" });
+        CI_ALERTES_SILIANA = bilans
+          .map(classerAlerteBilan)
+          .filter(Boolean)
+          .sort((a, b) => CI_ALERT_TIERS[b.tier] - CI_ALERT_TIERS[a.tier] || b.mois - a.mois);
+      } catch (err) {
+        console.error("Vérification des bilans Siliana en retard impossible", err);
+        CI_ALERTES_SILIANA = [];
+      }
+
+      if (!differer) appliquerAlerteCarteCI();
+    }
+
+    // Applique (ou retire) la couleur d'alerte de la carte CI d'après CI_ALERTES_SILIANA.
+    function appliquerAlerteCarteCI() {
+      const carte = document.querySelector('.index_card[data-page="ci"]');
+      if (!carte) return;
+      if (CI_ALERTES_SILIANA.length === 0 || carte.hidden) {
+        carte.removeAttribute("data-alert-tier");
+        masquerBandeauAlerte();
+      } else {
+        carte.dataset.alertTier = CI_ALERTES_SILIANA[0].tier;
+      }
+    }
+
+    // Bandeau du header (partagé CI / DTC) : une ligne par alerte de la carte survolée.
+    function afficherBandeauAlerte(alertes) {
+      if (!alertes || alertes.length === 0) return;
+      const bandeau = document.getElementById("navbar_card_alert");
+      if (!bandeau) return;
+      bandeau.innerHTML = alertes
+        .map((a) => `<span class="navbar_alert_line" data-tier="${a.tier}">${a.message}</span>`)
+        .join("");
+      bandeau.classList.add("is_visible");
+    }
+
+    function masquerBandeauAlerte() {
+      document.getElementById("navbar_card_alert")?.classList.remove("is_visible");
+    }
+
+    /* ---------- Alerte "clôture des consultations" (carte DTC) ----------
+       Même mécanique que le CI : palier le plus grave sur la carte, détail
+       (un message par consultation) dans le bandeau au survol. Date de fin =
+       prorogation si elle existe, sinon clôture. Consultations concernées :
+       annoncées (date d'annonce atteinte) et non clôturées depuis plus de
+       DTC_ALERTE_APRES_JOURS jours, quelle que soit l'issue (fructueuse ou non). */
+    const DTC_ALERT_TIERS = { attention: 1, imminent: 2, expired: 3 };
+    const DTC_SEUIL_ATTENTION = 7;      // jours restants <= 7
+    const DTC_SEUIL_IMMINENT = 2;       // jours restants <= 2
+    const DTC_ALERTE_APRES_JOURS = 7;   // alerte rouge maintenue 7 jours après la clôture
+    let DTC_ALERTES = [];
+
+    function joursAvantDate(dateIso) {
+      const d = new Date(`${String(dateIso).slice(0, 10)}T00:00:00`);
+      if (Number.isNaN(d.getTime())) return null;
+      const auj = new Date();
+      auj.setHours(0, 0, 0, 0);
+      return Math.round((d.getTime() - auj.getTime()) / 86400000);
+    }
+
+    function classerAlerteConsultation(c) {
+      const annonce = c.dateAnnonce ? joursAvantDate(c.dateAnnonce) : null;
+      if (annonce === null || annonce > 0) return null; // prévue / pas encore annoncée
+      const fin = c.dateProrogation || c.dateCloture;
+      if (!fin) return null;
+      const jours = joursAvantDate(fin);
+      if (jours === null) return null;
+      let tier = null, texte;
+      if (jours <= 0 && jours >= -DTC_ALERTE_APRES_JOURS) {
+        tier = "expired";
+        texte = jours === 0 ? "clôture aujourd'hui" : `clôturée depuis ${-jours} jour${jours === -1 ? "" : "s"}`;
+      } else if (jours > 0 && jours <= DTC_SEUIL_IMMINENT) {
+        tier = "imminent";
+      } else if (jours > 0 && jours <= DTC_SEUIL_ATTENTION) {
+        tier = "attention";
+      }
+      if (!tier) return null;
+      if (!texte) texte = jours === 1 ? "clôture demain" : `clôture dans ${jours} jours`;
+      const nom = [c.numCons ? `N° ${c.numCons}` : "", c.sigle || c.etablissement || ""].filter(Boolean).join(" · ");
+      const nomEsc = String(nom || "?").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+      return { tier, jours, message: `Consultation ${nomEsc} : ${texte}` };
+    }
+
+    async function verifierConsultationsDTC(differer) {
+      const carte = document.querySelector('.index_card[data-page="dtc"]');
+      if (!carte || carte.hidden) {
+        DTC_ALERTES = [];
+        appliquerAlerteCarteDTC();
+        return;
+      }
+      try {
+        const consultations = await apiCall("listConsultationsDTC", {});
+        DTC_ALERTES = consultations
+          .map(classerAlerteConsultation)
+          .filter(Boolean)
+          .sort((a, b) => DTC_ALERT_TIERS[b.tier] - DTC_ALERT_TIERS[a.tier] || a.jours - b.jours);
+      } catch (err) {
+        console.error("Vérification des consultations DTC impossible", err);
+        DTC_ALERTES = [];
+      }
+      if (!differer) appliquerAlerteCarteDTC();
+    }
+
+    function appliquerAlerteCarteDTC() {
+      const carte = document.querySelector('.index_card[data-page="dtc"]');
+      if (!carte) return;
+      if (DTC_ALERTES.length === 0 || carte.hidden) {
+        carte.removeAttribute("data-alert-tier");
+        masquerBandeauAlerte();
+      } else {
+        carte.dataset.alertTier = DTC_ALERTES[0].tier;
+      }
+    }
+
+    function seDeconnecter() {
+      clearCurrentUser();
+      mettreAJourEtatConnexion();
+      ouvrirModaleConnexion();
+    }
+  </script>
+
+</body>
+</html>
