@@ -621,6 +621,7 @@
     }
   </style>
   <script src="js/session.js"></script>
+  <script src="js/permissions.js"></script>
 </head>
 <body data-no-dirty>
 
@@ -636,35 +637,36 @@
       </span>
     </div>
     <div class="navbar_actions">
-      <span class="navbar_breadcrumb">
-        <a href="index.html">Accueil</a> <i class="bi bi-chevron-right"></i>
-        <a href="pp.html#classes">Promotion professionnelle</a> <i class="bi bi-chevron-right"></i>
-        Formation à distance
-      </span>
-      <button type="button" class="btn_logout_navbar" id="navbar_btn_logout" hidden title="Se déconnecter">
-        <i class="bi bi-box-arrow-right"></i>
-      </button>
+      <div class="navbar_actions_col">
+        <span class="navbar_breadcrumb">
+          <a href="index.html">Accueil</a> <i class="bi bi-chevron-right"></i>
+          <a href="pp.html#classes">Promotion professionnelle</a> <i class="bi bi-chevron-right"></i>
+          Formation à distance
+        </span>
+        <div class="navbar_btns">
+          <a href="pp.html#classes" class="btn_ghost btn_retour" id="class_btn_retour"><i class="bi bi-arrow-return-left"></i> Retour</a>
+          <button type="button" class="btn_primary" id="class_btn_editer">
+            <i class="bi bi-pencil-square"></i> Editer
+          </button>
+          <button type="button" class="btn_success" id="class_btn_enregistrer">
+            <i class="bi bi-check-lg"></i> Enregistrer
+          </button>
+          <button type="button" class="btn_info" id="class_btn_imprimer">
+            <i class="bi bi-printer"></i> Imprimer
+          </button>
+          <button type="button" class="btn_notify" id="class_btn_notifier" data-edit-only hidden>
+            <i class="bi bi-send"></i> Notifier
+          </button>
+          <button type="button" class="btn_real" id="class_btn_generer" hidden>
+            <i class="bi bi-briefcase"></i> facturation
+          </button>
+          <button type="button" class="btn_logout_navbar" id="navbar_btn_logout" hidden title="Se déconnecter">
+            <i class="bi bi-box-arrow-right"></i>
+          </button>
+        </div>
+      </div>
     </div>
   </header>
-
-  <div class="btns_metiers">
-    <a href="pp.html#classes" class="btn_ghost btn_retour" id="class_btn_retour"><i class="bi bi-arrow-return-left"></i> Retour</a>
-    <button type="button" class="btn_primary" id="class_btn_editer">
-      <i class="bi bi-pencil-square"></i> Editer
-    </button>
-    <button type="button" class="btn_success" id="class_btn_enregistrer">
-      <i class="bi bi-check-lg"></i> Enregistrer
-    </button>
-    <button type="button" class="btn_info" id="class_btn_imprimer">
-      <i class="bi bi-printer"></i> Imprimer
-    </button>
-    <button type="button" class="btn_notify" id="class_btn_notifier" hidden>
-      <i class="bi bi-send"></i> Notifier
-    </button>
-    <button type="button" class="btn_real" id="class_btn_generer" hidden>
-      <i class="bi bi-briefcase"></i> facturation
-    </button>
-  </div>
 
   <div class="infos_metiers" id="classe_infos">
     <span class="infos_metiers_item">Etablissement : <span data-field="partenairePP">----</span></span>
@@ -1361,7 +1363,7 @@
                 <button type="button" class="btn_danger" id="matiere_btn_supprimer" hidden>
                   <i class="bi bi-trash3"></i> Supprimer
                 </button>
-                <button type="submit" class="btn_success" id="matiere_submit_btn"><i class="bi bi-check-lg"></i> Enregistrer</button>
+                <button type="submit" class="btn_success" id="matiere_submit_btn" data-edit-only><i class="bi bi-check-lg"></i> Enregistrer</button>
               </div>
             </form>
           </div>
@@ -1515,7 +1517,7 @@
               <section class="reg_day_section is_samedi" id="reg_day_section_samedi" hidden>
                 <h4 class="reg_day_header">Samedi <span class="reg_day_date" id="reg_day_date_samedi"></span></h4>
                 <div id="reg_seq_list_samedi"></div>
-                <button type="button" class="btn_ghost seq_add_btn" id="reg_seq_add_samedi" data-jour="samedi">
+                <button type="button" class="btn_ghost seq_add_btn" id="reg_seq_add_samedi" data-edit-only data-jour="samedi">
                   <i class="bi bi-plus-lg"></i> Ajouter une séquence
                 </button>
                 <div class="seq_controls"><div id="reg_ctrl_samedi"></div></div>
@@ -1524,7 +1526,7 @@
               <section class="reg_day_section is_dimanche" id="reg_day_section_dimanche">
                 <h4 class="reg_day_header">Dimanche <span class="reg_day_date" id="reg_day_date_dimanche"></span></h4>
                 <div id="reg_seq_list_dimanche"></div>
-                <button type="button" class="btn_ghost seq_add_btn" id="reg_seq_add_dimanche" data-jour="dimanche">
+                <button type="button" class="btn_ghost seq_add_btn" id="reg_seq_add_dimanche" data-edit-only data-jour="dimanche">
                   <i class="bi bi-plus-lg"></i> Ajouter une séquence
                 </button>
                 <div class="seq_controls"><div id="reg_ctrl_dimanche"></div></div>
@@ -1568,7 +1570,7 @@
               <i class="bi bi-info-circle"></i> saisir heure hhmm sans les deux points (:) — changer heure par flèches ↑ / ↓ : +/- 15 min (↑ / ↓ + Maj : +/- 1 h)
             </p>
             <div id="exam_seq_list"></div>
-            <button type="button" class="btn_ghost seq_add_btn" id="exam_seq_add">
+            <button type="button" class="btn_ghost seq_add_btn" id="exam_seq_add" data-edit-only>
               <i class="bi bi-plus-lg"></i> Ajouter une séance
             </button>
 
@@ -1589,7 +1591,7 @@
       <div class="block_metiers_header">
         <h3 id="compteurs_h3">Compteurs</h3>
         <div class="block_metiers_header_actions">
-          <button type="button" class="btn_notify" id="tut_btn_check" hidden>
+          <button type="button" class="btn_notify" id="tut_btn_check" data-edit-only hidden>
             <i class="bi bi-send"></i> Check Tutorat
           </button>
           <button type="button" class="btn_info" id="tut_btn_showcounter">
@@ -1671,6 +1673,24 @@
 
     function totalRegPlanifie() {
       const stats = getSequenceStats(regroupements.flatMap(week => week.sequences || []));
+      return stats.g1 + stats.classe;
+    }
+
+    // Heures de regroupement par étudiant déjà ÉCOULÉES (séances dont la date,
+    // et l'heure de fin pour aujourd'hui, sont passées) — pas seulement
+    // planifiées. Même calcul que totalRegPlanifie() (G1 + classe entière).
+    function totalRegEcoule() {
+      const maintenant = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const auj = `${maintenant.getFullYear()}-${pad(maintenant.getMonth() + 1)}-${pad(maintenant.getDate())}`;
+      const heure = `${pad(maintenant.getHours())}:${pad(maintenant.getMinutes())}`;
+      const ecoulees = regroupements.flatMap(week =>
+        (week.sequences || []).filter(seq => {
+          const d = regDateDeSeq(week, seq);
+          return d && (d < auj || (d === auj && seq.fin && seq.fin <= heure));
+        })
+      );
+      const stats = getSequenceStats(ecoulees);
       return stats.g1 + stats.classe;
     }
 
@@ -1910,7 +1930,7 @@
         }
         if (view !== null && wasCollapsed) {
           requestAnimationFrame(() => {
-            compteurSection?.querySelector(".block_metiers_header")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            defilerVersSection(compteurSection);
           });
         }
         if (regCounterContainer) {
@@ -2004,11 +2024,11 @@
       document.getElementById("reg_week_date")?.addEventListener("input", () => { majAvertissementDateReg(); majDatesJoursReg(); });
       document.getElementById("classe_fiche_btn_inscrits")?.addEventListener("click", () => {
         closeFormModal("classe_fiche_modal");
-        fermerAutresSections("liste_inscrits");
+        ouvrirPanneauEdition("liste_inscrits");
         const section = document.getElementById("liste_inscrits");
         section.hidden = false;
         requestAnimationFrame(() => {
-          section.querySelector(".block_metiers_header")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          defilerVersSection(section);
         });
       });
       document.getElementById("inscrits_btn_hide")?.addEventListener("click", () => {
@@ -2017,12 +2037,12 @@
       });
       document.getElementById("classe_fiche_btn_enseignants")?.addEventListener("click", () => {
         closeFormModal("classe_fiche_modal");
-        fermerAutresSections("liste_enseignants");
+        ouvrirPanneauEdition("liste_enseignants");
         const section = document.getElementById("liste_enseignants");
         section.hidden = false;
         renderEnseignants();
         requestAnimationFrame(() => {
-          section.querySelector(".block_metiers_header")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          defilerVersSection(section);
         });
       });
       document.getElementById("enseignants_btn_hide")?.addEventListener("click", () => {
@@ -2040,11 +2060,11 @@
       });
       document.getElementById("classe_fiche_btn_frais")?.addEventListener("click", () => {
         closeFormModal("classe_fiche_modal");
-        fermerAutresSections("frais_coordination");
+        ouvrirPanneauEdition("frais_coordination");
         const section = document.getElementById("frais_coordination");
         section.hidden = false;
         requestAnimationFrame(() => {
-          section.querySelector(".block_metiers_header")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          defilerVersSection(section);
         });
       });
       document.getElementById("frais_btn_hide")?.addEventListener("click", () => {
@@ -2435,6 +2455,20 @@
       document.getElementById("tut_week_date")?.addEventListener("change", mettreAJourJoursDepuisDate);
     }
 
+    // Boutons Inscrits / Enseignants / Coordination de la modale "Editer" :
+    // ferment TOUTES les autres sections ouvertes — les autres panneaux
+    // "modale" (Compteurs, Inscrits, Enseignants, Frais) via
+    // fermerAutresSections() ET les 3 accordéons (Plan d'étude / Répartition
+    // tutorat / Regroupements), que fermerAutresSections() ne touche pas.
+    // Défilement vers une section ouverte : voir scrollToMetierSection()
+    // dans js/section_toggles.js (header au top sous la navbar).
+    function defilerVersSection(section) { scrollToMetierSection(section); }
+
+    function ouvrirPanneauEdition(sectionId) {
+      fermerAutresSections(sectionId);
+      collapseOtherMetierSections(null);
+    }
+
     // Referme les 3 sections accordéon principales (Plan d'étude /
     // Répartition tutorat / Regroupements) à leur état par défaut : appelée
     // à la fermeture d'un panneau "modale" (Inscrits / Enseignants / Frais
@@ -2478,11 +2512,12 @@
     // Déplie l'une des 3 sections accordéon principales (Plan d'étude /
     // Répartition tutorat / Regroupements — voir js/section_toggles.js) et
     // ferme le groupe de panneaux "modale" ci-dessus.
-    function unhideSection(sectionId) {
+    // scroll=false : après un enregistrement, la page gère son défilement.
+    function unhideSection(sectionId, scroll = true) {
       fermerAutresSections(sectionId);
       const section = document.getElementById(sectionId);
       collapseOtherMetierSections(section);
-      expandMetierSection(section);
+      expandMetierSection(section, { scroll });
     }
 
     // ------------------------------------------------------------
@@ -7744,7 +7779,7 @@
       closeFormModal("reg_week_modal");
       renderRegroupements();
       renderPlanTable();
-      unhideSection("regroupements");
+      unhideSection("regroupements", false);
       setUnsavedChanges();
     }
 
@@ -7762,12 +7797,15 @@
     // ------------------------------------------------------------
     // EXAMENS
     // ------------------------------------------------------------
-    // Le bouton "Planifier examen" ne dépend ni des semaines ni de leur
-    // nombre : il n'est masqué que si la classe est facturée.
+    // Le bouton "Planifier examen" n'apparaît que lorsque 90 % des heures de
+    // regroupement de la classe (cible heuresRegEtudiant) sont ÉCOULÉES (dates
+    // passées, pas simplement planifiées). Masqué aussi si la classe est facturée.
+    const EXAM_SEUIL_REG_ECOULE = 0.9;
     function updateExamBtnVisibility() {
       const btn = document.getElementById("exam_btn_planifier");
       if (!btn) return;
-      btn.hidden = estClasseFacturee();
+      const seuilAtteint = totalRegEcoule() >= EXAM_SEUIL_REG_ECOULE * heuresRegEtudiant - 1e-9;
+      btn.hidden = estClasseFacturee() || !seuilAtteint;
     }
 
     function getMatieresAvecEval() {
@@ -8929,7 +8967,7 @@
       tutWeekCollapseState[semaine] = false;
       renderTutorat();
       renderPlanTable();
-      unhideSection("repartition_tutorat");
+      unhideSection("repartition_tutorat", false);
       setUnsavedChanges();
 
       const weekEl = document.querySelector(`.tut_week_group[data-semaine="${semaine}"]`);
@@ -9084,7 +9122,7 @@
     // Enregistre la classe déjà importée (classeFileId toujours défini ici,
     // voir INIT : cette page n'ouvre jamais sans fileId). Un seul chemin de
     // sauvegarde, appelé aussi bien depuis le bouton "Enregistrer" principal
-    // (.btns_metiers) que depuis la modale "Editer" — les 2 mettent à jour
+    // (.navbar_btns) que depuis la modale "Editer" — les 2 mettent à jour
     // le MÊME fichier Drive (fiche + plan d'étude / tutorat / regroupements
     // / inscrits / frais / examens), le nom du fichier n'étant plus recalculé
     // ici (voir nomFichierClasse() côté Code.gs).
@@ -9130,10 +9168,11 @@
     }
 
     // Affiche/masque un spinner sur un bouton "Enregistrer" pendant l'appel
-    // serveur (utilisé par tous les boutons de sauvegarde des .btns_metiers).
+    // serveur (utilisé par tous les boutons de sauvegarde des .navbar_btns).
     // setBtnSaving() : voir js/spinner.js (partagé par toutes les pages).
 
     async function apiCallDirect(action, payload = {}) {
+  if (window.URSPerm) URSPerm.verifierAppel(action, payload); // droits (permissions.js)
       const res = await fetch(GAS_API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
