@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consultation — URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/navbar.css" />
+  <link rel="stylesheet" href="css/spinner.css" />
+  <script src="js/spinner.js"></script>
+  <style>
+    /* Page autonome en lecture seule (sans sidebar), sur le modèle de fi.html. */
+    .block_metiers {
+      --fi_header_bg: #f7ddc0;
+      --fi_header_border: #e8c49a;
+    }
+    .cons_info_inline { font-size: var(--fs_sm); font-family: var(--font_mono); color: var(--text_secondary); }
+    .cons_info_inline span { font-weight: bold; color: var(--text_primary); }
+
+    .cons_dates { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space_3) var(--space_4); padding: var(--space_4); }
+    .cons_dates div { display: flex; flex-direction: column; gap: var(--space_1); font-size: var(--fs_sm); color: var(--text_secondary); }
+    .cons_dates strong { color: var(--text_primary); font-size: var(--fs_base); }
+
+    .cons_tbl_wrap { overflow-x: auto; margin-bottom: var(--space_4); direction: rtl; }
+    .cons_tbl { width: 100%; border-collapse: collapse; font-size: var(--fs_sm); direction: rtl; }
+    .cons_tbl th, .cons_tbl td { border: 1px solid var(--border_soft); padding: var(--space_2) var(--space_3); vertical-align: middle; overflow-wrap: anywhere; }
+    .cons_tbl th { background: var(--color_paper_raised); text-align: start; font-weight: 600; color: var(--text_secondary); }
+    .cons_tbl .num { text-align: center; white-space: nowrap; font-family: var(--font_mono); }
+    .cons_tbl .ctr { text-align: center; }
+    .cons_tbl tfoot td { font-weight: 600; background: var(--color_paper_raised); }
+    .cons_tbl .grp { text-align: center; font-weight: 600; background: var(--color_paper_raised); }
+    .cons_tbl .lbl { text-align: right; direction: rtl; }
+    .cons_tbl tr.bleu td { background: color-mix(in srgb, #4a9fd8 16%, transparent); }
+    .cons_tbl tr.is_fruct td { background: color-mix(in srgb, var(--color_seal) 10%, transparent); }
+    .cons_tbl td.fin_exclu { background: #c62828; color: rgba(255, 255, 255, .55); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cons_tbl input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+    .cons_tbl input[type="number"]::-webkit-outer-spin-button, .cons_tbl input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .cons_tbl td.fin_exclu input.cons_cell_in { background: transparent; color: inherit; border-color: rgba(255, 255, 255, .45); }
+    .cons_ar { direction: rtl; unicode-bidi: plaintext; }
+    .cons_theme_sub { font-weight: 400; font-size: var(--fs_xs); }
+    .cons_tabs { display: flex; flex-wrap: wrap; gap: var(--space_2); margin: 0 0 var(--space_3); direction: rtl; }
+    .cons_tabs .cons_tab.is_active { background: var(--color_primary, var(--text_primary)); color: var(--color_paper_raised); }
+    .cons_off_titre { font-weight: 600; font-size: var(--fs_sm); margin: var(--space_3) 0 var(--space_2); }
+    .cons_sub { padding: var(--space_4); }
+    .cons_empty { color: var(--text_secondary); font-style: italic; font-size: var(--fs_sm); padding: var(--space_3); margin: 0; }
+    .cons_ko { color: var(--text_secondary); }
+    .cons_elim { font-weight: 700; }
+    .cons_head_actions [hidden], .cons_info_inline[hidden] { display: none !important; }
+    .cons_tabs .cons_tab_print { margin-inline-start: auto; }
+    .cons_print_blank { display: none; }
+    .cons_print_blank .blank_cell { height: 34px; }
+    .cons_print_titre { font-weight: 700; font-size: var(--fs_base); margin: 0 0 var(--space_2); }
+    .cons_blank_lines { margin: 0; padding-inline-start: 20px; }
+    .cons_blank_lines li { margin-bottom: 14px; }
+    @media print { .cons_print_page { break-after: page; page-break-after: always; } .cons_print_page:last-child { break-after: auto; page-break-after: auto; } }
+
+    /* Evaluation technique */
+    .cons_ev_btn { all: unset; cursor: pointer; display: inline-block; min-width: 70px; text-align: center; padding: 2px var(--space_2); border: 1px solid var(--border_soft); border-radius: var(--radius_sm); }
+    .cons_ev_btn[data-state="oui"] { background: color-mix(in srgb, #2e9e5b 18%, transparent); }
+    .cons_ev_btn[data-state="non"] { background: color-mix(in srgb, #c62828 18%, transparent); }
+    .cons_ev_btn[data-state="mid"] { background: color-mix(in srgb, #e08a00 22%, transparent); }
+    .cons_ev_btn { white-space: normal; }
+    .cons_tbl td.ev_best { background: color-mix(in srgb, #2e9e5b 28%, transparent); font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cons_tbl td.ev_na { background: #c62828; color: rgba(255, 255, 255, .7); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    .cons_etat_badge { display: inline-block; padding: 2px var(--space_2); border-radius: var(--radius_sm); font-family: var(--font_mono); font-weight: 700; font-size: var(--fs_xs); background: var(--color_paper_raised); }
+
+    /* Modale Editer (identique à dtc.html#consultations) */
+    .dtc_modal_cons { max-width: 1040px; width: 100%; }
+    .dtc_editer_footer { display: flex; justify-content: flex-end; gap: var(--space_3); padding: var(--space_4); border-top: 1px solid var(--border_soft); }
+    .dtc_date_field { display: flex; flex-direction: column; gap: var(--space_2); font-size: var(--fs_sm); color: var(--text_secondary); max-width: 240px; margin-bottom: var(--space_4); }
+    .dtc_date_field input, .dtc_date_field select { font-family: inherit; font-size: var(--fs_base); padding: var(--space_2) var(--space_3); border: 1px solid var(--border_soft); border-radius: var(--radius_sm); background: var(--color_paper_raised); color: var(--text_primary); }
+    .dtc_fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space_4); margin-bottom: var(--space_4); }
+    .dtc_fields .dtc_date_field { max-width: none; margin-bottom: 0; }
+    .dtc_fields.dtc_fields_num_dom { grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); }
+    .cons_head_actions { display: flex; align-items: center; gap: var(--space_3); margin-inline-start: auto; }
+    .cons_switch { display: inline-flex; align-items: center; gap: var(--space_2); font-size: var(--fs_sm); color: var(--text_secondary); cursor: pointer; user-select: none; }
+    .cons_switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .cons_switch_track { position: relative; width: 44px; height: 24px; border-radius: 999px; background: var(--border_soft); transition: background .2s; flex: none; }
+    .cons_switch_track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.25); transition: transform .2s; }
+    .cons_switch input:checked + .cons_switch_track { background: linear-gradient(135deg, #7ef0b4, #5b8fe0); }
+    .cons_switch input:checked + .cons_switch_track::after { transform: translateX(20px); }
+    .cons_switch input:focus-visible + .cons_switch_track { outline: 2px solid #5b8fe0; outline-offset: 2px; }
+    .cons_tbl input.cons_cell_in, .cons_tbl select.cons_cell_in { font-family: inherit; font-size: var(--fs_sm); padding: 2px var(--space_2); border: 1px solid var(--border_soft); border-radius: var(--radius_sm); background: var(--color_paper_raised); color: var(--text_primary); width: 100%; min-width: 110px; box-sizing: border-box; }
+    .cons_tgl { all: unset; cursor: pointer; display: inline-block; min-width: 40px; text-align: center; }
+    /* Tableau technique : colonnes المحور de largeur quasi égale, paddings réduits. */
+    .cons_tbl_tech { table-layout: fixed; }
+    .cons_tbl_tech th, .cons_tbl_tech td { padding: 2px var(--space_2); }
+    .cons_tbl_tech .cons_cell_in { min-width: 0; }
+    .cons_tbl_tech input[type="number"].cons_cell_in { width: 46%; }
+    .cons_tbl.is_edit td.ctr { background: color-mix(in srgb, #5b8fe0 6%, transparent); }
+    .dtc_cons_offres { margin-top: var(--space_2); }
+    .dtc_cons_offres_head { display: flex; align-items: center; justify-content: space-between; gap: var(--space_3); margin-bottom: var(--space_3); font-size: var(--fs_sm); color: var(--text_secondary); }
+    .dtc_cons_offre_row { display: grid; grid-template-columns: 64px minmax(0, 2fr) minmax(0, 1fr) auto; gap: var(--space_3); align-items: center; margin-bottom: var(--space_2); }
+    .dtc_cons_offre_row input { font-family: inherit; font-size: var(--fs_base); padding: var(--space_2) var(--space_3); border: 1px solid var(--border_soft); border-radius: var(--radius_sm); background: var(--color_paper_raised); color: var(--text_primary); min-width: 0; }
+    .dtc_cons_offre_num { font-family: var(--font_mono); font-size: var(--fs_sm); color: var(--text_secondary); }
+    .dtc_cons_offres_vide { font-size: var(--fs_sm); font-style: italic; color: var(--text_secondary); margin: 0; }
+    @media (max-width: 720px) { .dtc_cons_offre_row { grid-template-columns: 1fr auto; } .dtc_cons_offre_num { display: none; } }
+    @media (max-width: 720px) { .dtc_fields, .dtc_fields.dtc_fields_num_dom { grid-template-columns: 1fr; } }
+    .dtc_ar { direction: rtl; unicode-bidi: plaintext; }
+
+    @media print {
+      .navbar, .section_toggle_btn, .modal_overlay { display: none !important; }
+      /* Impression du tableau technique vierge : on n'imprime que ce bloc. */
+      body.is_print_blank .infos_metiers, body.is_print_blank main { display: none !important; }
+      body.is_print_blank .cons_print_blank { display: block; }
+    }
+  </style>
+  <script src="js/session.js"></script>
+  <script src="js/permissions.js"></script>
+</head>
+<body data-no-dirty>
+
+  <header class="navbar navbar_metier">
+    <div class="page_title_group">
+      <span class="page_eyebrow">DTC · Droits de tirage collectifs</span>
+      <h1 class="page_title">Consultation <span data-field="num">----</span></h1>
+    </div>
+    <div class="navbar_status" id="navbar_status">
+      <span class="spinner spinner_sm navbar_load" id="navbar_loading" role="status" aria-label="Chargement"></span>
+    </div>
+    <div class="navbar_actions">
+      <div class="navbar_actions_col">
+        <span class="navbar_breadcrumb">
+          <a href="index.html">Accueil</a> <i class="bi bi-chevron-right"></i>
+          <a href="dtc.html#consultations">Droits de tirage collectifs</a> <i class="bi bi-chevron-right"></i>
+          Consultation
+        </span>
+        <div class="navbar_btns">
+          <a href="dtc.html#consultations" class="btn_ghost btn_retour"><i class="bi bi-arrow-return-left"></i> Retour</a>
+          <button type="button" class="btn_primary" id="cons_btn_editer"><i class="bi bi-pencil-square"></i> Editer</button>
+          <button type="button" class="btn_info" id="cons_btn_imprimer"><i class="bi bi-printer"></i> Imprimer</button>
+          <button type="button" class="btn_logout_navbar" id="navbar_btn_logout" hidden title="Se déconnecter">
+            <i class="bi bi-box-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="infos_metiers">
+    <span class="cons_info_inline">Partenaire : <span data-field="partenaire">----</span></span>
+    <span class="cons_info_inline">Domaine : <span data-field="domaine" class="cons_ar">----</span></span>
+    <span class="cons_info_inline">Clôture : <span data-field="cloture">----</span></span>
+    <span class="cons_info_inline">État : <span data-field="etat">----</span></span>
+    <span class="cons_info_inline" id="cons_info_fruct" hidden>Thèmes fructueux : <span data-field="fructueux" class="cons_ar">----</span></span>
+  </div>
+
+  <main class="app_content app_content_metier">
+
+    <section class="block_metiers block_metiers_accordion is_collapsed" data-category="parvenues">
+      <div class="block_metiers_header">
+        <h3>Offres parvenues</h3>
+        <span class="block_metiers_status" data-status="parvenues"></span>
+        <div class="cons_head_actions">
+          <button type="button" class="btn_info" id="cons_toggle_edit_parvenues" aria-pressed="false" title="Rendre les cellules du tableau modifiables"><i class="bi bi-pencil-square"></i> Editer</button>
+          <button type="button" class="btn_info" id="dtc_cons_btn_add_offre" hidden><i class="bi bi-plus-lg"></i> Ajouter offre</button>
+        </div>
+        <button type="button" class="btn_info section_toggle_btn" title="Développer la section" aria-label="Développer la section">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      <div class="cons_sub cons_tbl_wrap" id="cons_parvenues"></div>
+    </section>
+
+    <section class="block_metiers block_metiers_accordion is_collapsed" data-category="financieres">
+      <div class="block_metiers_header">
+        <h3>Offres financières</h3>
+        <span class="block_metiers_status" data-status="financieres"></span>
+        <div class="cons_head_actions">
+          <button type="button" class="btn_info" id="cons_toggle_edit_financieres" aria-pressed="false" title="Saisir les montants"><i class="bi bi-pencil-square"></i> Editer</button>
+        </div>
+        <button type="button" class="btn_info section_toggle_btn" title="Développer la section" aria-label="Développer la section">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      <div class="cons_sub cons_tbl_wrap" id="cons_financieres"></div>
+    </section>
+
+    <section class="block_metiers block_metiers_accordion is_collapsed" data-category="techniques">
+      <div class="block_metiers_header">
+        <h3>Offres techniques</h3>
+        <span class="block_metiers_status" data-status="techniques"></span>
+        <div class="cons_head_actions">
+          <button type="button" class="btn_info" id="cons_toggle_edit_techniques" aria-pressed="false" title="Rendre les cellules du tableau modifiables"><i class="bi bi-pencil-square"></i> Editer</button>
+        </div>
+        <button type="button" class="btn_info section_toggle_btn" title="Développer la section" aria-label="Développer la section">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      <div class="cons_sub" id="cons_techniques"></div>
+    </section>
+
+    <section class="block_metiers block_metiers_accordion is_collapsed" data-category="evaltech">
+      <div class="block_metiers_header">
+        <h3>Evaluation technique</h3>
+        <span class="block_metiers_status" data-status="evaltech"></span>
+        <div class="cons_head_actions">
+          <button type="button" class="btn_info" id="cons_toggle_edit_evaltech" aria-pressed="false" title="Saisir la conformité"><i class="bi bi-pencil-square"></i> Editer</button>
+        </div>
+        <button type="button" class="btn_info section_toggle_btn" title="Développer la section" aria-label="Développer la section">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      <div class="cons_sub" id="cons_evaltech"></div>
+    </section>
+
+  </main>
+
+  <div class="cons_print_blank" id="cons_print_blank"></div>
+
+  <!-- Modale Editer : même contenu que la modale Consultation de dtc.html#consultations.
+       Le domaine n'est pas modifiable ici. -->
+  <div class="modal_overlay" id="dtc_modal_consultation">
+    <div class="modal_dialog dtc_modal_cons">
+      <div class="modal_header">
+        <h3 id="dtc_consultation_titre">Consultation</h3>
+        <button type="button" class="modal_close" data-close-modal="dtc_modal_consultation"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <div class="dtc_fields dtc_fields_num_dom">
+          <label class="dtc_date_field">N° de consultation
+            <input type="text" id="dtc_cons_num" placeholder="ex. 5" />
+          </label>
+          <label class="dtc_date_field">Domaine
+            <select id="dtc_cons_domaine" disabled></select>
+          </label>
+        </div>
+        <div class="dtc_fields">
+          <label class="dtc_date_field">Date d'annonce
+            <input type="date" id="dtc_cons_annonce" />
+          </label>
+          <label class="dtc_date_field">Date de clôture
+            <input type="date" id="dtc_cons_cloture" />
+          </label>
+          <label class="dtc_date_field">Date de prorogation
+            <input type="date" id="dtc_cons_proroge" />
+          </label>
+        </div>
+        <div class="dtc_fields">
+          <label class="dtc_date_field">État
+            <select id="dtc_cons_etat">
+              <option value="">----</option>
+              <option value="lancée">Lancée</option>
+              <option value="prorogée">Prorogée</option>
+              <option value="évaluation">Évaluation</option>
+              <option value="fructueuse">Fructueuse</option>
+              <option value="infructueuse">Infructueuse</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="dtc_editer_footer">
+        <button type="button" class="btn_success" id="dtc_consultation_btn_enregistrer"><i class="bi bi-check-lg"></i> Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/navbar_breadcrumb.js"></script>
+  <script src="js/modal_forms.js"></script>
+  <script src="js/sticky_metiers.js"></script>
+  <script src="js/section_toggles.js"></script>
+
+  <script>
+    /* ============================================================
+       Logique propre à cons.html — affichage en lecture seule d'une
+       consultation DTC (cons.html?id=<id>). Les données viennent de
+       listConsultationsDTC (une consultation est une entrée du fichier
+       Drive unique "CONSULTATIONS DTC.html") ; l'édition reste dans la
+       modale "Editer" de dtc.html#consultations.
+       ============================================================ */
+
+    // Mêmes définitions que dtc.html (documents administratifs / techniques).
+    const DTC_ADMIN_ROWS = [
+      { k: "consultation", lib: "احترام عملية الاستشارة" },
+      { k: "cahier", lib: "كراس الشروط ممضى ومختوم", elim: true },
+      { k: "fiche", lib: "بطاقة تقديم الهيكل مستخرجة من مالك" },
+      { k: "registre", lib: "مضمون من السجل الوطني للمؤسسات" },
+      { k: "cnss", lib: "انخراط في نظام الضمان الاجتماعي" },
+      { k: "honneur", lib: "التصريح على الشرف" },
+      { k: "financiere", lib: "العرض المالي", elim: true, bleu: true }
+    ];
+
+    const DTC_TECH_ROWS = [
+      { g: "بطاقة البرنامج", rows: [
+        { k: "modele", lib: "احترام الأنموذج", elim: true },
+        { k: "carte", lib: "إمضاء البطاقة", type: "carte" },
+        { k: "heures", lib: "التوزيع الزمني نظري - تطبيقي", elim: true, exclTxt: "لعدم احترام التوزيع الزمني" },
+        { k: "objectifs", lib: "الأهداف البيداغوجية" },
+        { k: "contenu", lib: "محتوى التكوين" },
+        { k: "moyens", lib: "الطرق والوسائل البيداغوجية والتجهيزات" },
+        { k: "evaluation", lib: "منهجية وأدوات التقييم" }
+      ] },
+      { g: "السيرة الذاتية للمكوّن", rows: [
+        { k: "nomCompo", lib: "اسم المكوّن", type: "text" },
+        { k: "cvMalek", lib: "مستخرجة من منظومة مالك" },
+        { k: "nature", lib: "طبيعة المكوّن", type: "nature" }
+      ] },
+      { g: "", rows: [{ k: "espace", lib: "الالتزام بتوفير فضاء" }] }
+    ];
+
+    let consRecord = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      document.getElementById("cons_btn_editer")?.addEventListener("click", ouvrirModalEdition);
+      document.getElementById("dtc_consultation_btn_enregistrer")?.addEventListener("click", enregistrerEdition);
+      initEditionParvenues();
+      initEditionTechniques();
+      initEditionFinancieres();
+      initEditionEvalTech();
+      document.getElementById("cons_btn_imprimer")?.addEventListener("click", () => {
+        // Ouvre toutes les sections pour l'impression
+        document.querySelectorAll(".block_metiers_accordion.is_collapsed").forEach((s) => expandMetierSection(s, { scroll: false }));
+        window.print();
+      });
+
+      const id = new URLSearchParams(window.location.search).get("id");
+      if (!id) {
+        alert("Aucune consultation sélectionnée. Ouvrez-la depuis la liste.");
+        window.location.href = "dtc.html#consultations";
+        return;
+      }
+
+      try {
+        const liste = await apiCallDirect("listConsultationsDTC", {});
+        consRecord = liste.find((c) => c.id === id);
+        if (!consRecord) throw new Error("Consultation introuvable.");
+        afficherConsultation(consRecord);
+      } catch (err) {
+        alert(`Erreur lors du chargement de la consultation : ${err.message}`);
+      } finally {
+        document.getElementById("navbar_loading").hidden = true;
+      }
+    });
+
+    // Le bouton "Enregistrer" est affiché tant qu'un tableau est en édition (offres parvenues / techniques).
+    function enregistrerAffiche() {
+      return !!(editParvenues || editTech || editFin || editEv);
+    }
+
+    // Rechargement / fermeture de l'onglet : avertissement natif du navigateur.
+    window.addEventListener("beforeunload", (e) => {
+      if (!enregistrerAffiche()) return;
+      e.preventDefault();
+      e.returnValue = "";
+    });
+
+    // Retour / fil d'Ariane / tout lien de l'en-tête : confirmation avant de quitter.
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest(".navbar a[href]");
+      if (!a || !enregistrerAffiche()) return;
+      if (!confirm("Des modifications ne sont pas enregistrées (bouton « Enregistrer » affiché). Quitter quand même ?")) e.preventDefault();
+    });
+
+    function esc(s) {
+      return String(s === null || s === undefined ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function formaterDateFr(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ""));
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : "----";
+    }
+
+    // Date + heure de réception ("AAAA-MM-JJTHH:MM" ; les anciennes valeurs "AAAA-MM-JJ" restent lisibles).
+    function formaterDateHeureFr(v) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(String(v || ""));
+      if (!m) return "----";
+      return `${m[3]}/${m[2]}/${m[1]}${m[4] ? ` ${m[4]}:${m[5]}` : ""}`;
+    }
+
+    // Nombre de jours écoulés entre une date AAAA-MM-JJ et aujourd'hui (null si date absente).
+    function joursDepuis(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+      if (!m) return null;
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      const t = new Date(); const auj = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+      return Math.max(0, Math.round((auj - d) / 86400000));
+    }
+
+    function fmtNb(n) { return String(Math.round((Number(n) || 0) * 100) / 100); }
+
+    function dateDuJourISO() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    // Même règle que etatConsultation() de dtc.html.
+    function etatConsultation(c) {
+      const aujourdhui = dateDuJourISO();
+      const annonce = c.dateAnnonce || "";
+      const fin = c.dateProrogation || c.dateCloture || "";
+      if (!annonce || aujourdhui < annonce) return "Prévue";
+      if (!fin || aujourdhui < fin) return c.dateProrogation ? "Prorogée" : "Annoncée";
+      return (c.fructueux || []).length >= 1 ? "Fructueuse" : "Infructueuse";
+    }
+
+    function setField(name, value) {
+      const el = document.querySelector(`[data-field="${name}"]`);
+      if (el) el.textContent = (value === null || value === undefined || value === "") ? "----" : value;
+    }
+
+    function setStatus(cat, texte) {
+      const el = document.querySelector(`[data-status="${cat}"]`);
+      if (el) el.textContent = texte;
+    }
+
+    function oui(v) { return v ? `نعم` : `<span class="cons_ko">لا</span>`; }
+
+    // كراس الشروط : true = نعم ; false = لا (إقصائي) ; "nosign" = غير ممضى (استكمال) ; "lastpage" = ممضى في الصفحة الأخيرة (استكمال).
+    const CAHIER_OPTS = [[true, "نعم"], [false, "لا (إقصائي)"], ["nosign", "غير ممضى (استكمال)"], ["lastpage", "ممضى في الصفحة الأخيرة (استكمال)"]];
+    function cahierLib(v) { return (CAHIER_OPTS.find((x) => x[0] === (v === undefined ? false : v)) || CAHIER_OPTS[1])[1]; }
+    function admState(k, v) { return k === "cahier" && typeof v === "string" ? "mid" : (v ? "oui" : "non"); }
+    function admLib(k, v) { return k === "cahier" ? cahierLib(v) : (v ? "نعم" : "لا"); }
+
+    // État effectif : une clôture / prorogation passée fait passer automatiquement une consultation lancée/prorogée en « évaluation ».
+    function etatEffectif(c) {
+      const brut = String(c.etat || "").toLowerCase();
+      const fin = c.dateProrogation || c.dateCloture || "";
+      const passee = !!fin && dateDuJourISO() >= fin;
+      if (passee && (brut === "" || brut === "lancée" || brut === "prorogée")) {
+        return (!brut && (c.fructueux || []).length >= 1) ? "fructueuse" : "évaluation";
+      }
+      return brut || etatConsultation(c).toLowerCase();
+    }
+
+    const CARTE_OPTS = [["oui", "نعم"], ["non", "لا (إقصائي)"], ["struct", "الهيكل غير ممضي"], ["compo", "المكوّن غير ممضي (إقصائي)"]];
+    const CARTE_KO = ["non", "compo"];
+    function libOffre(o, i) {
+      return `العرض عدد ${i + 1}${o.nom ? ` — ${o.nom}` : ""}`;
+    }
+
+    function afficherConsultation(c) {
+      const fructueux = c.fructueux || [];
+      const themes = c.themes || [];
+      const offres = c.offres || [];
+
+      setField("num", c.numCons);
+      setField("partenaire", c.sigle || c.etablissement);
+      setField("domaine", c.domaine);
+      setField("cloture", formaterDateFr(c.dateCloture));
+      const etatEff = etatEffectif(c);
+      let etatTxt = etatCapitalise(etatEff);
+      if (etatEff === "évaluation") {
+        const nbj = joursDepuis(c.dateProrogation || c.dateCloture);
+        if (nbj !== null) etatTxt += ` (${nbj} jour${nbj > 1 ? "s" : ""})`;
+      }
+      setField("etat", etatTxt);
+      document.getElementById("cons_info_fruct").hidden = etatEff !== "fructueuse";
+      setField("fructueux", `${fructueux.length} / ${themes.length}${fructueux.length ? ` : ${fructueux.join("، ")}` : ""}`);
+
+      renderParvenues(offres);
+      renderTechniques(c, offres);
+      renderFinancieres(c, offres);
+      renderEvalTech(c, offres);
+    }
+
+
+    // الخلاصة : par ordre d'arrivée des offres.
+    function renderSyntheseParvenues(offres) {
+      const t = (o) => { const d = Date.parse(o.dateRecu || ""); return isNaN(d) ? Infinity : d; };
+      const ordre = offres.map((o, i) => ({ o, i })).sort((a, b) => t(a.o) - t(b.o));
+      const elim = ["consultation", "cahier", "financiere"];
+      const lib = (k) => DTC_ADMIN_ROWS.find((r) => r.k === k).lib;
+      const items = ordre.map(({ o, i }) => {
+        const a = o.admin || {};
+        const nom = `العرض عدد ${i + 1}${o.nom ? ` — ${esc(o.nom)}` : ""}`;
+        let txt = "";
+        if (editParvenues || !Object.keys(a).length) txt = ""; // pas de décision avant enregistrement
+        else if (!a.consultation) txt = `لم يفتح : عدم ${esc(lib("consultation"))} (إقصائي)`;
+        else {
+          const ko = elim.filter((k) => !a[k]);
+          const manque = DTC_ADMIN_ROWS.filter((r) => !elim.includes(r.k) && !a[r.k]).map((r) => esc(r.lib));
+          const cahierAComp = typeof a.cahier === "string";
+          if (ko.length) txt = `مقصى : ${ko.map((k) => k === "cahier" ? "لعدم توفر كراس الشروط" : `${esc(lib(k))} (إقصائي)`).join("، ")}`;
+          else {
+            const parts = [];
+            if (cahierAComp) parts.push("استكمال إمضاء كراس الشروط");
+            if (manque.length) parts.push(`طلب استكمال من الهيكل الوثائق : ${manque.join("، ")}`);
+            txt = parts.length ? parts.join(" — ") : `الملف الإداري كامل`;
+          }
+        }
+        return `<li><strong>${nom}</strong>${txt ? ` : ${txt}` : ""}</li>`;
+      }).join("");
+      return `<div class="cons_ar" dir="rtl" style="margin-top:12px"><h4 style="margin:0 0 6px">الخلاصة:</h4><ol style="margin:0;padding-inline-start:20px">${items}</ol></div>`;
+    }
+
+
+    // Offre retenue = aucun critère éliminatoire à "لا".
+    function nbRetenues(offres) {
+      return offres.filter(estRetenue).length;
+    }
+    function estRetenue(o) { const a = o.admin || {}; return !!(a.consultation && a.cahier && a.financiere); }
+
+    let editParvenues = false;
+
+    function renderParvenues(offres) {
+      const box = document.getElementById("cons_parvenues");
+      { const y = nbRetenues(offres), x = offres.length;
+        setStatus("parvenues", x ? `${x} offre${x > 1 ? "s" : ""} (${y} retenue${y > 1 ? "s" : ""}, ${x - y} non retenue${x - y > 1 ? "s" : ""})` : "Aucune offre"); }
+      if (offres.length === 0) {
+        box.innerHTML = `<p class="cons_empty">Aucune offre enregistrée.</p>`;
+        return;
+      }
+      const ed = editParvenues;
+      const ouiNon = (i, k, v) => ed
+        ? `<td class="ctr"><button type="button" class="cons_ev_btn" data-admtgl data-state="${admState(k, v)}" data-i="${i}" data-k="${k}">${admLib(k, v)}</button></td>`
+        : (k === "cahier" ? `<td class="ctr">${typeof v === "string" ? admLib(k, v) : oui(v)}</td>` : `<td class="ctr">${oui(v)}</td>`);
+      const head = offres.map((o, i) => `<th class="ctr cons_ar">العرض عدد ${i + 1}${ed ? ` <button type="button" class="btn_danger" data-del="${i}" title="Supprimer l'offre"><i class="bi bi-trash"></i></button>` : ""}</th>`).join("");
+      const lignes = DTC_ADMIN_ROWS.map((r) => `
+        <tr class="${r.bleu ? "bleu" : ""}">
+          <td class="lbl cons_ar">${esc(r.lib)}${r.k === "cahier" ? "" : (r.elim || r.k === "consultation" ? ` <span class="cons_elim">(إقصائي)</span>` : "")}</td>
+          ${offres.map((o, i) => (r.k !== "consultation" && !(o.admin && o.admin.consultation))
+            ? `<td class="ctr cons_ar">لم يفتح</td>` // احترام عملية الاستشارة = لا : لم يفتح
+            : ouiNon(i, r.k, r.k === "cahier" ? (o.admin ? o.admin.cahier : undefined) : !!(o.admin && o.admin[r.k]))).join("")}
+        </tr>`).join("");
+      const nomCell = (o, i) => ed
+        ? `<td class="ctr"><input type="text" dir="auto" class="cons_cell_in" data-i="${i}" data-f="nom" value="${esc(o.nom || "")}" placeholder="الهيكل" /></td>`
+        : `<td class="ctr">${esc(o.nom) || "----"}</td>`;
+      const dateCell = (o, i) => {
+        if (!ed) return `<td class="ctr">${esc(formaterDateHeureFr(o.dateRecu))}</td>`;
+        let v = String(o.dateRecu || "");
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) v += "T00:00";
+        return `<td class="ctr"><input type="datetime-local" class="cons_cell_in" data-i="${i}" data-f="dateRecu" value="${esc(v.slice(0, 16))}" /></td>`;
+      };
+      box.innerHTML = `
+        <table class="cons_tbl${ed ? " is_edit" : ""}">
+          <thead><tr><th class="cons_ar">الوثائق الإدارية</th>${head}</tr></thead>
+          <tbody>
+            <tr><td class="lbl cons_ar">الهيكل</td>${offres.map(nomCell).join("")}</tr>
+            <tr><td class="lbl cons_ar">تاريخ الورود</td>${offres.map(dateCell).join("")}</tr>
+            ${lignes}
+          </tbody>
+        </table>`;
+      box.innerHTML += renderSyntheseParvenues(offres);
+    }
+
+    // Édition directe du tableau "Offres parvenues" (interrupteur Editer + bouton Ajouter offre).
+    function initEditionParvenues() {
+      const toggle = document.getElementById("cons_toggle_edit_parvenues");
+      const addBtn = document.getElementById("dtc_cons_btn_add_offre");
+      const section = document.querySelector('[data-category="parvenues"]');
+      // Ne pas replier/déplier la section en cliquant sur ces contrôles.
+      [toggle, addBtn].forEach((el) => el.addEventListener("click", (e) => e.stopPropagation()));
+      const ouvrir = () => { expandMetierSection(section); collapseOtherMetierSections(section); };
+
+      // Bouton bascule : crayon = lecture seule ; disquette = édition active (cliquer pour enregistrer).
+      toggle.setEtat = (on) => {
+        toggle.checked = on;
+        toggle.setAttribute("aria-pressed", String(on));
+        addBtn.hidden = !on;
+        toggle.innerHTML = on ? `<i class="bi bi-floppy"></i> Enregistrer` : `<i class="bi bi-pencil-square"></i> Editer`;
+        toggle.title = on ? "Enregistrer et quitter l'édition" : "Rendre les cellules du tableau modifiables";
+      };
+      toggle.addEventListener("click", async () => {
+        if (!consRecord) return;
+        toggle.setEtat(!toggle.checked);
+        if (toggle.checked) {
+          editParvenues = true; ouvrir();
+          renderParvenues(consRecord.offres || []);
+        } else {
+          editParvenues = false;
+          afficherConsultation(consRecord);
+          await sauverOffres();
+        }
+      });
+
+      addBtn.addEventListener("click", () => {
+        if (!consRecord) return;
+        consRecord.offres = consRecord.offres || [];
+        consRecord.offres.push({ nom: "", dateRecu: "", admin: {}, tech: {}, couts: {} });
+        toggle.setEtat(true); editParvenues = true; ouvrir();
+        afficherConsultation(consRecord);
+        const ins = document.querySelectorAll('#cons_parvenues input[data-f="nom"]');
+        ins[ins.length - 1]?.focus();
+      });
+
+      const box = document.getElementById("cons_parvenues");
+      box.addEventListener("change", (e) => {
+        const el = e.target.closest(".cons_cell_in");
+        if (!el || !consRecord) return;
+        const o = consRecord.offres[Number(el.dataset.i)];
+        if (!o) return;
+        if (el.dataset.f === "nom") o.nom = el.value.trim();
+        else if (el.dataset.f === "dateRecu") o.dateRecu = el.value;
+      });
+      box.addEventListener("click", (e) => {
+        const g = e.target.closest("[data-admtgl]");
+        if (g && consRecord) {
+          const o = consRecord.offres[Number(g.dataset.i)];
+          if (!o) return;
+          o.admin = o.admin || {};
+          const k = g.dataset.k;
+          if (k === "cahier") {
+            const cyc = CAHIER_OPTS.map((x) => x[0]);
+            const pos = cyc.indexOf(o.admin.cahier === undefined ? false : o.admin.cahier);
+            o.admin.cahier = cyc[(pos + 1) % cyc.length];
+          } else o.admin[k] = !o.admin[k];
+          if (k === "consultation") renderParvenues(consRecord.offres);
+          else { g.textContent = admLib(k, o.admin[k]); g.dataset.state = admState(k, o.admin[k]); }
+          return;
+        }
+        const b = e.target.closest("[data-del]");
+        if (!b || !consRecord) return;
+        if (!confirm("Supprimer cette offre et toutes ses données saisies ?")) return;
+        consRecord.offres.splice(Number(b.dataset.del), 1);
+        afficherConsultation(consRecord);
+      });
+    }
+
+    let editTech = false, techSel = -1;
+    function initEditionTechniques() {
+      const toggle = document.getElementById("cons_toggle_edit_techniques");
+      const section = document.querySelector('[data-category="techniques"]');
+      const box = document.getElementById("cons_techniques");
+      toggle.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!consRecord) return;
+        editTech = !editTech;
+        toggle.setAttribute("aria-pressed", String(editTech));
+        toggle.innerHTML = editTech ? `<i class="bi bi-floppy"></i> Enregistrer` : `<i class="bi bi-pencil-square"></i> Editer`;
+        expandMetierSection(section); collapseOtherMetierSections(section);
+        renderTechniques(consRecord, consRecord.offres || []);
+        renderFinancieres(consRecord, consRecord.offres || []);
+        if (!editTech) await sauverOffres(toggle);
+      });
+      box.addEventListener("click", (e) => {
+        const p = e.target.closest("[data-print-blank]");
+        if (p && consRecord) { imprimerTechVierge(Number(p.dataset.printBlank)); return; }
+        const g = e.target.closest("[data-tgl]");
+        if (g && consRecord) {
+          const o = consRecord.offres[Number(g.dataset.i)];
+          if (!o) return;
+          o.tech = o.tech || {};
+          const v = o.tech[g.dataset.t] = o.tech[g.dataset.t] || {};
+          const k = g.dataset.k;
+          const cyc = tglCycle(k);
+          const pos = cyc.indexOf(v[k] === "" ? undefined : v[k]);
+          const suiv = cyc[(pos + 1) % cyc.length];
+          if (suiv === undefined) delete v[k]; else v[k] = suiv;
+          g.textContent = tglLib(k, v[k]);
+          g.dataset.state = tglState(k, v[k]);
+          return;
+        }
+        const b = e.target.closest("[data-tab]");
+        if (!b || !consRecord) return;
+        techSel = Number(b.dataset.tab);
+        renderTechniques(consRecord, consRecord.offres || []);
+      });
+      box.addEventListener("change", (e) => {
+        const el = e.target.closest(".cons_cell_in");
+        if (!el || !consRecord) return;
+        const o = consRecord.offres[Number(el.dataset.i)];
+        if (!o) return;
+        o.tech = o.tech || {};
+        const v = o.tech[el.dataset.t] = o.tech[el.dataset.t] || {};
+        if (el.dataset.h) v[el.dataset.h] = el.value === "" ? "" : Number(el.value);
+        else if (el.tagName === "SELECT" && el.value === "") delete v[el.dataset.k];
+        else if (el.tagName === "SELECT" && el.dataset.k !== "nature" && el.dataset.k !== "carte") v[el.dataset.k] = el.value === "1";
+        else v[el.dataset.k] = el.value.trim();
+      });
+    }
+
+    // Enregistre les offres modifiées (à la désactivation de l'interrupteur Editer).
+    async function sauverOffres(btn) {
+      const toggle = btn || document.getElementById("cons_toggle_edit_parvenues");
+      toggle.disabled = true;
+      try {
+        consRecord.offres = (consRecord.offres || []).map((o) => ({ ...o, nom: String(o.nom || "").trim() }));
+        await apiCallDirect("enregistrerConsultationDTC", { consultation: consRecord });
+      } catch (err) {
+        alert(`Erreur lors de l'enregistrement des offres : ${err.message}`);
+      } finally {
+        toggle.disabled = false;
+      }
+    }
+
+    function renderTechniques(c, offres) {
+      const box = document.getElementById("cons_techniques");
+      const themes = c.themes || [];
+      const det = {};
+      (c.details || []).forEach((d) => { det[d.nom] = d; });
+      { const y = nbRetenues(offres); setStatus("techniques", offres.length ? `${y} offre${y > 1 ? "s" : ""} retenue${y > 1 ? "s" : ""}` : ""); }
+      if (offres.length === 0) {
+        box.innerHTML = `<p class="cons_empty">Aucune offre enregistrée.</p>`;
+        return;
+      }
+      const ret = offres.map((o, i) => ({ o, i })).filter(({ o }) => estRetenue(o));
+      if (ret.length === 0) {
+        box.innerHTML = `<p class="cons_empty">Aucune offre retenue.</p>`;
+        return;
+      }
+      if (themes.length === 0) {
+        box.innerHTML = `<p class="cons_empty">Aucun thème pour cette consultation.</p>`;
+        return;
+      }
+
+      const cellLecture = (o, nom, r) => {
+        const v = (o.tech && o.tech[nom]) || {};
+        if (r.type === "text") return `<td class="ctr cons_ar">${esc(v[r.k]) || "----"}</td>`;
+        if (r.type === "nature") return `<td class="ctr cons_ar">${esc(v[r.k]) || "----"}</td>`;
+        if (r.type === "carte") { const x = CARTE_OPTS.find((c) => c[0] === v[r.k]); return `<td class="ctr cons_ar">${x ? esc(x[1]) : "----"}</td>`; }
+        return `<td class="ctr">${v[r.k] === undefined || v[r.k] === "" ? "----" : oui(v[r.k])}</td>`;
+      };
+
+      if (!ret.some(({ i }) => i === techSel)) techSel = ret[0].i;
+      const ed = editTech;
+      const onglets = `<div class="cons_tabs" dir="rtl">${ret.map(({ o, i }) => `<button type="button" class="btn_info cons_tab${i === techSel ? " is_active" : ""}" data-tab="${i}">العرض عدد ${i + 1}</button>`).join("")}<button type="button" class="btn_info cons_tab_print" data-print-blank="${techSel}" title="Imprimer un tableau vierge"><i class="bi bi-printer"></i> Imprimer</button></div>`;
+      box.innerHTML = onglets + ret.filter(({ i }) => i === techSel).map(({ o, i }) => {
+        const cell = (o, nom, r) => {
+          if (!ed) return cellLecture(o, nom, r);
+          const v = (o.tech && o.tech[nom]) || {};
+          const at = `class="cons_cell_in" data-i="${i}" data-t="${esc(nom)}" data-k="${r.k}"`;
+          if (r.type === "carte") return `<td class="ctr">${tglHtml(i, nom, r.k, v[r.k])}</td>`;
+          if (r.type === "nature") return `<td class="ctr cons_ar">${tglHtml(i, nom, r.k, v[r.k])}</td>`;
+          if (r.type === "text") return `<td class="ctr"><input type="text" dir="auto" ${at} value="${esc(v[r.k] || "")}" /></td>`;
+          return `<td class="ctr">${tglHtml(i, nom, r.k, v[r.k])}</td>`;
+        };
+        const lignes = DTC_TECH_ROWS.map((grp) => grp.rows.map((r, n) => {
+          let debut;
+          if (!grp.g) debut = `<td colspan="2" class="lbl cons_ar">${esc(r.lib)}${r.elim ? ` <span class="cons_elim">(إقصائي)</span>` : ""}</td>`;
+          else debut = (n === 0 ? `<td rowspan="${grp.rows.length}" class="grp cons_ar">${esc(grp.g)}</td>` : "") + `<td class="lbl cons_ar">${esc(r.lib)}${r.elim ? ` <span class="cons_elim">(إقصائي)</span>` : ""}</td>`;
+          return `<tr>${debut}${themes.map((nom) => cell(o, nom, r)).join("")}</tr>`;
+        }).join("")).join("");
+        return `
+          <div class="cons_off_titre cons_ar">${esc(libOffre(o, i))}</div>
+          <div class="cons_tbl_wrap">
+            <table class="cons_tbl cons_tbl_tech">
+              <colgroup><col style="width:11%"><col style="width:22%">${themes.map(() => "<col>").join("")}</colgroup>
+              <thead><tr><th colspan="2" class="cons_ar">الوثائق الفنّية</th>${themes.map((nom, j) => `
+                <th class="ctr cons_ar">المحور عدد ${j + 1}<div class="cons_theme_sub">${esc(nom)}</div></th>`).join("")}</tr></thead>
+              <tbody>${lignes}</tbody>
+            </table>
+          </div>${syntheseTech(o, themes)}`;
+      }).join("");
+    }
+
+    // Décision par thème : "لا" إقصائي -> مقصى ; sinon "لا" non éliminatoire -> استكمال ; sinon مقبول.
+    // Aucune décision en édition ; état brut ("----") -> جار التثبت.
+    // Toggles : ---- -> نعم -> لا -> ---- ; carte : ---- -> نعم -> لا (إقصائي) -> الهيكل غير ممضي -> المكوّن غير ممضي (إقصائي) -> ----
+    const NATURES = ["خاص", "عمومي", "عمومي دون ترخيص"];
+    function tglCycle(k) { return k === "carte" ? [undefined, ...CARTE_OPTS.map((x) => x[0])] : k === "nature" ? [undefined, ...NATURES] : [undefined, true, false]; }
+    function tglState(k, v) { return v === undefined || v === "" ? "vide" : k === "carte" || k === "nature" ? v : (v ? "oui" : "non"); }
+    function tglLib(k, v) {
+      if (v === undefined || v === "") return "----";
+      if (k === "nature") return v;
+      if (k === "carte") return (CARTE_OPTS.find((x) => x[0] === v) || [, "----"])[1];
+      return v ? "نعم" : "لا";
+    }
+    function tglHtml(i, nom, k, v) {
+      return `<button type="button" class="cons_tgl" data-tgl data-state="${tglState(k, v)}" data-i="${i}" data-t="${esc(nom)}" data-k="${k}">${tglLib(k, v)}</button>`;
+    }
+
+    // Un محور est مقصى si un critère éliminatoire de l'offre technique est à "لا" (ou carte non / مكوّن غير ممضي).
+    function themeExclu(o, nom) {
+      const v = (o.tech && o.tech[nom]) || {};
+      return DTC_TECH_ROWS.flatMap((g) => g.rows).some((r) =>
+        r.type === "carte" ? CARTE_KO.includes(v.carte) : (!r.type && r.elim && v[r.k] === false));
+    }
+
+    function syntheseTech(o, themes) {
+      const rows = DTC_TECH_ROWS.flatMap((g) => g.rows);
+      const items = themes.map((nom, j) => {
+        const v = (o.tech && o.tech[nom]) || {};
+        let txt = "";
+        if (!editTech) {
+          const ko = [], manque = [], attente = [];
+          rows.forEach((r) => {
+            if (r.type === "carte") { if (CARTE_KO.includes(v.carte)) ko.push(r); else if (v.carte === "struct") manque.push(r); else if (v.carte !== "oui") attente.push(r); }
+            else if (!r.type) { if (v[r.k] === false) (r.elim ? ko : manque).push(r); else if (v[r.k] !== true) attente.push(r); }
+          });
+          const l = (arr) => arr.map((r) => esc(r.lib)).join("، ");
+          const koStd = ko.filter((r) => !r.exclTxt), koSpec = ko.filter((r) => r.exclTxt);
+          const partsKo = [];
+          if (koStd.length) partsKo.push(`الهيكل مقصى في المحور (${l(koStd)} - إقصائي)`);
+          koSpec.forEach((r) => partsKo.push(`مقصى ${r.exclTxt}`));
+          txt = ko.length ? partsKo.join(" — ") : manque.length ? `استكمال (${l(manque)})` : attente.length ? "جار التثبت" : "مقبول";
+          if (v.nature === "عمومي دون ترخيص") txt += ` — المكوّن عمومي دون ترخيص`;
+        }
+        return `<li>المحور عدد ${j + 1}${txt ? ` : ${txt}` : ""}</li>`;
+      }).join("");
+      return `<div class="cons_ar" dir="rtl" style="margin-top:12px"><h4 style="margin:0 0 6px">الخلاصة:</h4><ol style="margin:0;padding-inline-start:20px">${items}</ol></div>`;
+    }
+
+    // Tableau technique vierge (offre sélectionnée) à remplir à la main.
+    function imprimerTechVierge(i) {
+      const c = consRecord, o = c && (c.offres || [])[i];
+      if (!o) return;
+      const themes = c.themes || [];
+      const lib = (r) => `${esc(r.lib)}${r.elim ? ` <span class="cons_elim">(إقصائي)</span>` : ""}`;
+      const det = {};
+      (c.details || []).forEach((d) => { det[d.nom] = d; });
+      // Ligne « التوزيع الزمني نظري - تطبيقي » : à l'écran toujours un toggle نعم/لا ; sur papier on imprime les heures th / pr.
+      // Heures théoriques / pratiques d'un thème : saisie de l'offre, sinon consultation (hrtThemes/hrpThemes), sinon détails.
+      const heuresTxt = (nom, j) => {
+        const v = (o.tech && o.tech[nom]) || {};
+        const theo = v.theo !== undefined && v.theo !== "" ? v.theo : (c.hrtThemes && c.hrtThemes[j] !== undefined ? c.hrtThemes[j] : (det[nom] ? det[nom].heuresTheo : ""));
+        const prat = v.prat !== undefined && v.prat !== "" ? v.prat : (c.hrpThemes && c.hrpThemes[j] !== undefined ? c.hrpThemes[j] : (det[nom] ? det[nom].heuresPrat : ""));
+        return (theo === "" && prat === "") ? "" : `${fmtNb(theo)} / ${fmtNb(prat)}`;
+      };
+      const PAR_PAGE = 7;
+      const pages = [];
+      for (let p = 0; p < themes.length; p += PAR_PAGE) pages.push(p);
+      if (pages.length === 0) pages.push(0);
+      document.getElementById("cons_print_blank").innerHTML = pages.map((debutIdx) => {
+        const lot = themes.slice(debutIdx, debutIdx + PAR_PAGE).map((nom, k) => ({ nom, j: debutIdx + k }));
+        const lignes = DTC_TECH_ROWS.map((grp) => grp.rows.map((r, n) => {
+          const debut = !grp.g
+            ? `<td colspan="2" class="lbl cons_ar">${lib(r)}</td>`
+            : (n === 0 ? `<td rowspan="${grp.rows.length}" class="grp cons_ar">${esc(grp.g)}</td>` : "") + `<td class="lbl cons_ar">${lib(r)}</td>`;
+          const cellule = ({ nom, j }) => r.k === "heures"
+            ? `<td class="num">${esc(heuresTxt(nom, j))}</td>`
+            : `<td class="ctr blank_cell"></td>`;
+          return `<tr>${debut}${lot.map(cellule).join("")}</tr>`;
+        }).join("")).join("");
+        return `
+        <div class="cons_print_page">
+          <div class="cons_print_titre cons_ar" dir="rtl">الإستشارة عدد ${esc(c.numCons || "----")} في مجال ${esc(c.domaine || "----")}</div>
+          <div class="cons_off_titre cons_ar">${esc(libOffre(o, i))}</div>
+          <div class="cons_tbl_wrap">
+            <table class="cons_tbl cons_tbl_tech">
+              <colgroup><col style="width:11%"><col style="width:22%">${lot.map(() => "<col>").join("")}</colgroup>
+              <thead><tr><th colspan="2" class="cons_ar">الوثائق الفنّية</th>${lot.map(({ nom, j }) => `
+                <th class="ctr cons_ar">المحور عدد ${j + 1}<div class="cons_theme_sub">${esc(nom)}</div></th>`).join("")}</tr></thead>
+              <tbody>${lignes}</tbody>
+            </table>
+          </div>
+          <div class="cons_ar" dir="rtl" style="margin-top:12px"><h4 style="margin:0 0 6px">الخلاصة:</h4>
+            <ol class="cons_blank_lines">${lot.map(({ j }) => `<li value="${j + 1}">المحور عدد ${j + 1} : </li>`).join("")}</ol></div>
+        </div>`;
+      }).join("");
+      document.body.classList.add("is_print_blank");
+      window.addEventListener("afterprint", () => document.body.classList.remove("is_print_blank"), { once: true });
+      window.print();
+    }
+
+    let editFin = false;
+    function initEditionFinancieres() {
+      const toggle = document.getElementById("cons_toggle_edit_financieres");
+      const section = document.querySelector('[data-category="financieres"]');
+      const box = document.getElementById("cons_financieres");
+      toggle.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!consRecord) return;
+        editFin = !editFin;
+        toggle.setAttribute("aria-pressed", String(editFin));
+        toggle.innerHTML = editFin ? `<i class="bi bi-floppy"></i> Enregistrer` : `<i class="bi bi-pencil-square"></i> Editer`;
+        toggle.title = editFin ? "Enregistrer et quitter l'édition" : "Saisir les montants";
+        expandMetierSection(section); collapseOtherMetierSections(section);
+        renderFinancieres(consRecord, consRecord.offres || []);
+        if (!editFin) await sauverOffres(toggle);
+      });
+      box.addEventListener("change", (e) => {
+        const el = e.target.closest("input[data-cout]");
+        if (!el || !consRecord) return;
+        const o = consRecord.offres[Number(el.dataset.i)];
+        if (!o) return;
+        o.couts = o.couts || {};
+        if (el.value === "") delete o.couts[el.dataset.cout];
+        else o.couts[el.dataset.cout] = Number(el.value);
+      });
+    }
+
+    function renderFinancieres(c, offres) {
+      const box = document.getElementById("cons_financieres");
+      const themes = c.themes || [];
+      { const y = nbRetenues(offres); setStatus("financieres", offres.length ? `${y} offre${y > 1 ? "s" : ""} retenue${y > 1 ? "s" : ""}` : ""); }
+      if (offres.length === 0) {
+        box.innerHTML = `<p class="cons_empty">Aucune offre enregistrée.</p>`;
+        return;
+      }
+      const ret = offres.map((o, i) => ({ o, i })).filter(({ o }) => estRetenue(o));
+      if (ret.length === 0) {
+        box.innerHTML = `<p class="cons_empty">Aucune offre retenue.</p>`;
+        return;
+      }
+      if (themes.length === 0) {
+        box.innerHTML = `<p class="cons_empty">Aucun thème pour cette consultation.</p>`;
+        return;
+      }
+      const head = ret.map(({ o, i }) => `<th class="ctr cons_ar">الكلفة بالأرقام (د)<div class="cons_theme_sub">${esc(libOffre(o, i))}</div></th>`).join("");
+      const ed = editFin;
+      const lignes = themes.map((nom, j) => `
+        <tr>
+          <td class="num">${j + 1}</td>
+          <td dir="auto">${esc(nom)}</td>
+          ${ret.map(({ o, i: oi }) => {
+            const m = o.couts ? o.couts[nom] : undefined;
+            const vide = (m === undefined || m === null || m === "");
+            const cls = `num${themeExclu(o, nom) ? " fin_exclu" : ""}`;
+            return ed
+              ? `<td class="${cls}"><input type="number" step="any" class="cons_cell_in" data-i="${oi}" data-cout="${esc(nom)}" value="${vide ? "" : esc(m)}" /></td>`
+              : `<td class="${cls}">${vide ? "—" : esc(m)}</td>`;
+          }).join("")}
+        </tr>`).join("");
+      box.innerHTML = `
+        <table class="cons_tbl">
+          <thead><tr><th class="num cons_ar">العدد</th><th class="cons_ar">المحاور</th>${head}</tr></thead>
+          <tbody>${lignes}</tbody>
+        </table>`;
+    }
+
+    /* ---------------- Evaluation technique ----------------
+       Une page par محور (boutons en haut) ; tableau RTL : critères minimaux x offres retenues
+       (مطابق / غير مطابق), puis la ligne des coûts. Stockage : offre.eval[thème][critère] = true|false.
+       Le moins disant = coût le plus bas parmi les offres non مقصى sur ce محور
+       (مقصى = critère éliminatoire de l'offre technique, ou au moins un critère غير مطابق). */
+    const DTC_EVAL_ROWS = [
+      { g: "العناصر البيداغوجية", rows: [
+        { k: "objectifs", lib: "الأهداف البيداغوجية" },
+        { k: "contenu", lib: "المحتوى البيداغوجي" },
+        { k: "moyens", lib: "الوسائل والطرق البيداغوجية والتجهيزات الملائمة للتكوين" },
+        { k: "methodo", lib: "منهجية تقييم التكوين" },
+        { k: "outils", lib: "أدوات تقييم التكوين" }
+      ] },
+      { g: "المكوّن", rows: [
+        { k: "nomCompo", lib: "اسم المكوّن", ro: true },
+        { k: "base", lib: "التكوين الأساسي" },
+        { k: "expPro", lib: "الخبرة المهنية" },
+        { k: "expFc", lib: "الخبرة في التكوين المستمر" }
+      ] }
+    ];
+    const EV_KEYS = DTC_EVAL_ROWS.flatMap((g) => g.rows).filter((r) => !r.ro).map((r) => r.k);
+
+    let editEv = false, evSel = 0;
+
+    function evalNonConforme(o, nom) {
+      const v = (o.eval && o.eval[nom]) || {};
+      return EV_KEYS.some((k) => v[k] === false);
+    }
+    function evalEcarte(o, nom) { return themeExclu(o, nom) || evalNonConforme(o, nom); }
+
+    // Offre(s) la moins disante d'un محور : { min, idx: [index d'offre] } ou null.
+    function moinsDisant(offres, nom) {
+      let min = null, idx = [];
+      offres.forEach((o, i) => {
+        if (!estRetenue(o) || evalEcarte(o, nom)) return;
+        const m = o.couts ? o.couts[nom] : undefined;
+        if (m === undefined || m === null || m === "" || isNaN(Number(m))) return;
+        const n = Number(m);
+        if (min === null || n < min) { min = n; idx = [i]; } else if (n === min) idx.push(i);
+      });
+      return min === null ? null : { min, idx };
+    }
+
+    function evBtn(i, nom, k, v) {
+      const st = v === true ? "oui" : v === false ? "non" : "vide";
+      const lib = v === true ? "مطابق" : v === false ? "غير مطابق" : "----";
+      return `<button type="button" class="cons_ev_btn" data-evtgl data-state="${st}" data-i="${i}" data-t="${esc(nom)}" data-k="${k}">${lib}</button>`;
+    }
+
+    function renderEvalTech(c, offres) {
+      const box = document.getElementById("cons_evaltech");
+      const themes = c.themes || [];
+      const ret = offres.map((o, i) => ({ o, i })).filter(({ o }) => estRetenue(o));
+      setStatus("evaltech", ret.length ? `${ret.length} offre${ret.length > 1 ? "s" : ""} évaluée${ret.length > 1 ? "s" : ""}` : "");
+      if (offres.length === 0) { box.innerHTML = `<p class="cons_empty">Aucune offre enregistrée.</p>`; return; }
+      if (ret.length === 0) { box.innerHTML = `<p class="cons_empty">Aucune offre retenue.</p>`; return; }
+      if (themes.length === 0) { box.innerHTML = `<p class="cons_empty">Aucun thème pour cette consultation.</p>`; return; }
+      if (evSel < 0 || evSel >= themes.length) evSel = 0;
+
+      const nom = themes[evSel];
+      const ed = editEv;
+      const onglets = `<div class="cons_tabs" dir="rtl">${themes.map((t, j) => `<button type="button" class="btn_info cons_tab${j === evSel ? " is_active" : ""}" data-evtab="${j}" title="${esc(t)}">المحور عدد ${j + 1}</button>`).join("")}</div>`;
+
+      const cellule = (o, i, r) => {
+        if (r.k === "nomCompo") {
+          const n = o.tech && o.tech[nom] ? o.tech[nom].nomCompo : "";
+          return `<td class="ctr cons_ar">${esc(n) || "----"}</td>`;
+        }
+        const v = o.eval && o.eval[nom] ? o.eval[nom][r.k] : undefined;
+        if (ed) return `<td class="ctr">${evBtn(i, nom, r.k, v)}</td>`;
+        return `<td class="ctr cons_ar">${v === true ? "مطابق" : v === false ? `<span class="cons_ko">غير مطابق</span>` : "----"}</td>`;
+      };
+      const lignes = DTC_EVAL_ROWS.map((grp) => grp.rows.map((r, n) =>
+        `<tr>${n === 0 ? `<td rowspan="${grp.rows.length}" class="grp cons_ar">${esc(grp.g)}</td>` : ""}<td class="lbl cons_ar">${esc(r.lib)}</td>${ret.map(({ o, i }) => cellule(o, i, r)).join("")}</tr>`
+      ).join("")).join("");
+
+      const best = moinsDisant(offres, nom);
+      const coutRow = `<tr><td colspan="2" class="lbl cons_ar"><strong>الكلفة بالأرقام (د)</strong></td>${ret.map(({ o, i }) => {
+        const m = o.couts ? o.couts[nom] : undefined;
+        const vide = (m === undefined || m === null || m === "");
+        const cls = evalEcarte(o, nom) ? "ev_na" : (best && best.idx.includes(i) ? "ev_best" : "");
+        return `<td class="num ${cls}">${vide ? "—" : esc(m)}</td>`;
+      }).join("")}</tr>`;
+
+      // الخلاصة : le moins disant de chaque محور.
+      const items = themes.map((t, j) => {
+        const b = moinsDisant(offres, t);
+        const txt = b ? b.idx.map((i) => esc(libOffre(offres[i], i))).join(" / ") + ` (${esc(fmtNb(b.min))} د)` : "لا يوجد عرض مؤهل";
+        return `<li>المحور عدد ${j + 1} : ${txt}</li>`;
+      }).join("");
+
+      box.innerHTML = `${onglets}
+        <div class="cons_off_titre cons_ar">المحور عدد ${evSel + 1} — ${esc(nom)}</div>
+        <div class="cons_tbl_wrap">
+          <table class="cons_tbl cons_tbl_tech${ed ? " is_edit" : ""}">
+            <colgroup><col style="width:14%"><col style="width:30%">${ret.map(() => "<col>").join("")}</colgroup>
+            <thead><tr><th class="cons_ar">الوثائق الفنية</th><th class="cons_ar">الشروط الفنية الدنيا</th>${ret.map(({ o, i }) => `<th class="ctr cons_ar">${esc(libOffre(o, i))}</th>`).join("")}</tr></thead>
+            <tbody>${lignes}${coutRow}</tbody>
+          </table>
+        </div>
+        <div class="cons_ar" dir="rtl" style="margin-top:12px"><h4 style="margin:0 0 6px">الأقل كلفة (غير المقصى):</h4><ol style="margin:0;padding-inline-start:20px">${items}</ol></div>`;
+    }
+
+    function initEditionEvalTech() {
+      const toggle = document.getElementById("cons_toggle_edit_evaltech");
+      const section = document.querySelector('[data-category="evaltech"]');
+      const box = document.getElementById("cons_evaltech");
+      toggle.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!consRecord) return;
+        editEv = !editEv;
+        toggle.setAttribute("aria-pressed", String(editEv));
+        toggle.innerHTML = editEv ? `<i class="bi bi-floppy"></i> Enregistrer` : `<i class="bi bi-pencil-square"></i> Editer`;
+        toggle.title = editEv ? "Enregistrer et quitter l'édition" : "Saisir la conformité";
+        expandMetierSection(section); collapseOtherMetierSections(section);
+        renderEvalTech(consRecord, consRecord.offres || []);
+        if (!editEv) await sauverOffres(toggle);
+      });
+      box.addEventListener("click", (e) => {
+        if (!consRecord) return;
+        const t = e.target.closest("[data-evtab]");
+        if (t) { evSel = Number(t.dataset.evtab); renderEvalTech(consRecord, consRecord.offres || []); return; }
+        const g = e.target.closest("[data-evtgl]");
+        if (!g) return;
+        const o = consRecord.offres[Number(g.dataset.i)];
+        if (!o) return;
+        o.eval = o.eval || {};
+        const v = o.eval[g.dataset.t] = o.eval[g.dataset.t] || {};
+        const k = g.dataset.k;
+        // ---- -> مطابق -> غير مطابق -> ----
+        if (v[k] === undefined) v[k] = true; else if (v[k] === true) v[k] = false; else delete v[k];
+        renderEvalTech(consRecord, consRecord.offres || []); // met à jour la ligne des coûts
+      });
+    }
+
+    // ---- Modale Editer : état (stocké) et offres ----
+    const DTC_ETATS = ["lancée", "prorogée", "évaluation", "fructueuse", "infructueuse"];
+
+    function etatCapitalise(e) { return e ? e.charAt(0).toUpperCase() + e.slice(1) : ""; }
+
+    // Valeur du select : état enregistré ; sinon dérivé des dates pour les anciennes consultations.
+    function etatParDefaut(c) {
+      if (!c) return "";
+      { const eff = etatEffectif(c); if (DTC_ETATS.includes(eff)) return eff; }
+      if (c.etat) return c.etat;
+      const m = { "Annoncée": "lancée", "Prorogée": "prorogée", "Fructueuse": "fructueuse", "Infructueuse": "infructueuse" };
+      return m[etatConsultation(c)] || "";
+    }
+
+    // Modale Editer (même contenu que dtc.html#consultations) : N°, domaine (lecture seule) et dates.
+    function ouvrirModalEdition() {
+      if (!consRecord) return;
+      const c = consRecord;
+      const select = document.getElementById("dtc_cons_domaine");
+      select.innerHTML = `<option value="0">${esc(`${c.sigle || c.etablissement} - ${c.domaine}`)}</option>`;
+      select.value = "0";
+      document.getElementById("dtc_cons_num").value = c.numCons || "";
+      document.getElementById("dtc_cons_annonce").value = c.dateAnnonce || "";
+      document.getElementById("dtc_cons_cloture").value = c.dateCloture || "";
+      document.getElementById("dtc_cons_proroge").value = c.dateProrogation || "";
+      document.getElementById("dtc_cons_etat").value = etatParDefaut(c);
+      openFormModal("dtc_modal_consultation");
+    }
+
+    async function enregistrerEdition() {
+      const annonce = document.getElementById("dtc_cons_annonce").value;
+      const cloture = document.getElementById("dtc_cons_cloture").value;
+      const proroge = document.getElementById("dtc_cons_proroge").value;
+
+      // Mêmes contrôles que dtc.html (dates facultatives, ordre chronologique).
+      if (cloture && !annonce) { alert("Renseignez la date d'annonce avant la date de clôture."); return; }
+      if (proroge && !cloture) { alert("Renseignez la date de clôture avant la prorogation."); return; }
+      if (annonce && cloture && cloture < annonce) { alert("La clôture ne peut pas précéder l'annonce."); return; }
+      if (proroge && proroge < cloture) { alert("La prorogation ne peut pas précéder la clôture."); return; }
+
+      // On repart de l'enregistrement complet : ouverture, offres et thèmes fructueux restent intacts.
+      const consultation = {
+        ...consRecord,
+        numCons: document.getElementById("dtc_cons_num").value.trim(),
+        dateAnnonce: annonce,
+        dateCloture: cloture,
+        dateProrogation: proroge || "",
+        etat: document.getElementById("dtc_cons_etat").value,
+        offres: consRecord.offres || []
+      };
+
+      const btn = document.getElementById("dtc_consultation_btn_enregistrer");
+      btn.disabled = true;
+      try {
+        await apiCallDirect("enregistrerConsultationDTC", { consultation });
+        consRecord = consultation;
+        afficherConsultation(consRecord);
+        closeFormModal("dtc_modal_consultation");
+      } catch (err) {
+        alert(`Erreur lors de l'enregistrement : ${err.message}`);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // Même principe que fi.html : appel direct vers l'API Apps Script.
+    async function apiCallDirect(action, payload = {}) {
+      if (window.URSPerm) URSPerm.verifierAppel(action, payload); // droits (permissions.js)
+      const res = await fetch(GAS_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action, ...payload })
+      });
+      if (!res.ok) throw new Error(`Erreur réseau (${res.status})`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Erreur backend inconnue");
+      return data.result;
+    }
+  </script>
+</body>
+</html>
