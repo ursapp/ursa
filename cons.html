@@ -1,0 +1,2225 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>استشارة — URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/spinner.css" />
+  <script src="js/spinner.js"></script>
+  <style>
+    /* ============================================================
+       CSS propre à cons.html (page autonome, RTL) : reprend ce qui servait de
+       layout.css et navbar.css (liens retirés), avec propriétés logiques.
+       ============================================================ */
+    /* Police : Sakkal Majalla partout, sauf la ligne d'infos (.infos_metiers). */
+    /* Tailles agrandies (Sakkal Majalla est petite) : variables redéfinies seulement hors .infos_metiers. */
+    .navbar, main, .modal_overlay { --fs_xs: 1rem; --fs_sm: 1.1rem; --fs_base: 1.25rem; --fs_md: 1.4rem; --fs_lg: 1.75rem; }
+    body, body *:not(.infos_metiers):not(.infos_metiers *) { font-family: "Sakkal Majalla", "Traditional Arabic", Tahoma, Arial, sans-serif !important; }
+    .navbar { position: sticky; top: 0; z-index: 40; height: var(--navbar_height); background: var(--color_paper_raised); border-bottom: 1px solid var(--border_soft); display: flex; align-items: center; gap: var(--space_4); padding: 0 var(--space_6); }
+    .navbar_metier { padding-bottom: 0; align-items: stretch; }
+    .navbar_metier .page_title_group { align-self: center; }
+    .navbar_metier .navbar_actions { align-self: stretch; align-items: stretch; }
+    .navbar_metier .navbar_status { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: var(--space_4); }
+    .navbar_load[hidden], .navbar_alert[hidden] { display: none !important; }
+    .navbar_alert { font-size: var(--fs_sm); font-weight: 700; color: var(--color_danger); display: inline-flex; align-items: center; gap: var(--space_2); }
+    .navbar_actions { margin-inline-start: auto; display: flex; align-items: center; gap: var(--space_3); }
+    .navbar_actions_col { display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; gap: 4px; padding-top: var(--space_1); }
+    .navbar_btns { display: flex; align-items: flex-end; justify-content: flex-end; gap: var(--space_2); }
+    /* Boutons collés au bord bas de la navbar : arrondi en haut seulement (sélecteur renforcé : les règles .btn_* sont définies plus bas). */
+    .navbar .navbar_btns > * { margin: 0; border-radius: var(--radius_sm) var(--radius_sm) 0 0; }
+    .navbar_btns > .btn_logout_navbar { width: 34px; height: 34px; }
+    .btn_logout_navbar { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--color_danger); background: var(--color_danger); color: var(--text_inverse); cursor: pointer; transition: background 120ms ease, border-color 120ms ease; }
+    .btn_logout_navbar:hover { background: #b95951; border-color: #b95951; }
+    .btn_logout_navbar[hidden] { display: none !important; }
+
+    .page_title_group { display: flex; flex-direction: column; gap: 2px; }
+    .page_eyebrow { font-family: var(--font_mono); font-size: var(--fs_xs); letter-spacing: 0.08em; text-transform: uppercase; color: var(--color_seal); }
+    .page_title { font-family: var(--font_display); font-size: var(--fs_lg); color: var(--text_primary); margin: 0; }
+
+    .infos_metiers { background: var(--color_paper_raised); padding: var(--space_2) var(--space_4); display: flex; align-items: center; justify-content: center; gap: var(--space_5); flex-wrap: wrap; text-align: center; position: sticky; top: var(--navbar_height); z-index: 31; border-bottom: 1px solid var(--border_soft); }
+    .app_content_metier { max-width: 1600px; margin: 0 auto; padding: var(--space_5); }
+    .app_content_metier > section { margin-bottom: var(--space_5); }
+    .block_metiers { background: transparent; border: 1px solid var(--border_soft); border-radius: var(--radius_md); box-shadow: var(--shadow_card); padding: 0; margin-bottom: var(--space_4); }
+    .block_metiers_header { position: sticky; top: calc(var(--navbar_height) + var(--infos-metiers-height, 0px)); z-index: 30; align-self: flex-start; display: flex; align-items: center; justify-content: space-between; gap: var(--space_3); padding: var(--space_2) var(--space_4); min-height: calc(34px + (var(--space_2) * 2)); background: var(--header_bg_peach); border-bottom: 1px solid #e8c49a; }
+    .block_metiers_header h3 { margin: 0; font-family: var(--font_display); font-size: var(--fs_base); font-weight: 700; display: flex; align-items: center; gap: var(--space_2); }
+    .block_metiers_status { font-size: var(--fs_sm); color: var(--text_secondary); flex: 1; }
+    .block_metiers.is_collapsed > *:not(.block_metiers_header) { display: none; }
+    .btn_info.section_toggle_btn { flex: 0 0 auto; }
+
+    /* Boutons */
+    .btn_primary, .btn_seal, .btn_real, .btn_success, .btn_info, .btn_notify, .btn_danger, .btn_teal, .btn_simul, .btn_ghost { border: none; width: auto; padding: 0 var(--space_3); min-height: 34px; height: 34px; border-radius: var(--radius_sm); font-size: var(--fs_sm); font-weight: 600; display: inline-flex; align-items: center; gap: var(--space_2); line-height: 1.2; white-space: nowrap; cursor: pointer; transition: background var(--ease_std), border-color var(--ease_std), color var(--ease_std); }
+    /* Sakkal Majalla place le texte arabe plus bas que la ligne de base standard : on descend les icônes des boutons avec texte pour les aligner. */
+    :is(.btn_primary, .btn_seal, .btn_real, .btn_success, .btn_info, .btn_notify, .btn_danger, .btn_ghost):not(.section_toggle_btn) > i.bi { position: relative; top: .14em; }
+    .btn_danger[data-del] > i.bi, .btn_danger[data-sddel] > i.bi { top: 0; }
+    @media (max-width: 1080px) { :is(.btn_primary, .btn_real, .btn_success, .btn_info, .btn_danger, .btn_ghost) > i.bi { top: 0; } }
+    .btn_primary[hidden], .btn_real[hidden], .btn_success[hidden], .btn_info[hidden], .btn_danger[hidden], .btn_ghost[hidden] { display: none !important; }
+    .btn_primary:disabled, .btn_success:disabled, .btn_info:disabled, .btn_danger:disabled, .btn_ghost:disabled { opacity: .5; cursor: not-allowed; }
+    .btn_primary:focus-visible, .btn_real:focus-visible, .btn_success:focus-visible, .btn_info:focus-visible, .btn_danger:focus-visible, .btn_ghost:focus-visible { outline: 2px solid var(--color_seal); outline-offset: 2px; }
+    .btn_primary { background: var(--color_ink); color: var(--text_inverse); } .btn_primary:hover { background: var(--color_ink_soft); }
+    .btn_real { background: var(--color_real); color: var(--color_ink); } .btn_real:hover { background: var(--color_real_light); }
+    .btn_success { background: var(--color_success); color: var(--text_inverse); } .btn_success:hover { background: var(--color_teal_light); }
+    .btn_info { background: var(--color_info); color: var(--text_inverse); } .btn_info:hover { background: var(--color_info_light); }
+    .btn_danger { background: var(--color_danger); color: var(--text_inverse); } .btn_danger:hover { background: #b95951; }
+    .btn_ghost { background: transparent; color: var(--text_primary); border: 1px solid var(--border_soft); } .btn_ghost:hover { border-color: var(--color_seal); color: var(--color_seal); }
+    /* Bouton « notifier » (même classe que class.html) : couleur propre si variables.css n'en définit pas. */
+    .btn_notify { background: var(--color_notify, #d9822b); color: var(--text_inverse, #fff); } .btn_notify:hover { filter: brightness(.9); }
+    .btn_notify:focus-visible { outline: 2px solid var(--color_seal); outline-offset: 2px; }
+    .btn_retour { background: var(--color_danger); color: var(--text_inverse); border: none; } .btn_retour:hover { background: #b95951; color: var(--text_inverse); }
+    .btn_saving { pointer-events: none; opacity: .75; }
+
+    /* Modales */
+    .modal_overlay { display: none; position: fixed; inset: 0; background: rgba(22, 38, 42, .55); z-index: 200; align-items: flex-start; justify-content: center; padding: var(--space_7) var(--space_4); overflow-y: auto; }
+    .modal_overlay.is_visible { display: flex; }
+    .modal_dialog { background: var(--color_paper_raised); border-radius: var(--radius_md); width: 100%; max-width: 720px; box-shadow: var(--shadow_panel); }
+    .modal_header { display: flex; align-items: center; justify-content: space-between; padding: var(--space_4); border-bottom: 1px solid var(--border_soft); }
+    .modal_header h3 { margin: 0; font-family: var(--font_display); font-size: var(--fs_md); display: flex; align-items: center; gap: var(--space_2); }
+    .modal_header h3 i { display: none !important; }
+    .modal_alert { margin-inline-start: auto; margin-inline-end: var(--space_3); font-size: var(--fs_sm); font-weight: 700; color: var(--color_danger); display: inline-flex; align-items: center; gap: var(--space_2); }
+    .modal_alert[hidden] { display: none !important; }
+    .modal_close { background: transparent; border: none; font-size: var(--fs_lg); color: var(--text_secondary); cursor: pointer; } .modal_close:hover { color: var(--color_danger); }
+    .modal_body { padding: var(--space_4); max-height: 75vh; overflow-y: auto; }
+
+    @media (max-width: 1080px) {
+      .navbar { padding: 0 var(--space_4); }
+      .app_content_metier { padding: var(--space_3); }
+      .navbar_metier .page_eyebrow { display: none; }
+      .navbar_metier .page_title_group { min-width: 0; }
+      .navbar_metier .page_title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs_base); }
+      .navbar_actions_col { padding-top: 0; }
+      .navbar_btns > * { font-size: 0; gap: 0; }
+      .navbar_btns > * i { font-size: var(--fs_base); margin: 0; }
+      .btn_notify:has(i), .btn_primary:has(i), .btn_real:has(i), .btn_success:has(i), .btn_info:has(i), .btn_danger:has(i), .btn_ghost:has(i) { width: 34px; padding: 0; gap: 0; font-size: 0; justify-content: center; }
+      .btn_notify:has(i) i, .btn_primary:has(i) i, .btn_real:has(i) i, .btn_success:has(i) i, .btn_info:has(i) i, .btn_danger:has(i) i, .btn_ghost:has(i) i { font-size: var(--fs_md); }
+    }
+    @media print { .navbar { display: none !important; } }
+
+    [hidden] { display: none !important; }
+    /* Fond vert foncé (.btn_real) : texte clair (même réglage que le bouton « facturation » de class.html). */
+    #cons_btn_pv { color: var(--text_inverse); }
+
+    /* Page autonome en lecture seule (sans sidebar), sur le modèle de fi.html. */
+    .block_metiers {
+      --fi_header_bg: #f7ddc0;
+      --fi_header_border: #e8c49a;
+    }
+    .cons_info_inline { font-size: var(--fs_sm); font-family: var(--font_mono); color: var(--text_secondary); }
+    .cons_info_inline span { font-weight: bold; color: var(--text_primary); }
+
+    .cons_dates { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space_3) var(--space_4); padding: var(--space_4); }
+    .cons_dates div { display: flex; flex-direction: column; gap: var(--space_1); font-size: var(--fs_sm); color: var(--text_secondary); }
+    .cons_dates strong { color: var(--text_primary); font-size: var(--fs_base); }
+
+    .cons_tbl_wrap { overflow-x: auto; margin-bottom: var(--space_4); direction: rtl; }
+    .cons_tbl { width: 100%; border-collapse: collapse; font-size: var(--fs_sm); direction: rtl; }
+    .cons_tbl th, .cons_tbl td { border: 1px solid var(--border_soft); padding: var(--space_2) var(--space_3); vertical-align: middle; overflow-wrap: anywhere; }
+    .cons_tbl th { background: var(--color_paper_raised); text-align: start; font-weight: 600; color: var(--text_secondary); }
+    .cons_tbl .num { text-align: center; white-space: nowrap; font-family: var(--font_mono); }
+    .cons_tbl .ctr { text-align: center; }
+    .cons_tbl tfoot td { font-weight: 600; background: var(--color_paper_raised); }
+    .cons_tbl .grp { text-align: center; font-weight: 600; background: var(--color_paper_raised); }
+    .cons_tbl .lbl { text-align: right; direction: rtl; }
+    .cons_tbl tr.bleu td { background: color-mix(in srgb, #4a9fd8 16%, transparent); }
+    .cons_tbl tr.is_fruct td { background: color-mix(in srgb, var(--color_seal) 10%, transparent); }
+    .cons_tbl .tech_sans_offre { background: color-mix(in srgb, #8a8f98 32%, transparent); color: var(--text_secondary, #666); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cons_tbl td.fin_exclu { background: #c62828; color: rgba(255, 255, 255, .55); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cons_tbl input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+    .cons_tbl input[type="number"]::-webkit-outer-spin-button, .cons_tbl input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .cons_tbl td.fin_exclu input.cons_cell_in { background: transparent; color: inherit; border-color: rgba(255, 255, 255, .45); }
+    .cons_ar { direction: rtl; unicode-bidi: plaintext; }
+    .cons_theme_sub { font-weight: 400; font-size: var(--fs_xs); }
+    .cons_tabs { display: flex; flex-wrap: wrap; gap: var(--space_2); margin: 0 0 var(--space_3); direction: rtl; }
+    .cons_tabs .cons_tab.is_active { background: var(--color_primary, var(--text_primary)); color: var(--color_paper_raised); }
+    .cons_off_titre { font-weight: 600; font-size: var(--fs_sm); margin: var(--space_3) 0 var(--space_2); }
+    .cons_sub { padding: var(--space_4); }
+    .cons_eval_fin_bar { display: flex; justify-content: flex-start; direction: ltr; padding: var(--space_3) var(--space_4) 0; }
+    .cons_chk_inline { display: inline-flex; align-items: center; gap: var(--space_2); cursor: pointer; color: var(--text_primary); }
+    .cons_chk_inline input { width: 18px; height: 18px; }
+    .cons_empty { color: var(--text_secondary); font-style: italic; font-size: var(--fs_sm); padding: var(--space_3); margin: 0; }
+    .cons_ko { color: var(--text_secondary); }
+    .cons_elim { font-weight: 700; }
+    .cons_head_actions [hidden], .cons_info_inline[hidden] { display: none !important; }
+    .cons_tabs .cons_tab_print { margin-inline-start: auto; }
+    .cons_print_blank { display: none; }
+    .cons_print_blank .blank_cell { height: 34px; }
+    .cons_print_titre { font-weight: 700; font-size: var(--fs_base); margin: 0 0 var(--space_2); }
+    .cons_blank_lines { margin: 0; padding-inline-start: 20px; }
+    .cons_blank_lines li { margin-bottom: 14px; }
+    @media print { .cons_print_page { break-after: page; page-break-after: always; } .cons_print_page:last-child { break-after: auto; page-break-after: auto; } }
+
+    /* Evaluation technique */
+    .cons_ev_btn { all: unset; cursor: pointer; display: inline-block; min-width: 70px; text-align: center; padding: 2px var(--space_2); border: 1px solid var(--border_soft); border-radius: var(--radius_sm); }
+    .cons_ev_btn[data-state="oui"] { background: color-mix(in srgb, #2e9e5b 18%, transparent); }
+    .cons_ev_btn[data-state="non"] { background: color-mix(in srgb, #c62828 18%, transparent); }
+    .cons_ev_btn[data-state="mid"] { background: color-mix(in srgb, #e08a00 22%, transparent); }
+    .cons_ev_btn { white-space: normal; }
+    .cons_tbl td.ev_best { background: color-mix(in srgb, #2e9e5b 28%, transparent); font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cons_tbl td.ev_ko, .cons_tbl th.ev_ko { background: color-mix(in srgb, #c62828 14%, transparent); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cons_tbl td.ev_na { background: #c62828; color: rgba(255, 255, 255, .7); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    /* Section « Données du PV » */
+    .cons_tbl.cons_pv_tbl th, .cons_tbl.cons_pv_tbl td { text-align: start; }
+    .cons_pv_tbl .lbl_fr { width: 28%; font-weight: 600; color: var(--text_secondary); }
+    .cons_pv_cnt { display: inline-flex; align-items: center; gap: var(--space_2); font-size: var(--fs_sm); margin: var(--space_3) 0 var(--space_2); }
+    .cons_pv_cnt input { width: 70px; }
+    .cons_pv_titre { font-weight: 600; font-size: var(--fs_sm); margin: var(--space_4) 0 var(--space_2); }
+    .cons_pv_modal { border-top: 1px solid var(--border_soft); margin-top: var(--space_4); padding-top: var(--space_3); }
+    .dtc_date_field.cons_chk { flex-direction: row; align-items: center; gap: var(--space_2); cursor: pointer; color: var(--text_primary); }
+    .dtc_date_field.cons_chk input { width: 18px; height: 18px; }
+    .cons_pv_modal_titre { margin: 0 0 var(--space_2); font-size: var(--fs_base); }
+    .dtc_modal_cons .modal_body { max-height: 75vh; overflow-y: auto; }
+    .cons_pv_hint { font-size: var(--fs_xs); color: var(--text_secondary); margin: var(--space_2) 0 0; }
+
+    .cons_etat_badge { display: inline-block; padding: 2px var(--space_2); border-radius: var(--radius_sm); font-family: var(--font_mono); font-weight: 700; font-size: var(--fs_xs); background: var(--color_paper_raised); }
+
+    /* Modale Editer (identique à dtc.html#consultations) */
+    .dtc_modal_cons { max-width: 1040px; width: 100%; }
+    .dtc_editer_footer { display: flex; justify-content: flex-end; gap: var(--space_3); padding: var(--space_4); border-top: 1px solid var(--border_soft); }
+    .dtc_date_field { display: flex; flex-direction: column; gap: var(--space_2); font-size: var(--fs_sm); color: var(--text_secondary); max-width: 240px; margin-bottom: var(--space_4); }
+    .dtc_date_field input, .dtc_date_field select { font-family: inherit; font-size: var(--fs_base); padding: var(--space_2) var(--space_3); border: 1px solid var(--border_soft); border-radius: var(--radius_sm); background: var(--color_paper_raised); color: var(--text_primary); }
+    .dtc_fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space_4); margin-bottom: var(--space_4); }
+    .dtc_fields .dtc_date_field { max-width: none; margin-bottom: 0; }
+    .dtc_fields.dtc_fields_num_dom { grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); }
+    .cons_head_actions { display: flex; align-items: center; gap: var(--space_3); margin-inline-start: auto; }
+    .cons_switch { display: inline-flex; align-items: center; gap: var(--space_2); font-size: var(--fs_sm); color: var(--text_secondary); cursor: pointer; user-select: none; }
+    .cons_switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .cons_switch_track { position: relative; width: 44px; height: 24px; border-radius: 999px; background: var(--border_soft); transition: background .2s; flex: none; }
+    .cons_switch_track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.25); transition: transform .2s; }
+    .cons_switch input:checked + .cons_switch_track { background: linear-gradient(135deg, #7ef0b4, #5b8fe0); }
+    .cons_switch input:checked + .cons_switch_track::after { transform: translateX(20px); }
+    .cons_switch input:focus-visible + .cons_switch_track { outline: 2px solid #5b8fe0; outline-offset: 2px; }
+    .cons_tbl input.cons_cell_in, .cons_tbl select.cons_cell_in { font-family: inherit; font-size: var(--fs_sm); padding: 2px var(--space_2); border: 1px solid var(--border_soft); border-radius: var(--radius_sm); background: var(--color_paper_raised); color: var(--text_primary); width: 100%; min-width: 110px; box-sizing: border-box; }
+    /* Toggles du tableau technique (mode Editer) : même rendu coloré que .cons_ev_btn des offres parvenues. */
+    .cons_ev_btn[data-state="struct"], .cons_ev_btn[data-state="عمومي دون ترخيص"] { background: color-mix(in srgb, #e08a00 22%, transparent); }
+    .cons_ev_btn[data-state="compo"] { background: color-mix(in srgb, #c62828 18%, transparent); }
+    .cons_ev_btn[data-state="خاص"], .cons_ev_btn[data-state="عمومي"] { background: color-mix(in srgb, #2e9e5b 18%, transparent); }
+    /* Tableau technique : colonnes المحور de largeur quasi égale, paddings réduits. */
+    .cons_tbl_tech { table-layout: fixed; }
+    .cons_tbl_tech th, .cons_tbl_tech td { padding: 2px var(--space_2); }
+    .cons_tbl_tech .cons_cell_in { min-width: 0; }
+    /* Tableau technique : colonnes des thèmes ajustées à la cellule la plus large (150px minimum) ; défilement horizontal si besoin. */
+    .cons_tbl_tech_auto { table-layout: auto; width: max-content; min-width: 100%; }
+    .cons_tbl_tech_auto th.tech_th { min-width: 150px; }
+    /* Le titre du thème ne fixe pas la largeur : il suit celle de la colonne, déterminée par les cellules (surtout le nom du formateur). */
+    .cons_tbl_tech_auto .cons_theme_sub { width: 0; min-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+    .cons_tbl_tech_auto td.grp { width: 90px; max-width: 90px; white-space: normal; }
+    .cons_tbl_tech_auto td.lbl { max-width: 170px; white-space: normal; }
+    .cons_tbl_tech_auto td { white-space: nowrap; }
+    .cons_tbl_tech_auto td.grp, .cons_tbl_tech_auto td.lbl { white-space: normal; }
+    .cons_tbl_tech_auto input[type="text"].cons_cell_in { field-sizing: content; min-width: 130px; max-width: 320px; box-sizing: border-box; }
+    .cons_tbl_tech input[type="number"].cons_cell_in { width: 46%; }
+    .cons_tbl.is_edit td.ctr { background: color-mix(in srgb, #5b8fe0 6%, transparent); }
+    .dtc_cons_offres { margin-top: var(--space_2); }
+    .dtc_cons_offres_head { display: flex; align-items: center; justify-content: space-between; gap: var(--space_3); margin-bottom: var(--space_3); font-size: var(--fs_sm); color: var(--text_secondary); }
+    .dtc_cons_offre_row { display: grid; grid-template-columns: 64px minmax(0, 2fr) minmax(0, 1fr) auto; gap: var(--space_3); align-items: center; margin-bottom: var(--space_2); }
+    .dtc_cons_offre_row input { font-family: inherit; font-size: var(--fs_base); padding: var(--space_2) var(--space_3); border: 1px solid var(--border_soft); border-radius: var(--radius_sm); background: var(--color_paper_raised); color: var(--text_primary); min-width: 0; }
+    .dtc_cons_offre_num { font-family: var(--font_mono); font-size: var(--fs_sm); color: var(--text_secondary); }
+    .dtc_cons_offres_vide { font-size: var(--fs_sm); font-style: italic; color: var(--text_secondary); margin: 0; }
+    @media (max-width: 720px) { .dtc_cons_offre_row { grid-template-columns: 1fr auto; } .dtc_cons_offre_num { display: none; } }
+    @media (max-width: 720px) { .dtc_fields, .dtc_fields.dtc_fields_num_dom { grid-template-columns: 1fr; } }
+    .dtc_ar { direction: rtl; unicode-bidi: plaintext; }
+
+    @media print {
+      .navbar, .section_toggle_btn, .modal_overlay { display: none !important; }
+      /* Impression du tableau technique vierge : on n'imprime que ce bloc. */
+      body.is_print_blank .infos_metiers, body.is_print_blank main { display: none !important; }
+      body.is_print_blank .cons_print_blank { display: block; }
+    }
+  </style>
+  <script src="js/session.js"></script>
+  <script src="js/permissions.js"></script>
+</head>
+<body data-no-dirty>
+
+  <header class="navbar navbar_metier">
+    <div class="page_title_group">
+      <span class="page_eyebrow">حقوق السحب الجماعي</span>
+      <h1 class="page_title">استشارة عدد <span data-field="num">----</span></h1>
+    </div>
+    <div class="navbar_status" id="navbar_status">
+      <span class="spinner spinner_sm navbar_load" id="navbar_loading" role="status" aria-label="جارٍ التحميل"></span>
+    </div>
+    <div class="navbar_actions">
+      <div class="navbar_actions_col">
+        <div class="navbar_btns">
+          <a href="dtc.html#consultations" class="btn_ghost btn_retour"><i class="bi bi-arrow-return-right"></i> رجوع</a>
+          <button type="button" class="btn_primary" id="cons_btn_editer"><i class="bi bi-pencil-square"></i> تعديل</button>
+          <button type="button" class="btn_info" id="cons_btn_imprimer"><i class="bi bi-printer"></i> طباعة</button>
+          <button type="button" class="btn_real" id="cons_btn_pv" hidden title="إنشاء محضر فتح العروض"><i class="bi bi-file-earmark-text"></i> محضر الفتح</button>
+          <button type="button" class="btn_notify" id="cons_btn_istikmal" hidden title="مراسلة الهياكل لاستكمال الوثائق"><i class="bi bi-send"></i> استكمال</button>
+          <button type="button" class="btn_logout_navbar" id="navbar_btn_logout" hidden title="تسجيل الخروج">
+            <i class="bi bi-box-arrow-left"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="infos_metiers">
+    <span class="cons_info_inline">الشريك : <span data-field="partenaire" class="cons_ar">----</span></span>
+    <span class="cons_info_inline">المجال : <span data-field="domaine" class="cons_ar">----</span></span>
+    <span class="cons_info_inline">الغلق : <span data-field="cloture">----</span></span>
+    <span class="cons_info_inline">الحالة : <span data-field="etat">----</span></span>
+    <span class="cons_info_inline" id="cons_info_fruct" hidden><span data-field="fructueux">----</span></span>
+    <span class="cons_info_inline" id="cons_info_cout" hidden><span data-field="coutTotal">----</span></span>
+  </div>
+
+  <main class="app_content app_content_metier">
+
+    <section class="block_metiers block_metiers_accordion is_collapsed" data-category="parvenues">
+      <div class="block_metiers_header">
+        <h3>العروض الواردة</h3>
+        <span class="block_metiers_status" data-status="parvenues"></span>
+        <div class="cons_head_actions">
+          <button type="button" class="btn_info" id="cons_toggle_edit_parvenues" aria-pressed="false" title="جعل خانات الجدول قابلة للتعديل"><i class="bi bi-pencil-square"></i> تعديل</button>
+          <button type="button" class="btn_info" id="dtc_cons_btn_add_offre"><i class="bi bi-plus-lg"></i> إضافة عرض</button>
+        </div>
+        <button type="button" class="btn_info section_toggle_btn" title="توسيع القسم" aria-label="توسيع القسم">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      <div class="cons_sub cons_tbl_wrap" id="cons_parvenues"></div>
+    </section>
+
+    <section class="block_metiers block_metiers_accordion is_collapsed" data-category="techniques">
+      <div class="block_metiers_header">
+        <h3>التقييم الإداري</h3>
+        <span class="block_metiers_status" data-status="techniques"></span>
+        <div class="cons_head_actions">
+          <button type="button" class="btn_info" id="cons_toggle_edit_techniques" aria-pressed="false" title="جعل خانات الجدول قابلة للتعديل"><i class="bi bi-pencil-square"></i> تعديل</button>
+        </div>
+        <button type="button" class="btn_info section_toggle_btn" title="توسيع القسم" aria-label="توسيع القسم">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      <div class="cons_sub" id="cons_techniques"></div>
+    </section>
+
+    <section class="block_metiers block_metiers_accordion is_collapsed" data-category="evaltech">
+      <div class="block_metiers_header">
+        <h3>التقييم الفني</h3>
+        <span class="block_metiers_status" data-status="evaltech"></span>
+        <div class="cons_head_actions">
+          <button type="button" class="btn_info" id="cons_toggle_edit_evaltech" aria-pressed="false" title="إدخال المطابقة"><i class="bi bi-pencil-square"></i> تعديل</button>
+        </div>
+        <button type="button" class="btn_info section_toggle_btn" title="توسيع القسم" aria-label="توسيع القسم">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      <div class="cons_sub" id="cons_evaltech"></div>
+    </section>
+
+    <section class="block_metiers block_metiers_accordion is_collapsed" data-category="conclusion">
+      <div class="block_metiers_header">
+        <h3>نتيجة الاستشارة</h3>
+        <span class="block_metiers_status" data-status="conclusion"></span>
+        <button type="button" class="btn_info section_toggle_btn" title="توسيع القسم" aria-label="توسيع القسم">
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
+      <div class="cons_eval_fin_bar">
+        <label class="cons_chk_inline" dir="rtl">
+          <input type="checkbox" id="cons_eval_fin" /> التقييم منتهي
+        </label>
+      </div>
+      <div class="cons_sub" id="cons_conclusion"></div>
+    </section>
+
+
+  </main>
+
+  <div class="cons_print_blank" id="cons_print_blank"></div>
+
+  <!-- Modale Editer : même contenu que la modale Consultation de dtc.html#consultations.
+       Le domaine n'est pas modifiable ici. -->
+  <div class="modal_overlay" id="dtc_modal_consultation">
+    <div class="modal_dialog dtc_modal_cons">
+      <div class="modal_header">
+        <h3 id="dtc_consultation_titre">استشارة</h3>
+        <button type="button" class="modal_close" data-close-modal="dtc_modal_consultation"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal_body">
+        <div class="dtc_fields dtc_fields_num_dom">
+          <label class="dtc_date_field">عدد الاستشارة
+            <input type="text" id="dtc_cons_num" placeholder="مثال : 5" />
+          </label>
+          <label class="dtc_date_field">المجال
+            <select id="dtc_cons_domaine" disabled></select>
+          </label>
+        </div>
+        <div class="dtc_fields">
+          <label class="dtc_date_field">تاريخ الإعلان
+            <input type="date" id="dtc_cons_annonce" />
+          </label>
+          <label class="dtc_date_field">تاريخ الغلق
+            <input type="datetime-local" id="dtc_cons_cloture" />
+          </label>
+          <label class="dtc_date_field">تاريخ التمديد
+            <input type="datetime-local" id="dtc_cons_proroge" />
+          </label>
+        </div>
+        <div class="dtc_fields">
+          <label class="dtc_date_field">الحالة
+            <select id="dtc_cons_etat">
+              <option value="">----</option>
+              <option value="lancée">جارية</option>
+              <option value="prorogée">ممدّدة</option>
+              <option value="évaluation">قيد التقييم</option>
+              <option value="fructueuse">مثمرة</option>
+              <option value="infructueuse">غير مثمرة</option>
+            </select>
+          </label>
+        </div>
+        <div class="cons_pv_modal">
+          <h4 class="cons_pv_modal_titre">الهياكل التي سحبت كراس الشروط دون إيداع عرض</h4>
+          <p class="cons_pv_hint">الهياكل التي أودعت عرضا تُدخل تاريخ سحبها في جدول العروض الواردة.</p>
+          <div id="cons_sd"></div>
+        </div>
+        <div class="cons_pv_modal">
+          <h4 class="cons_pv_modal_titre">بيانات محضر فتح العروض</h4>
+          <div id="cons_pv"></div>
+        </div>
+      </div>
+      <div class="dtc_editer_footer">
+        <button type="button" class="btn_success" id="dtc_consultation_btn_enregistrer"><i class="bi bi-check-lg"></i> حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/modal_forms.js"></script>
+  <script src="js/sticky_metiers.js"></script>
+  <script src="js/section_toggles.js"></script>
+
+  <script>
+    /* ============================================================
+       Logique propre à cons.html — affichage en lecture seule d'une
+       consultation DTC (cons.html?id=<id>). Les données viennent de
+       listConsultationsDTC (une consultation est une entrée du fichier
+       Drive unique "CONSULTATIONS DTC.html") ; l'édition reste dans la
+       modale "Editer" de dtc.html#consultations.
+       ============================================================ */
+
+    // Mêmes définitions que dtc.html (documents administratifs / techniques).
+    const DTC_ADMIN_ROWS = [
+      { k: "consultation", lib: "احترام عملية الاستشارة" },
+      { k: "cahier", lib: "كراس الشروط ممضى ومختوم", elim: true },
+      { k: "fiche", lib: "بطاقة تقديم الهيكل مستخرجة من مالك", s: "بطاقة تقديم الهيكل" },
+      { k: "registre", lib: "مضمون من السجل الوطني للمؤسسات", s: "مضمون السجل الوطني للمؤسسات" },
+      { k: "cnss", lib: "انخراط في نظام الضمان الاجتماعي", s: "الانخراط في الضمان الاجتماعي" },
+      { k: "honneur", lib: "التصريح على الشرف" },
+      { k: "financiere", lib: "العرض المالي", elim: true, bleu: true }
+    ];
+
+    // Motifs d'exclusion administrative d'une offre (sans « ل ») : consultation = لا -> seul motif ; sinon cahier / offre financière.
+    const ADM_KO_LIB = { consultation: "عدم احترام عملية الاستشارة", cahier: "عدم توفر كراس الشروط", financiere: "عدم توفر العرض المالي" };
+    function admExclus(o) {
+      const a = o.admin || {};
+      if (!a.consultation) return [ADM_KO_LIB.consultation];
+      return ["cahier", "financiere"].filter((k) => !a[k]).map((k) => ADM_KO_LIB[k]);
+    }
+
+    const DTC_TECH_ROWS = [
+      { g: "بطاقة البرنامج", rows: [
+        { k: "modele", lib: "احترام الأنموذج", elim: true },
+        { k: "carte", lib: "إمضاء البطاقة", type: "carte" },
+        { k: "heures", lib: "التوزيع الزمني نظري - تطبيقي", elim: true, exclTxt: "لعدم احترام التوزيع الزمني" },
+        { k: "objectifs", lib: "الأهداف البيداغوجية", elim: true },
+        { k: "contenu", lib: "محتوى التكوين", elim: true },
+        { k: "moyens", lib: "الطرق والوسائل البيداغوجية والتجهيزات", elim: true },
+        { k: "evaluation", lib: "منهجية وأدوات التقييم", elim: true }
+      ] },
+      { g: "السيرة الذاتية للمكوّن", rows: [
+        { k: "nomCompo", lib: "اسم المكوّن", type: "text" },
+        { k: "cvMalek", lib: "مستخرجة من منظومة مالك" },
+        { k: "nature", lib: "طبيعة المكوّن", type: "nature" }
+      ] },
+      { g: "", rows: [{ k: "espace", lib: "الالتزام بتوفير فضاء" }] }
+    ];
+
+    let consRecord = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      document.getElementById("cons_btn_editer")?.addEventListener("click", ouvrirModalEdition);
+      initEvalTerminee();
+      document.getElementById("dtc_consultation_btn_enregistrer")?.addEventListener("click", enregistrerEdition);
+      initEditionParvenues();
+      initEditionTechniques();
+      initEditionEvalTech();
+      initPVModal();
+      document.getElementById("cons_btn_pv")?.addEventListener("click", genererPVOuverture);
+      document.getElementById("cons_btn_istikmal")?.addEventListener("click", genererLettresComplement);
+      document.getElementById("cons_btn_imprimer")?.addEventListener("click", () => {
+        // Ouvre toutes les sections pour l'impression
+        document.querySelectorAll(".block_metiers_accordion.is_collapsed").forEach((s) => expandMetierSection(s, { scroll: false }));
+        window.print();
+      });
+
+      const id = new URLSearchParams(window.location.search).get("id");
+      if (!id) {
+        alert("لم يتم اختيار أي استشارة. افتحها من القائمة.");
+        window.location.href = "dtc.html#consultations";
+        return;
+      }
+
+      try {
+        // La liste des partenaires (nom arabe) est chargée en parallèle, avant le premier affichage.
+        const [liste] = await Promise.all([
+          apiCallDirect("listConsultationsDTC", {}),
+          apiCallDirect("listPartDTC", {}).then((r) => { pvPartenaireCache = r; }).catch(() => {})
+        ]);
+        consRecord = liste.find((c) => c.id === id);
+        if (!consRecord) throw new Error("Consultation introuvable.");
+        afficherConsultation(consRecord);
+      } catch (err) {
+        alert(`خطأ أثناء تحميل الاستشارة : ${err.message}`);
+      } finally {
+        document.getElementById("navbar_loading").hidden = true;
+      }
+    });
+
+    // Le bouton "Enregistrer" est affiché tant qu'un tableau est en édition (offres parvenues / techniques).
+    function enregistrerAffiche() {
+      return !!(editParvenues || editTech || editEv);
+    }
+
+    // Rechargement / fermeture de l'onglet : avertissement natif du navigateur.
+    window.addEventListener("beforeunload", (e) => {
+      if (!enregistrerAffiche()) return;
+      e.preventDefault();
+      e.returnValue = "";
+    });
+
+    // Retour / fil d'Ariane / tout lien de l'en-tête : confirmation avant de quitter.
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest(".navbar a[href]");
+      if (!a || !enregistrerAffiche()) return;
+      if (!confirm("توجد تعديلات غير محفوظة (يظهر زر « حفظ »). هل تريد المغادرة رغم ذلك ؟")) e.preventDefault();
+    });
+
+    function esc(s) {
+      return String(s === null || s === undefined ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function formaterDateFr(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ""));
+      return m ? `\u2066${m[1]}/${m[2]}/${m[3]}\u2069` : "----";
+    }
+
+    // Date + heure de réception ("AAAA-MM-JJTHH:MM" ; les anciennes valeurs "AAAA-MM-JJ" restent lisibles).
+    function formaterDateHeureFr(v) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(String(v || ""));
+      if (!m) return "----";
+      return `\u2066${m[1]}/${m[2]}/${m[3]}${m[4] ? ` ${m[4]}:${m[5]}` : ""}\u2069`;
+    }
+
+    // Nombre de jours écoulés entre une date AAAA-MM-JJ et aujourd'hui (null si date absente).
+    function joursDepuis(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+      if (!m) return null;
+      const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      const t = new Date(); const auj = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+      return Math.max(0, Math.round((auj - d) / 86400000));
+    }
+
+    // Accord des nombres en arabe : 0 / 1 / 2 / 3-10 (pluriel) / 11+ (tamyiz singulier).
+    function arNb(n, f) {
+      n = Number(n) || 0;
+      return n === 0 ? f.z : n === 1 ? f.s : n === 2 ? f.d : n <= 10 ? `${n} ${f.p}` : `${n} ${f.t}`;
+    }
+    const AR_OFFRES = { z: "لا عروض", s: "عرض واحد", d: "عرضان", p: "عروض", t: "عرضا" };
+    const AR_OFF_OK = { z: "لا عرض مقبول", s: "عرض واحد مقبول", d: "عرضان مقبولان", p: "عروض مقبولة", t: "عرضا مقبولا" };
+    const AR_OFF_KO = { z: "لا عرض غير مقبول", s: "عرض واحد غير مقبول", d: "عرضان غير مقبولين", p: "عروض غير مقبولة", t: "عرضا غير مقبول" };
+    const AR_OFF_EV = { z: "لا عرض مقبول إداريا", s: "عرض واحد مقبول إداريا", d: "عرضان مقبولان إداريا", p: "عروض مقبولة إداريا", t: "عرضا مقبولا إداريا" };
+    const AR_JOURS = { z: "اليوم", s: "يوم واحد", d: "يومان", p: "أيام", t: "يوما" };
+    function fmtNb(n) { return String(Math.round((Number(n) || 0) * 100) / 100); }
+
+    function maintenantISO() {
+  const d = new Date(), p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+// Valeur pour <input type="datetime-local"> (anciennes dates sans heure tolérées).
+function versDateHeure(v) { v = String(v || ""); return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v + "T00:00" : v.slice(0, 16); }
+function dateDuJourISO() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    // Même règle que etatConsultation() de dtc.html.
+    function etatConsultation(c) {
+      const aujourdhui = dateDuJourISO();
+      const annonce = c.dateAnnonce || "";
+      const fin = c.dateProrogation || c.dateCloture || "";
+      if (!annonce || aujourdhui < annonce) return "Prévue";
+      if (!fin || maintenantISO() < fin) return c.dateProrogation ? "Prorogée" : "Annoncée";
+      return (c.fructueux || []).length >= 1 ? "Fructueuse" : "Infructueuse";
+    }
+
+    function setField(name, value) {
+      const el = document.querySelector(`[data-field="${name}"]`);
+      if (el) el.textContent = (value === null || value === undefined || value === "") ? "----" : value;
+    }
+
+    function setStatus(cat, texte) {
+      const el = document.querySelector(`[data-status="${cat}"]`);
+      if (el) el.textContent = texte;
+    }
+
+    function oui(v) { return v ? `نعم` : `<span class="cons_ko">لا</span>`; }
+
+    // كراس الشروط : true = نعم ; false = لا (إقصائي) ; "nosign" = غير ممضى (استكمال) ; "lastpage" = ممضى في الصفحة الأخيرة (استكمال).
+    const CAHIER_OPTS = [[true, "نعم"], [false, "لا (إقصائي)"], ["nosign", "غير ممضى (استكمال)"], ["lastpage", "ممضى في الصفحة الأخيرة (استكمال)"]];
+    function cahierLib(v) { return (CAHIER_OPTS.find((x) => x[0] === (v === undefined ? false : v)) || CAHIER_OPTS[1])[1]; }
+    function admState(k, v) { return k === "cahier" && typeof v === "string" ? "mid" : (v ? "oui" : "non"); }
+    // لا : (إقصائي) pour احترام عملية الاستشارة et العرض المالي, (استكمال) pour les autres documents.
+    function admNon(k) { return k === "consultation" || k === "financiere" ? "لا (إقصائي)" : "لا (استكمال)"; }
+    function admLib(k, v) { return k === "cahier" ? cahierLib(v) : (v ? "نعم" : admNon(k)); }
+
+    // État effectif : une clôture / prorogation passée fait passer automatiquement une consultation lancée/prorogée en « évaluation ».
+    function etatEffectif(c) {
+      const brut = String(c.etat || "").toLowerCase();
+      const fin = c.dateProrogation || c.dateCloture || "";
+      const passee = !!fin && maintenantISO() >= fin;
+      // Évaluation terminée (toutes les offres saisies) : fructueuse s'il y a au moins un thème fructueux, sinon infructueuse.
+      if (passee && ["", "lancée", "prorogée", "évaluation", "fructueuse", "infructueuse"].includes(brut)) {
+        const cr = conclusionEtat(c);
+        if (cr) return cr;
+      }
+      if (passee && (brut === "" || brut === "lancée" || brut === "prorogée")) {
+        return (!brut && (c.fructueux || []).length >= 1) ? "fructueuse" : "évaluation";
+      }
+      return brut || etatConsultation(c).toLowerCase();
+    }
+
+    const CARTE_OPTS = [["oui", "نعم"], ["non", "لا (إقصائي)"], ["struct", "الهيكل غير ممضي (استكمال)"], ["compo", "المكوّن غير ممضي (إقصائي)"]];
+    const CARTE_KO = ["non", "compo"];
+    // Formulation de la conclusion selon qui n'a pas signé la fiche programme.
+    const CARTE_LIB = { non: "عدم إمضاء البطاقة من طرف الهيكل والمكوّن", struct: "عدم إمضاء البطاقة من طرف الهيكل", compo: "عدم إمضاء البطاقة من طرف المكوّن" };
+    function libOffre(o, i) {
+      return `العرض عدد ${i + 1}${o.nom ? ` — ${o.nom}` : ""}`;
+    }
+
+    // « التقييم منتهي » : plus d'ajout d'offre ni de modification dans les tableaux (la case « التقييم منتهي » de la section résultat reste active pour décocher).
+    function appliquerVerrou(c) {
+      const lock = !!(c && c.evalTerminee);
+      const chkFin = document.getElementById("cons_eval_fin");
+      if (chkFin) chkFin.checked = lock;
+      if (lock) { editParvenues = false; editTech = false; editEv = false; }
+      ["parvenues", "techniques", "evaltech"].forEach((k) => {
+        const t = document.getElementById(`cons_toggle_edit_${k}`);
+        if (!t) return;
+        t.hidden = lock;
+        if (lock) {
+          t.setAttribute("aria-pressed", "false");
+          if (t.setEtat) t.setEtat(false); else t.innerHTML = `<i class="bi bi-pencil-square"></i> تعديل`;
+        }
+      });
+      const add = document.getElementById("dtc_cons_btn_add_offre");
+      if (add) add.hidden = lock;
+    }
+
+    function afficherConsultation(c) {
+      appliquerVerrou(c);
+      const fructueux = c.fructueux || [];
+      const themes = c.themes || [];
+      const offres = c.offres || [];
+
+      { const nc = numConsAff(c.numCons); setField("num", nc ? `\u2066${nc}\u2069` : ""); } // AAAA/NN, isolé en LTR
+      // Nom arabe du partenaire (onglet partdtc, déjà en cache) ; repli sur le sigle.
+      pvPartenaire(c).then((p) => setField("partenaire", p.arabe)).catch(() => setField("partenaire", c.sigle || c.etablissement));
+      setField("domaine", c.domaine);
+      setField("cloture", formaterDateHeureFr(c.dateCloture));
+      majEtat(c);
+
+      renderParvenues(offres);
+      renderTechniques(c, offres);
+      renderEvalTech(c, offres);
+      renderConclusion(c);
+      // Nombre de groupes par défaut (commission) si les détails du thème n'en donnent pas.
+      pvNbGroupes(c).then((n) => { if (n > 0 && n !== grpDefaut) { grpDefaut = n; renderConclusion(c); } }).catch(() => {});
+    }
+
+    // État affiché dans la ligne d'infos.
+    function majEtat(c) {
+      const etatEff = etatEffectif(c);
+      let etatTxt = etatCapitalise(etatEff);
+      if (etatEff === "évaluation") {
+        const nbj = joursDepuis(c.dateProrogation || c.dateCloture);
+        if (nbj !== null) etatTxt += ` (${nbj === 0 ? "اليوم" : "منذ " + arNb(nbj, AR_JOURS)})`;
+      }
+      setField("etat", etatTxt);
+    }
+
+
+    // الخلاصة : par ordre d'arrivée des offres.
+    function renderSyntheseParvenues(offres) {
+      const t = (o) => { const d = Date.parse(o.dateRecu || ""); return isNaN(d) ? Infinity : d; };
+      const ordre = offres.map((o, i) => ({ o, i })).sort((a, b) => t(a.o) - t(b.o));
+      const elim = ["consultation", "cahier", "financiere"];
+      const lib = (k) => DTC_ADMIN_ROWS.find((r) => r.k === k).lib;
+      const items = ordre.map(({ o, i }) => {
+        const a = o.admin || {};
+        const nom = `العرض عدد ${i + 1}${o.nom ? ` — ${esc(o.nom)}` : ""}`;
+        let txt = "";
+        if (editParvenues) txt = ""; // pas de décision pendant l'édition
+        else {
+          const ko = admExclus(o);
+          const manque = DTC_ADMIN_ROWS.filter((r) => !elim.includes(r.k) && !a[r.k]).map((r) => esc(r.s || r.lib));
+          const cahierAComp = typeof a.cahier === "string";
+          if (ko.length) txt = `مقصى ${ko.map((m) => "ل" + m).join("، ")}`;
+          else {
+            const comp = (cahierAComp ? ["إمضاء كراس الشروط"] : []).concat(manque);
+            txt = comp.length ? `طلب استكمال : ${comp.join("، ")}` : `الملف الإداري كامل`;
+          }
+        }
+        return `<li><strong>${nom}</strong>${txt ? ` : ${txt}` : ""}</li>`;
+      }).join("");
+      return `<div class="cons_ar" dir="rtl" style="margin-top:12px"><h4 style="margin:0 0 6px">الخلاصة:</h4><ol style="margin:0;padding-inline-start:20px">${items}</ol></div>`;
+    }
+
+
+    // Offre retenue = aucun critère éliminatoire à "لا".
+    function nbRetenues(offres) {
+      return offres.filter(estRetenue).length;
+    }
+    function estRetenue(o) { const a = o.admin || {}; return !!(a.consultation && a.cahier && a.financiere); }
+
+    let editParvenues = false;
+
+    // Bouton « PV d'ouverture » : masqué au chargement et tant que des offres techniques ne sont pas
+    // entièrement renseignées ; affiché dès qu'il y a des offres et que tout est rempli.
+    function majBoutonPV() {
+      const btn = document.getElementById("cons_btn_pv");
+      if (!btn) return;
+      const c = consRecord;
+      btn.hidden = !(c && (c.offres || []).length > 0 && offresTechIncompletes(c).length === 0);
+      const bi = document.getElementById("cons_btn_istikmal");
+      if (bi) bi.hidden = !(c && complementsConsultation(c).length > 0);
+    }
+
+    function renderParvenues(offres) {
+      majBoutonPV();
+      const box = document.getElementById("cons_parvenues");
+      { const y = nbRetenues(offres), x = offres.length;
+        setStatus("parvenues", x ? `${arNb(x, AR_OFFRES)} (${arNb(y, AR_OFF_OK)}، ${arNb(x - y, AR_OFF_KO)})` : "لا عروض"); }
+      if (offres.length === 0) {
+        box.innerHTML = `<p class="cons_empty">لا توجد عروض مسجلة.</p>`;
+        return;
+      }
+      const ed = editParvenues;
+      const ouiNon = (i, k, v) => ed
+        ? `<td class="ctr"><button type="button" class="cons_ev_btn" data-admtgl data-state="${admState(k, v)}" data-i="${i}" data-k="${k}">${admLib(k, v)}</button></td>`
+        : `<td class="ctr">${v ? admLib(k, v) : `<span class="cons_ko">${admLib(k, v)}</span>`}</td>`;
+      const head = offres.map((o, i) => `<th class="ctr cons_ar">العرض عدد ${i + 1}${ed ? ` <button type="button" class="btn_danger" data-del="${i}" title="حذف العرض"><i class="bi bi-trash"></i></button>` : ""}</th>`).join("");
+      const lignes = DTC_ADMIN_ROWS.map((r) => `
+        <tr class="${r.bleu ? "bleu" : ""}">
+          <td class="lbl cons_ar">${esc(r.lib)}</td>
+          ${offres.map((o, i) => (r.k !== "consultation" && !(o.admin && o.admin.consultation))
+            ? `<td class="ctr cons_ar">لم يفتح</td>` // احترام عملية الاستشارة = لا : لم يفتح
+            : ouiNon(i, r.k, r.k === "cahier" ? (o.admin ? o.admin.cahier : undefined) : !!(o.admin && o.admin[r.k]))).join("")}
+        </tr>`).join("");
+      const nomCell = (o, i) => ed
+        ? `<td class="ctr"><input type="text" dir="auto" class="cons_cell_in" data-i="${i}" data-f="nom" value="${esc(o.nom || "")}" placeholder="الهيكل" /></td>`
+        : `<td class="ctr">${esc(o.nom) || "----"}</td>`;
+      const dateCell = (o, i) => {
+        if (!ed) return `<td class="ctr">${esc(formaterDateHeureFr(o.dateRecu))}</td>`;
+        let v = String(o.dateRecu || "");
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) v += "T00:00";
+        return `<td class="ctr"><input type="datetime-local" class="cons_cell_in" data-i="${i}" data-f="dateRecu" value="${esc(v.slice(0, 16))}" /></td>`;
+      };
+      box.innerHTML = `
+        <table class="cons_tbl${ed ? " is_edit" : ""}">
+          <thead><tr><th class="cons_ar">الوثائق الإدارية</th>${head}</tr></thead>
+          <tbody>
+            <tr><td class="lbl cons_ar">الهيكل</td>${offres.map(nomCell).join("")}</tr>
+            <tr><td class="lbl cons_ar">تاريخ سحب كراس الشروط</td>${offres.map((o, i) => retraitCell(o, i, ed)).join("")}</tr>
+            <tr><td class="lbl cons_ar">تاريخ الورود</td>${offres.map(dateCell).join("")}</tr>
+            ${lignes}
+          </tbody>
+        </table>`;
+      box.innerHTML += renderSyntheseParvenues(offres);
+    }
+
+    // Édition directe du tableau "Offres parvenues" (interrupteur Editer + bouton Ajouter offre).
+    function initEditionParvenues() {
+      const toggle = document.getElementById("cons_toggle_edit_parvenues");
+      const addBtn = document.getElementById("dtc_cons_btn_add_offre");
+      const section = document.querySelector('[data-category="parvenues"]');
+      // Ne pas replier/déplier la section en cliquant sur ces contrôles.
+      [toggle, addBtn].forEach((el) => el.addEventListener("click", (e) => e.stopPropagation()));
+      const ouvrir = () => { expandMetierSection(section); collapseOtherMetierSections(section); };
+
+      // Bouton bascule : crayon = lecture seule ; disquette = édition active (cliquer pour enregistrer).
+      toggle.setEtat = (on) => {
+        toggle.checked = on;
+        toggle.setAttribute("aria-pressed", String(on));
+        toggle.innerHTML = on ? `<i class="bi bi-floppy"></i> حفظ` : `<i class="bi bi-pencil-square"></i> تعديل`;
+        toggle.title = on ? "حفظ والخروج من التعديل" : "جعل خانات الجدول قابلة للتعديل";
+      };
+      toggle.addEventListener("click", async () => {
+        if (!consRecord || consRecord.evalTerminee) return;
+        toggle.setEtat(!toggle.checked);
+        if (toggle.checked) {
+          editParvenues = true; ouvrir();
+          renderParvenues(consRecord.offres || []);
+        } else {
+          editParvenues = false;
+          afficherConsultation(consRecord);
+          await sauverOffres();
+        }
+      });
+
+      addBtn.addEventListener("click", () => {
+        if (!consRecord || consRecord.evalTerminee) return;
+        consRecord.offres = consRecord.offres || [];
+        consRecord.offres.push({ nom: "", dateRecu: "", dateRetrait: "", admin: {}, tech: {}, couts: {} });
+        toggle.setEtat(true); editParvenues = true; ouvrir();
+        afficherConsultation(consRecord);
+        const ins = document.querySelectorAll('#cons_parvenues input[data-f="nom"]');
+        ins[ins.length - 1]?.focus();
+      });
+
+      const box = document.getElementById("cons_parvenues");
+      box.addEventListener("change", (e) => {
+        const el = e.target.closest(".cons_cell_in");
+        if (!el || !consRecord) return;
+        const o = consRecord.offres[Number(el.dataset.i)];
+        if (!o) return;
+        if (el.dataset.f === "nom") o.nom = el.value.trim();
+        else if (el.dataset.f === "dateRecu") o.dateRecu = el.value;
+        else if (el.dataset.f === "dateRetrait") o.dateRetrait = el.value;
+      });
+      box.addEventListener("click", (e) => {
+        const g = e.target.closest("[data-admtgl]");
+        if (g && consRecord) {
+          const o = consRecord.offres[Number(g.dataset.i)];
+          if (!o) return;
+          o.admin = o.admin || {};
+          const k = g.dataset.k;
+          if (k === "cahier") {
+            const cyc = CAHIER_OPTS.map((x) => x[0]);
+            const pos = cyc.indexOf(o.admin.cahier === undefined ? false : o.admin.cahier);
+            o.admin.cahier = cyc[(pos + 1) % cyc.length];
+          } else o.admin[k] = !o.admin[k];
+          if (k === "consultation") renderParvenues(consRecord.offres);
+          else { g.textContent = admLib(k, o.admin[k]); g.dataset.state = admState(k, o.admin[k]); }
+          return;
+        }
+        const b = e.target.closest("[data-del]");
+        if (!b || !consRecord) return;
+        if (!confirm("حذف هذا العرض وكل بياناته المدخلة ؟")) return;
+        consRecord.offres.splice(Number(b.dataset.del), 1);
+        afficherConsultation(consRecord);
+      });
+    }
+
+    // Date de retrait du cahier des charges (ligne sous « الهيكل »).
+    function retraitCell(o, i, ed) {
+      if (!ed) return `<td class="ctr">${esc(formaterDateFr(o.dateRetrait))}</td>`;
+      return `<td class="ctr"><input type="date" class="cons_cell_in" data-i="${i}" data-f="dateRetrait" value="${esc(o.dateRetrait || "")}" /></td>`;
+    }
+
+    // Structures ayant retiré le cahier des charges SANS déposer d'offre (consRecord.sansDepot = [{ nom, dateRetrait }]).
+    // Celles qui ont déposé une offre saisissent leur date de retrait dans le tableau des offres parvenues ;
+    // les autres se gèrent ici, dans la modale « Editer » de l'en-tête (brouillon sdDraft, validé par « Enregistrer »).
+    // Elles ne sont ni retenues ni évaluées ; elles sont reprises dans le PV d'ouverture.
+    let sdDraft = null;
+    function renderSdModal() {
+      const box = document.getElementById("cons_sd");
+      if (!box) return;
+      const sd = sdDraft || [];
+      const lignes = sd.map((x, k) => `<div class="dtc_cons_offre_row">
+          <span class="dtc_cons_offre_num">${String(k + 1).padStart(2, "0")}</span>
+          <input type="text" dir="auto" data-sd="${k}" data-f="nom" value="${esc(x.nom || "")}" placeholder="الهيكل" />
+          <input type="date" data-sd="${k}" data-f="dateRetrait" value="${esc(x.dateRetrait || "")}" title="تاريخ سحب كراس الشروط" />
+          <button type="button" class="btn_danger" data-sddel="${k}" title="حذف"><i class="bi bi-trash"></i></button>
+        </div>`).join("");
+      box.innerHTML = `<div class="dtc_cons_offres">
+        ${lignes || `<p class="dtc_cons_offres_vide">لا توجد هياكل.</p>`}
+        <button type="button" class="btn_info" data-sdadd><i class="bi bi-plus-lg"></i> إضافة هيكل</button>
+      </div>`;
+    }
+    function initSdModal() {
+      const box = document.getElementById("cons_sd");
+      if (!box) return;
+      box.addEventListener("input", (e) => {
+        const el = e.target.closest("[data-sd]");
+        if (!el || !sdDraft || !sdDraft[Number(el.dataset.sd)]) return;
+        sdDraft[Number(el.dataset.sd)][el.dataset.f] = el.value;
+      });
+      box.addEventListener("click", (e) => {
+        if (!sdDraft) return;
+        if (e.target.closest("[data-sdadd]")) {
+          sdDraft.push({ nom: "", dateRetrait: "" });
+          renderSdModal();
+          const ins = box.querySelectorAll('input[data-f="nom"]');
+          ins[ins.length - 1]?.focus();
+          return;
+        }
+        const b = e.target.closest("[data-sddel]");
+        if (!b) return;
+        sdDraft.splice(Number(b.dataset.sddel), 1);
+        renderSdModal();
+      });
+    }
+    document.addEventListener("DOMContentLoaded", initSdModal);
+
+    let editTech = false, techSel = -1;
+    // Un même formateur (nom répété dans plusieurs thèmes de l'offre) a toujours la même طبيعة المكوّن :
+    // - nom saisi : la nature est reprise d'un autre thème du même formateur ;
+    // - nature choisie ou modifiée : elle est reportée (écrasant l'existante) sur tous les thèmes du même formateur.
+    // Retourne true si au moins un thème a été complété.
+    function syncNatureFormateur(o, nom, source) {
+      const norm = (x) => String(x || "").replace(/\s+/g, " ").trim().toLowerCase();
+      const tech = o.tech || {};
+      const v = tech[nom] || {};
+      const cle = norm(v.nomCompo);
+      if (!cle) return false;
+      let change = false;
+      if (source === "nom") {
+        const autre = Object.keys(tech).find((t) => t !== nom && norm(tech[t] && tech[t].nomCompo) === cle && tech[t].nature);
+        if (autre && v.nature !== tech[autre].nature) { v.nature = tech[autre].nature; change = true; }
+      } else {
+        Object.keys(tech).forEach((t) => {
+          if (t === nom || !tech[t] || norm(tech[t].nomCompo) !== cle) return;
+          if (v.nature) { if (tech[t].nature !== v.nature) { tech[t].nature = v.nature; change = true; } }
+          else if (tech[t].nature) { delete tech[t].nature; change = true; }
+        });
+      }
+      return change;
+    }
+    function initEditionTechniques() {
+      const toggle = document.getElementById("cons_toggle_edit_techniques");
+      const section = document.querySelector('[data-category="techniques"]');
+      const box = document.getElementById("cons_techniques");
+      toggle.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!consRecord || consRecord.evalTerminee) return;
+        editTech = !editTech;
+        toggle.setAttribute("aria-pressed", String(editTech));
+        toggle.innerHTML = editTech ? `<i class="bi bi-floppy"></i> حفظ` : `<i class="bi bi-pencil-square"></i> تعديل`;
+        expandMetierSection(section); collapseOtherMetierSections(section);
+        renderTechniques(consRecord, consRecord.offres || []);
+        if (!editTech) await sauverOffres(toggle);
+      });
+      box.addEventListener("click", (e) => {
+        const p = e.target.closest("[data-print-blank]");
+        if (p && consRecord) { imprimerTechVierge(Number(p.dataset.printBlank)); return; }
+        const g = e.target.closest("[data-tgl]");
+        if (g && consRecord) {
+          const o = consRecord.offres[Number(g.dataset.i)];
+          if (!o) return;
+          o.tech = o.tech || {};
+          const v = o.tech[g.dataset.t] = o.tech[g.dataset.t] || {};
+          const k = g.dataset.k;
+          const cyc = tglCycle(k);
+          const pos = cyc.indexOf(v[k] === "" ? undefined : v[k]);
+          const suiv = cyc[(pos + 1) % cyc.length];
+          if (suiv === undefined) delete v[k]; else v[k] = suiv;
+          g.textContent = tglLib(k, v[k]);
+          g.dataset.state = tglState(k, v[k]);
+          if (k === "nature" && syncNatureFormateur(o, g.dataset.t, "nature")) renderTechniques(consRecord, consRecord.offres || []);
+          return;
+        }
+        const b = e.target.closest("[data-tab]");
+        if (!b || !consRecord) return;
+        techSel = Number(b.dataset.tab);
+        renderTechniques(consRecord, consRecord.offres || []);
+      });
+      box.addEventListener("change", (e) => {
+        const co = e.target.closest("input[data-cout]");
+        if (co && consRecord) {
+          const oc = consRecord.offres[Number(co.dataset.i)];
+          if (!oc) return;
+          oc.couts = oc.couts || {};
+          if (co.value === "") delete oc.couts[co.dataset.cout]; else oc.couts[co.dataset.cout] = Number(co.value);
+          renderTechniques(consRecord, consRecord.offres || []);
+          return;
+        }
+        const el = e.target.closest(".cons_cell_in");
+        if (!el || !consRecord) return;
+        const o = consRecord.offres[Number(el.dataset.i)];
+        if (!o) return;
+        o.tech = o.tech || {};
+        const v = o.tech[el.dataset.t] = o.tech[el.dataset.t] || {};
+        if (el.dataset.h) v[el.dataset.h] = el.value === "" ? "" : Number(el.value);
+        else if (el.tagName === "SELECT" && el.value === "") delete v[el.dataset.k];
+        else if (el.tagName === "SELECT" && el.dataset.k !== "nature" && el.dataset.k !== "carte") v[el.dataset.k] = el.value === "1";
+        else v[el.dataset.k] = el.value.trim();
+        if (el.dataset.k === "nomCompo" && syncNatureFormateur(o, el.dataset.t, "nom")) renderTechniques(consRecord, consRecord.offres || []);
+      });
+    }
+
+    // Enregistre les offres modifiées (à la désactivation de l'interrupteur Editer).
+    async function sauverOffres(btn) {
+      const toggle = btn || document.getElementById("cons_toggle_edit_parvenues");
+      toggle.disabled = true;
+      try {
+        consRecord.offres = (consRecord.offres || []).map((o) => ({ ...o, nom: String(o.nom || "").trim() }));
+        await apiCallDirect("enregistrerConsultationDTC", { consultation: consRecord });
+      } catch (err) {
+        alert(`خطأ أثناء حفظ العروض : ${err.message}`);
+      } finally {
+        toggle.disabled = false;
+      }
+    }
+
+    function renderTechniques(c, offres) {
+      renderEvalTech(c, offres); // le التقييم الفني dépend des montants et des données saisies ici (inclut renderConclusion)
+      majBoutonPV();
+      const box = document.getElementById("cons_techniques");
+      const themes = c.themes || [];
+      const det = {};
+      (c.details || []).forEach((d) => { det[d.nom] = d; });
+      { const y = nbRetenues(offres); setStatus("techniques", offres.length ? arNb(y, AR_OFF_OK) : ""); }
+      if (offres.length === 0) {
+        box.innerHTML = `<p class="cons_empty">لا توجد عروض مسجلة.</p>`;
+        return;
+      }
+      const ret = offres.map((o, i) => ({ o, i })).filter(({ o }) => estRetenue(o));
+      if (ret.length === 0) {
+        box.innerHTML = `<p class="cons_empty">لا توجد عروض مقبولة.</p>`;
+        return;
+      }
+      if (themes.length === 0) {
+        box.innerHTML = `<p class="cons_empty">لا توجد محاور لهذه الاستشارة.</p>`;
+        return;
+      }
+
+      const cellLecture = (o, nom, r) => {
+        const v = (o.tech && o.tech[nom]) || {};
+        if (r.type === "text") return `<td class="ctr cons_ar">${esc(v[r.k]) || "----"}</td>`;
+        if (r.type === "nature") return `<td class="ctr cons_ar">${esc(v[r.k]) || "----"}</td>`;
+        if (r.type === "carte") { const x = CARTE_OPTS.find((c) => c[0] === v[r.k]); return `<td class="ctr cons_ar">${x ? esc(x[1]) : "----"}</td>`; }
+        if (v[r.k] === false && TGL_NON[r.k]) return `<td class="ctr"><span class="cons_ko">${TGL_NON[r.k]}</span></td>`;
+        return `<td class="ctr">${v[r.k] === undefined || v[r.k] === "" ? "----" : oui(v[r.k])}</td>`;
+      };
+
+      if (!ret.some(({ i }) => i === techSel)) techSel = ret[0].i;
+      const ed = editTech;
+      const onglets = `<div class="cons_tabs" dir="rtl">${ret.map(({ o, i }) => `<button type="button" class="btn_info cons_tab${i === techSel ? " is_active" : ""}" data-tab="${i}">العرض عدد ${i + 1}</button>`).join("")}<button type="button" class="btn_info cons_tab_print" data-print-blank="${techSel}" title="طباعة جدول فارغ"><i class="bi bi-printer"></i> طباعة</button></div>`;
+      box.innerHTML = onglets + ret.filter(({ i }) => i === techSel).map(({ o, i }) => {
+        const cell = (o, nom, r) => {
+          if (!ed) return cellLecture(o, nom, r);
+          const v = (o.tech && o.tech[nom]) || {};
+          const at = `class="cons_cell_in" data-i="${i}" data-t="${esc(nom)}" data-k="${r.k}"`;
+          if (r.type === "carte") return `<td class="ctr">${tglHtml(i, nom, r.k, v[r.k])}</td>`;
+          if (r.type === "nature") return `<td class="ctr cons_ar">${tglHtml(i, nom, r.k, v[r.k])}</td>`;
+          if (r.type === "text") return `<td class="ctr"><input type="text" dir="auto" ${at} value="${esc(v[r.k] || "")}" /></td>`;
+          return `<td class="ctr">${tglHtml(i, nom, r.k, v[r.k])}</td>`;
+        };
+        const lignes = DTC_TECH_ROWS.map((grp) => grp.rows.map((r, n) => {
+          let debut;
+          if (!grp.g) debut = `<td colspan="2" class="lbl cons_ar">${esc(r.lib)}${r.elim && !TGL_NON[r.k] ? ` <span class="cons_elim">(إقصائي)</span>` : ""}</td>`;
+          else debut = (n === 0 ? `<td rowspan="${grp.rows.length}" class="grp cons_ar">${esc(grp.g)}</td>` : "") + `<td class="lbl cons_ar">${esc(r.lib)}${r.elim && !TGL_NON[r.k] ? ` <span class="cons_elim">(إقصائي)</span>` : ""}</td>`;
+          return `<tr>${debut}${themes.map((nom) => (!ed && statutTheme(o, nom) === "absent") ? `<td class="ctr tech_sans_offre">—</td>` : cell(o, nom, r)).join("")}</tr>`;
+        }).join("")).join("");
+        const coutRow = `<tr><td colspan="2" class="lbl cons_ar"><strong>الكلفة بالأرقام (د)</strong></td>${themes.map((nom) => {
+          const m = o.couts ? o.couts[nom] : undefined;
+          const vide = (m === undefined || m === null || m === "");
+          const cls = `num${themeExclu(o, nom) && !vide ? " fin_exclu" : ""}`;
+          return ed
+            ? `<td class="${cls}"><input type="number" step="any" class="cons_cell_in" style="width:100%;min-width:90px" data-i="${i}" data-cout="${esc(nom)}" value="${vide ? "" : esc(m)}" /></td>`
+            : `<td class="${cls}">${vide ? "—" : esc(m)}</td>`;
+        }).join("")}</tr>`;
+        return `
+          <div class="cons_off_titre cons_ar">${esc(libOffre(o, i))}</div>
+          <div class="cons_tbl_wrap">
+            <table class="cons_tbl cons_tbl_tech cons_tbl_tech_auto">
+              <thead><tr><th colspan="2" class="cons_ar">الوثائق الفنّية</th>${themes.map((nom, j) => `
+                <th class="ctr cons_ar tech_th${!ed && statutTheme(o, nom) === "absent" ? " tech_sans_offre" : ""}"${!ed && statutTheme(o, nom) === "absent" ? ` title="الهيكل لم يشارك في هذا المحور"` : ""}>المحور عدد ${j + 1}<div class="cons_theme_sub">${esc(nom)}</div></th>`).join("")}</tr></thead>
+              <tbody>${lignes}${coutRow}</tbody>
+            </table>
+          </div>${syntheseTech(o, themes)}`;
+      }).join("");
+    }
+
+    // Décision par thème : "لا" إقصائي -> مقصى ; sinon "لا" non éliminatoire -> استكمال ; sinon مقبول.
+    // Aucune décision en édition ; état brut ("----") -> جار التثبت.
+    // Toggles : ---- -> نعم -> لا -> ---- ; carte : ---- -> نعم -> لا (إقصائي) -> الهيكل غير ممضي -> المكوّن غير ممضي (إقصائي) -> ----
+    const NATURES = ["خاص", "عمومي", "عمومي دون ترخيص"];
+    function tglCycle(k) { return k === "carte" ? [undefined, ...CARTE_OPTS.map((x) => x[0])] : k === "nature" ? [undefined, ...NATURES] : [undefined, true, false]; }
+    // Libellé du choix « لا » (le caractère إقصائي / استكمال est porté par le choix, plus par le libellé de la ligne).
+    const TGL_NON = { heures: "لا (إقصائي)", objectifs: "لا (إقصائي)", contenu: "لا (إقصائي)", moyens: "لا (إقصائي)", evaluation: "لا (إقصائي)", espace: "لا (استكمال)" };
+    function tglState(k, v) { return v === undefined || v === "" ? "vide" : k === "carte" || k === "nature" ? v : (v ? "oui" : "non"); }
+    function tglLib(k, v) {
+      if (v === undefined || v === "") return "----";
+      if (k === "nature") return v;
+      if (k === "carte") return (CARTE_OPTS.find((x) => x[0] === v) || [, "----"])[1];
+      return v ? "نعم" : (TGL_NON[k] || "لا");
+    }
+    function tglHtml(i, nom, k, v) {
+      return `<button type="button" class="cons_ev_btn" data-tgl data-state="${tglState(k, v)}" data-i="${i}" data-t="${esc(nom)}" data-k="${k}">${tglLib(k, v)}</button>`;
+    }
+
+    // Un محور est مقصى si un critère éliminatoire de l'offre technique est à "لا" (ou carte non / مكوّن غير ممضي).
+    // Pas d'offre financière pour ce thème (coût non saisi) => pas d'offre technique non plus.
+    function sansOffreFin(o, nom) {
+      const m = o && o.couts ? o.couts[nom] : undefined;
+      return m === undefined || m === null || m === "";
+    }
+    // Offre technique présente pour ce thème = au moins un champ technique renseigné.
+    function aOffreTech(o, nom) {
+      const v = (o && o.tech && o.tech[nom]) || {};
+      return Object.keys(v).some((k) => v[k] !== undefined && v[k] !== null && String(v[k]).trim() !== "");
+    }
+    // "absent" : ni offre financière ni technique (le candidat n'a pas participé au محور) ;
+    // "sans_tech" / "sans_fin" : une seule des deux (مقصى) ; "complet" : les deux.
+    function statutTheme(o, nom) {
+      const f = !sansOffreFin(o, nom), t = aOffreTech(o, nom);
+      return f && t ? "complet" : f ? "sans_tech" : t ? "sans_fin" : "absent";
+    }
+    const STATUT_EXCL_LIB = { sans_tech: "عدم تقديم عرض فني", sans_fin: "عدم تقديم عرض مالي" };
+    function themeExclu(o, nom) {
+      if (STATUT_EXCL_LIB[statutTheme(o, nom)]) return true;
+      const v = (o.tech && o.tech[nom]) || {};
+      return DTC_TECH_ROWS.flatMap((g) => g.rows).some((r) =>
+        r.type === "carte" ? CARTE_KO.includes(v.carte) : (!r.type && r.elim && v[r.k] === false));
+    }
+
+    function syntheseTech(o, themes) {
+      const rows = DTC_TECH_ROWS.flatMap((g) => g.rows);
+      const items = themes.map((nom, j) => {
+        const v = (o.tech && o.tech[nom]) || {};
+        let txt = "";
+        const stt = statutTheme(o, nom);
+        if (editTech) txt = "";
+        else if (stt === "absent") txt = "الهيكل لم يشارك في المحور";
+        else if (STATUT_EXCL_LIB[stt]) txt = `مقصى لـ${STATUT_EXCL_LIB[stt]}`;
+        else {
+          const ko = [], manque = [], attente = [];
+          rows.forEach((r) => {
+            if (r.type === "carte") { if (CARTE_KO.includes(v.carte)) ko.push(r); else if (v.carte === "struct") manque.push(r); else if (v.carte !== "oui") attente.push(r); }
+            else if (!r.type) { if (v[r.k] === false) (r.elim ? ko : manque).push(r); else if (v[r.k] !== true) attente.push(r); }
+          });
+          const l = (arr) => arr.map((r) => r.type === "carte" ? CARTE_LIB[v.carte] : esc(r.lib)).join("، ");
+          const koStd = ko.filter((r) => !r.exclTxt), koSpec = ko.filter((r) => r.exclTxt);
+          const partsKo = [];
+          if (koStd.length) partsKo.push(`الهيكل مقصى في المحور (${l(koStd)} - إقصائي)`);
+          koSpec.forEach((r) => partsKo.push(`مقصى ${r.exclTxt}`));
+          txt = ko.length ? partsKo.join(" — ") : manque.length ? `استكمال (${l(manque)})` : attente.length ? "جار التثبت" : "مقبول";
+          if (v.nature === "عمومي دون ترخيص") txt += ` — المكوّن عمومي دون ترخيص`;
+        }
+        return `<li style="break-inside:avoid">المحور عدد ${j + 1}${txt ? ` : ${txt}` : ""}</li>`;
+      }).join("");
+      return `<div class="cons_ar" dir="rtl" style="margin-top:12px"><h4 style="margin:0 0 6px">الخلاصة:</h4><ul style="margin:0;padding:0;list-style:none;column-count:2;column-gap:32px">${items}</ul></div>`;
+    }
+
+    // Tableau technique vierge (offre sélectionnée) à remplir à la main.
+    function imprimerTechVierge(i) {
+      const c = consRecord, o = c && (c.offres || [])[i];
+      if (!o) return;
+      const themes = c.themes || [];
+      const lib = (r) => `${esc(r.lib)}${r.elim ? ` <span class="cons_elim">(إقصائي)</span>` : ""}`;
+      const det = {};
+      (c.details || []).forEach((d) => { det[d.nom] = d; });
+      // Ligne « التوزيع الزمني نظري - تطبيقي » : à l'écran toujours un toggle نعم/لا ; sur papier on imprime les heures th / pr.
+      // Heures théoriques / pratiques d'un thème : saisie de l'offre, sinon consultation (hrtThemes/hrpThemes), sinon détails.
+      const heuresTxt = (nom, j) => {
+        const v = (o.tech && o.tech[nom]) || {};
+        const theo = v.theo !== undefined && v.theo !== "" ? v.theo : (c.hrtThemes && c.hrtThemes[j] !== undefined ? c.hrtThemes[j] : (det[nom] ? det[nom].heuresTheo : ""));
+        const prat = v.prat !== undefined && v.prat !== "" ? v.prat : (c.hrpThemes && c.hrpThemes[j] !== undefined ? c.hrpThemes[j] : (det[nom] ? det[nom].heuresPrat : ""));
+        return (theo === "" && prat === "") ? "" : `${fmtNb(theo)} / ${fmtNb(prat)}`;
+      };
+      const PAR_PAGE = 7;
+      const pages = [];
+      for (let p = 0; p < themes.length; p += PAR_PAGE) pages.push(p);
+      if (pages.length === 0) pages.push(0);
+      document.getElementById("cons_print_blank").innerHTML = pages.map((debutIdx) => {
+        const lot = themes.slice(debutIdx, debutIdx + PAR_PAGE).map((nom, k) => ({ nom, j: debutIdx + k }));
+        const lignes = DTC_TECH_ROWS.map((grp) => grp.rows.map((r, n) => {
+          const debut = !grp.g
+            ? `<td colspan="2" class="lbl cons_ar">${lib(r)}</td>`
+            : (n === 0 ? `<td rowspan="${grp.rows.length}" class="grp cons_ar">${esc(grp.g)}</td>` : "") + `<td class="lbl cons_ar">${lib(r)}</td>`;
+          const cellule = ({ nom, j }) => r.k === "heures"
+            ? `<td class="num">${esc(heuresTxt(nom, j))}</td>`
+            : `<td class="ctr blank_cell"></td>`;
+          return `<tr>${debut}${lot.map(cellule).join("")}</tr>`;
+        }).join("")).join("");
+        return `
+        <div class="cons_print_page">
+          <div class="cons_print_titre cons_ar" dir="rtl">الإستشارة عدد <bdi dir="ltr">${esc(numConsAff(c.numCons) || "----")}</bdi> في مجال ${esc(c.domaine || "----")}</div>
+          <div class="cons_off_titre cons_ar">${esc(libOffre(o, i))}</div>
+          <div class="cons_tbl_wrap">
+            <table class="cons_tbl cons_tbl_tech">
+              <colgroup><col style="width:11%"><col style="width:22%">${lot.map(() => "<col>").join("")}</colgroup>
+              <thead><tr><th colspan="2" class="cons_ar">الوثائق الفنّية</th>${lot.map(({ nom, j }) => `
+                <th class="ctr cons_ar">المحور عدد ${j + 1}<div class="cons_theme_sub">${esc(nom)}</div></th>`).join("")}</tr></thead>
+              <tbody>${lignes}</tbody>
+            </table>
+          </div>
+          <div class="cons_ar" dir="rtl" style="margin-top:12px"><h4 style="margin:0 0 6px">الخلاصة:</h4>
+            <ol class="cons_blank_lines">${lot.map(({ j }) => `<li value="${j + 1}">المحور عدد ${j + 1} : </li>`).join("")}</ol></div>
+        </div>`;
+      }).join("");
+      document.body.classList.add("is_print_blank");
+      window.addEventListener("afterprint", () => document.body.classList.remove("is_print_blank"), { once: true });
+      window.print();
+    }
+
+    /* ---------------- Evaluation technique ----------------
+       Une page par محور (boutons en haut) ; tableau RTL : critères minimaux x offres retenues
+       (مطابق / غير مطابق), puis la ligne des coûts. Stockage : offre.eval[thème][critère] = true|false.
+       Le moins disant = coût le plus bas parmi les offres non مقصى sur ce محور
+       (مقصى = critère éliminatoire de l'offre technique, ou au moins un critère غير مطابق). */
+    const DTC_EVAL_ROWS = [
+      { g: "العناصر البيداغوجية", rows: [
+        { k: "objectifs", lib: "الأهداف البيداغوجية" },
+        { k: "contenu", lib: "المحتوى البيداغوجي" },
+        { k: "moyens", lib: "الوسائل والطرق البيداغوجية والتجهيزات الملائمة للتكوين" },
+        { k: "methodo", lib: "منهجية تقييم التكوين" },
+        { k: "outils", lib: "أدوات تقييم التكوين" }
+      ] },
+      { g: "المكوّن", rows: [
+        { k: "nomCompo", lib: "اسم المكوّن", ro: true },
+        { k: "base", lib: "التكوين الأساسي" },
+        { k: "expPro", lib: "الخبرة المهنية" },
+        { k: "expFc", lib: "الخبرة في التكوين المستمر" }
+      ] }
+    ];
+    const EV_KEYS = DTC_EVAL_ROWS.flatMap((g) => g.rows).filter((r) => !r.ro).map((r) => r.k);
+
+    let editEv = false, evSel = 0;
+
+    function evalNonConforme(o, nom) {
+      const v = (o.eval && o.eval[nom]) || {};
+      // Défavorable seulement une fois toutes les cellules remplies (au moins un غير مطابق).
+      return EV_KEYS.every((k) => v[k] !== undefined) && EV_KEYS.some((k) => v[k] === false);
+    }
+    function evalEcarte(o, nom) { return themeExclu(o, nom) || evalNonConforme(o, nom); }
+
+    // Offre(s) la moins disante d'un محور : { min, idx: [index d'offre] } ou null.
+    function moinsDisant(offres, nom) {
+      let min = null, idx = [];
+      offres.forEach((o, i) => {
+        if (!estRetenue(o) || evalEcarte(o, nom)) return;
+        const m = o.couts ? o.couts[nom] : undefined;
+        if (m === undefined || m === null || m === "" || isNaN(Number(m))) return;
+        const n = Number(m);
+        if (min === null || n < min) { min = n; idx = [i]; } else if (n === min) idx.push(i);
+      });
+      return min === null ? null : { min, idx };
+    }
+
+    function evalComplet(o, nom) {
+      const v = (o.eval && o.eval[nom]) || {};
+      return EV_KEYS.every((k) => v[k] === true);
+    }
+    // Offres retenues triées par montant croissant sur ce محور (sans montant = en dernier).
+    function ordreOffres(offres, nom) {
+      const cout = (o) => { const m = o.couts ? o.couts[nom] : undefined; return (m === undefined || m === null || m === "" || isNaN(Number(m))) ? Infinity : Number(m); };
+      return offres.map((o, i) => ({ o, i })).filter(({ o }) => estRetenue(o))
+        .sort((a, b) => (cout(a.o) - cout(b.o)) || (a.i - b.i) || 0);
+    }
+    // Colonne modifiable : la 1re offre (par montant croissant) ni مقصى ni غير مطابق. Les suivantes restent verrouillées
+    // tant que celle-ci n'est pas défavorable ; si elle est entièrement مطابق, l'évaluation s'arrête là.
+    function offreActive(offres, nom) {
+      const x = ordreOffres(offres, nom).find(({ o }) => {
+        const m = o.couts ? o.couts[nom] : undefined;
+        return m !== undefined && m !== null && m !== "" && !isNaN(Number(m)) && !evalEcarte(o, nom);
+      });
+      return x ? x.i : -1;
+    }
+
+    function evBtn(i, nom, k, v) {
+      const st = v === true ? "oui" : v === false ? "non" : "vide";
+      const lib = v === true ? "مطابق" : v === false ? "غير مطابق" : "----";
+      return `<button type="button" class="cons_ev_btn" data-evtgl data-state="${st}" data-i="${i}" data-t="${esc(nom)}" data-k="${k}">${lib}</button>`;
+    }
+
+    function renderEvalTech(c, offres) {
+      renderConclusion(c);
+      const box = document.getElementById("cons_evaltech");
+      const themes = c.themes || [];
+      const ret = offres.map((o, i) => ({ o, i })).filter(({ o }) => estRetenue(o));
+      setStatus("evaltech", ret.length ? arNb(ret.length, AR_OFF_EV) : "");
+      if (offres.length === 0) { box.innerHTML = `<p class="cons_empty">لا توجد عروض مسجلة.</p>`; return; }
+      if (ret.length === 0) { box.innerHTML = `<p class="cons_empty">لا توجد عروض مقبولة.</p>`; return; }
+      if (themes.length === 0) { box.innerHTML = `<p class="cons_empty">لا توجد محاور لهذه الاستشارة.</p>`; return; }
+      if (evSel < 0 || evSel >= themes.length) evSel = 0;
+
+      const nom = themes[evSel];
+      const ed = editEv;
+      // Pas d'offre financière pour ce محور => pas d'offre technique : l'offre n'est pas évaluée sur ce محور.
+      const cols = ordreOffres(offres, nom).filter(({ o }) => coutSaisi(o, nom) !== null);
+      const actif = offreActive(offres, nom);
+      const onglets = `<div class="cons_tabs" dir="rtl">${themes.map((t, j) => `<button type="button" class="btn_info cons_tab${j === evSel ? " is_active" : ""}" data-evtab="${j}" title="${esc(t)}">المحور عدد ${j + 1}</button>`).join("")}${ed ? `<button type="button" class="btn_danger cons_tab_print" data-evreset title="مسح تقييم هذا المحور والبدء من جديد بالأقل كلفة"><i class="bi bi-arrow-counterclockwise"></i> إعادة التقييم</button>` : ""}</div>`;
+
+      const cellule = (o, i, r) => {
+        if (r.k === "nomCompo") {
+          const n = o.tech && o.tech[nom] ? o.tech[nom].nomCompo : "";
+          return `<td class="ctr cons_ar">${esc(n) || "----"}</td>`;
+        }
+        const v = o.eval && o.eval[nom] ? o.eval[nom][r.k] : undefined;
+        if (ed && i === actif) return `<td class="ctr">${evBtn(i, nom, r.k, v)}</td>`;
+        return `<td class="ctr cons_ar">${v === true ? "مطابق" : v === false ? `<span class="cons_ko">غير مطابق</span>` : "----"}</td>`;
+      };
+      const lignes = DTC_EVAL_ROWS.map((grp) => grp.rows.map((r, n) =>
+        `<tr>${n === 0 ? `<td rowspan="${grp.rows.length}" class="grp cons_ar">${esc(grp.g)}</td>` : ""}<td class="lbl cons_ar">${esc(r.lib)}</td>${cols.map(({ o, i }) => cellule(o, i, r).replace('<td class="', evalEcarte(o, nom) ? '<td class="ev_ko ' : '<td class="')).join("")}</tr>`
+      ).join("")).join("");
+
+      const best = moinsDisant(offres, nom);
+      const coutRow = `<tr><td colspan="2" class="lbl cons_ar"><strong>الكلفة بالأرقام (د)</strong></td>${cols.map(({ o, i }) => {
+        const m = o.couts ? o.couts[nom] : undefined;
+        const vide = (m === undefined || m === null || m === "");
+        const cls = evalEcarte(o, nom) ? "ev_ko" : (best && best.idx.includes(i) ? "ev_best" : "");
+        return `<td class="num ${cls}">${vide ? "—" : esc(m)}</td>`;
+      }).join("")}</tr>`;
+
+      // الخلاصة : محور affiché uniquement. Toutes les offres ayant un montant, par montant croissant.
+      // Une offre non acceptée en amont (non retenue à l'ouverture, ou مقصى dans les documents techniques) est listée
+      // si elle est la moins disante, puis on passe à la suivante ; sinon on s'arrête à la première offre مقبول / جار التقييم.
+      const cand = offres.map((o, i) => ({ o, i })).filter(({ o }) => {
+        const m = o.couts ? o.couts[nom] : undefined;
+        return m !== undefined && m !== null && m !== "" && !isNaN(Number(m));
+      }).sort((a, b) => (Number(a.o.couts[nom]) - Number(b.o.couts[nom])) || (a.i - b.i));
+      const lignesSyn = [];
+      let tousRejetes = true;
+      for (let n = 0; n < cand.length; n++) {
+        const { o, i } = cand[n];
+        let st, rejete = false;
+        if (!estRetenue(o)) { st = "غير مقبول (غير مقبول عند فتح العروض)"; rejete = true; }
+        else if (STATUT_EXCL_LIB[statutTheme(o, nom)]) { st = `غير مقبول (مقصى لـ${STATUT_EXCL_LIB[statutTheme(o, nom)]})`; rejete = true; }
+        else if (themeExclu(o, nom)) { st = "غير مقبول (مقصى في الوثائق الفنية)"; rejete = true; }
+        else if (evalNonConforme(o, nom)) { st = "غير مقبول"; rejete = true; }
+        else st = evalComplet(o, nom) ? "مقبول" : "جار التقييم";
+        const qual = n === 0 ? "الأقل كلفة" : "صاحب العرض المالي الموالي في الترتيب";
+        lignesSyn.push(`${esc(libOffre(o, i))} ${qual} - ${st}`);
+        if (!rejete) { tousRejetes = false; break; }
+      }
+      // Aucune offre qualifiée (ou toutes غير مقبول) : محور غير مثمر.
+      if (tousRejetes) lignesSyn.push("محور غير مثمر");
+      const items = lignesSyn.map((t) => `<li style="list-style:none">${t}</li>`).join("");
+
+      box.innerHTML = `${onglets}
+        <div class="cons_off_titre cons_ar">المحور عدد ${evSel + 1} — ${esc(nom)}</div>
+        ${cols.length ? "" : `<p class="cons_empty">لا عرض مالي لهذا المحور : لا تقييم فني.</p>`}
+        <div class="cons_tbl_wrap"${cols.length ? "" : ` hidden`}>
+          <table class="cons_tbl cons_tbl_tech${ed ? " is_edit" : ""}">
+            <colgroup><col style="width:14%"><col style="width:30%">${cols.map(() => "<col>").join("")}</colgroup>
+            <thead><tr><th class="cons_ar">الوثائق الفنية</th><th class="cons_ar">الشروط الفنية الدنيا</th>${cols.map(({ o, i }) => `<th class="ctr cons_ar${evalEcarte(o, nom) ? " ev_ko" : ""}">${esc(libOffre(o, i))}${ed && i === actif ? ` <i class="bi bi-pencil"></i>` : ""}</th>`).join("")}</tr></thead>
+            <tbody>${lignes}${coutRow}</tbody>
+          </table>
+        </div>
+        <div class="cons_ar" dir="rtl" style="margin-top:12px"><h4 style="margin:0 0 6px">خلاصة المحور عدد ${evSel + 1} :</h4><ul style="margin:0;padding:0">${items}</ul></div>`;
+    }
+
+    /* ---------------- Conclusion : thèmes fructueux ----------------
+       Un thème est fructueux si l'offre la moins disante, parmi celles ni مقصى ni غير مطابق, est entièrement مطابق.
+       Coût total d'un thème = coût journalier × jours (heures ÷ 6) × 15 bénéficiaires × nombre de groupes. */
+    const HEURES_PAR_JOUR = 6, BENEFICIAIRES = 15;
+    let grpDefaut = 1;
+    const AR_MAH_OK = { z: "لا محور مثمر", s: "محور واحد مثمر", d: "محوران مثمران", p: "محاور مثمرة", t: "محورا مثمرا" };
+    const AR_MAH_EV = { z: "لا محور قيد التقييم", s: "محور واحد قيد التقييم", d: "محوران قيد التقييم", p: "محاور قيد التقييم", t: "محورا قيد التقييم" };
+    const iso = (t) => `⁦${t}⁩`;
+    function fmt3(n) { return (Math.round((Number(n) || 0) * 1000) / 1000).toFixed(3); }
+    const coutSaisi = (o, nom) => { const m = o.couts ? o.couts[nom] : undefined; return (m === undefined || m === null || m === "" || isNaN(Number(m))) ? null : Number(m); };
+
+    function detailTheme(c, nom, j) {
+      const det = (c.details || []).find((d) => d && d.nom === nom) || {};
+      const th = Number(c.hrtThemes && c.hrtThemes[j] !== undefined ? c.hrtThemes[j] : det.heuresTheo) || 0;
+      const pr = Number(c.hrpThemes && c.hrpThemes[j] !== undefined ? c.hrpThemes[j] : det.heuresPrat) || 0;
+      const g = parseInt(det.groupes, 10);
+      return { heures: th + pr, groupes: g > 0 ? g : grpDefaut };
+    }
+
+    // { etat: "fructueux" | "infructueux" | "attente", nom, cout }
+    function resultatTheme(c, nom) {
+      const offres = c.offres || [];
+      const ret = offres.map((o, i) => ({ o, i })).filter(({ o }) => estRetenue(o));
+      if (!ret.length) return { etat: "infructueux" };
+      const cand = ret.filter(({ o }) => coutSaisi(o, nom) !== null)
+        .sort((a, b) => (coutSaisi(a.o, nom) - coutSaisi(b.o, nom)) || (a.i - b.i));
+      for (const { o } of cand) {
+        if (themeExclu(o, nom) || evalNonConforme(o, nom)) continue;
+        return evalComplet(o, nom) ? { etat: "fructueux", nom: o.nom, cout: coutSaisi(o, nom) } : { etat: "attente" };
+      }
+      // Les offres sans offre financière pour ce محور ne sont pas évaluées : sans offre chiffrée non écartée, infructueux.
+      return { etat: "infructueux" };
+    }
+
+    // "fructueuse" / "infructueuse" une fois tous les thèmes tranchés, sinon null (pas d'offres : null).
+    function conclusionEtat(c) {
+      const themes = c.themes || [];
+      if (!themes.length || !(c.offres || []).length) return null;
+      const res = themes.map((nom) => resultatTheme(c, nom).etat);
+      if (res.includes("attente")) return null;
+      return res.includes("fructueux") ? "fructueuse" : "infructueuse";
+    }
+
+    function renderConclusion(c) {
+      const box = document.getElementById("cons_conclusion");
+      if (!box || !c) return;
+      const themes = c.themes || [], offres = c.offres || [];
+      const res = themes.map((nom, j) => ({ nom, j, r: resultatTheme(c, nom), d: detailTheme(c, nom, j) }));
+      const fr = res.filter((x) => x.r.etat === "fructueux");
+      const att = res.filter((x) => x.r.etat === "attente");
+      const inf = res.filter((x) => x.r.etat === "infructueux");
+      const lignes = fr.map((x) => {
+        const jours = x.d.heures / HEURES_PAR_JOUR;
+        return { ...x, jours, total: x.r.cout * jours * BENEFICIAIRES * x.d.groupes };
+      });
+      const totalGen = lignes.reduce((t, x) => t + x.total, 0);
+
+      // Ligne d'infos : statistiques sans libellés.
+      const show = themes.length > 0 && offres.length > 0;
+      document.getElementById("cons_info_fruct").hidden = !show;
+      document.getElementById("cons_info_cout").hidden = !(show && fr.length > 0);
+      setField("fructueux", iso(`${fr.length} / ${themes.length}`));
+      setField("coutTotal", `${iso(fmt3(totalGen))} د`);
+      setStatus("conclusion", show ? `${arNb(fr.length, AR_MAH_OK)} من أصل ${themes.length}` : "");
+      majEtat(c);
+
+      if (!offres.length) { box.innerHTML = `<p class="cons_empty">لا توجد عروض مسجلة.</p>`; return; }
+      if (!themes.length) { box.innerHTML = `<p class="cons_empty">لا توجد محاور لهذه الاستشارة.</p>`; return; }
+
+      // Offres acceptées sans offre financière pour un محور : pas d'offre technique, donc non évaluées sur ce محور.
+      const retenues = offres.map((o, i) => ({ o, i })).filter(({ o }) => estRetenue(o));
+      const sansFin = (nom) => retenues.filter(({ o }) => coutSaisi(o, nom) === null);
+      const themeSansFin = (nom) => retenues.length > 0 && sansFin(nom).length === retenues.length;
+      const liste = (arr) => arr.map((x) => `المحور عدد ${x.j + 1}${themeSansFin(x.nom) ? " (لا عرض مالي)" : ""}`).join("، ");
+      const partiels = res.filter((x) => !themeSansFin(x.nom) && sansFin(x.nom).length > 0);
+      let verdict;
+      if (att.length) verdict = `<strong>التقييم لم يكتمل بعد :</strong> ${arNb(att.length, AR_MAH_EV)} (${liste(att)}).`;
+      else if (fr.length) verdict = "";
+      else verdict = `<span class="cons_etat_badge">غير مثمرة</span> الاستشارة غير مثمرة : لا يوجد أي محور مثمر.`;
+
+      const tab = fr.length ? `
+        <table class="cons_tbl">
+          <thead><tr><th class="num">العدد</th><th>المحور</th><th class="ctr">الهيكل</th><th class="ctr">عدد الأيام</th><th class="ctr">عدد الساعات</th><th class="ctr">عدد المجموعات</th><th class="ctr">الكلفة اليومية للمنتفع (د)</th><th class="ctr">الكلفة الجملية (د)</th></tr></thead>
+          <tbody>${lignes.map((x) => `<tr>
+            <td class="num">${x.j + 1}</td>
+            <td dir="auto">${esc(x.nom)}</td>
+            <td class="ctr cons_ar">${esc(x.r.nom) || "----"}</td>
+            <td class="num">${fmtNb(x.jours)}</td>
+            <td class="num">${fmtNb(x.d.heures)}</td>
+            <td class="num">${x.d.groupes}</td>
+            <td class="num">${fmt3(x.r.cout)}</td>
+            <td class="num">${fmt3(x.total)}</td></tr>`).join("")}</tbody>
+          <tfoot><tr><td colspan="7" class="lbl">المجموع</td><td class="num">${fmt3(totalGen)}</td></tr></tfoot>
+        </table>
+        <p class="cons_pv_hint">الكلفة الجملية = الكلفة اليومية × عدد الأيام (الساعات ÷ ${HEURES_PAR_JOUR}) × ${BENEFICIAIRES} منتفعا × عدد المجموعات.</p>` : "";
+
+      box.innerHTML = `<div class="cons_ar" dir="rtl">
+        ${verdict ? `<p style="margin:0 0 10px">${verdict}</p>` : ""}
+        ${tab}
+        ${inf.length ? `<p><strong>المحاور غير المثمرة :</strong> ${liste(inf)}.</p>` : ""}
+        ${att.length && fr.length ? `<p><strong>المحاور قيد التقييم :</strong> ${liste(att)}.</p>` : ""}
+        ${partiels.length ? `<p><strong>عروض غير مقيَّمة فنيا لغياب العرض المالي :</strong> ${partiels.map((x) => `المحور عدد ${x.j + 1} (${sansFin(x.nom).map(({ o, i }) => esc(libOffre(o, i))).join("، ")})`).join("؛ ")}.</p>` : ""}
+      </div>`;
+    }
+
+    function initEditionEvalTech() {
+      const toggle = document.getElementById("cons_toggle_edit_evaltech");
+      const section = document.querySelector('[data-category="evaltech"]');
+      const box = document.getElementById("cons_evaltech");
+      toggle.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!consRecord || consRecord.evalTerminee) return;
+        editEv = !editEv;
+        toggle.setAttribute("aria-pressed", String(editEv));
+        toggle.innerHTML = editEv ? `<i class="bi bi-floppy"></i> حفظ` : `<i class="bi bi-pencil-square"></i> تعديل`;
+        toggle.title = editEv ? "حفظ والخروج من التعديل" : "إدخال المطابقة";
+        expandMetierSection(section); collapseOtherMetierSections(section);
+        renderEvalTech(consRecord, consRecord.offres || []);
+        if (!editEv) await sauverOffres(toggle);
+      });
+      box.addEventListener("click", (e) => {
+        if (!consRecord) return;
+        const t = e.target.closest("[data-evtab]");
+        if (t) { evSel = Number(t.dataset.evtab); renderEvalTech(consRecord, consRecord.offres || []); return; }
+        if (e.target.closest("[data-evreset]")) {
+          const nomT = (consRecord.themes || [])[evSel];
+          if (!nomT || !confirm(`هل تريد إعادة تقييم المحور عدد ${evSel + 1} لكل العروض ؟`)) return;
+          (consRecord.offres || []).forEach((o) => { if (o.eval) delete o.eval[nomT]; });
+          renderEvalTech(consRecord, consRecord.offres || []);
+          return;
+        }
+        const g = e.target.closest("[data-evtgl]");
+        if (!g) return;
+        const o = consRecord.offres[Number(g.dataset.i)];
+        if (!o || Number(g.dataset.i) !== offreActive(consRecord.offres, g.dataset.t)) return;
+        o.eval = o.eval || {};
+        const v = o.eval[g.dataset.t] = o.eval[g.dataset.t] || {};
+        const k = g.dataset.k;
+        // ---- -> مطابق -> غير مطابق -> ----
+        if (v[k] === undefined) v[k] = true; else if (v[k] === true) v[k] = false; else delete v[k];
+        renderEvalTech(consRecord, consRecord.offres || []); // met à jour la ligne des coûts
+      });
+    }
+
+
+    /* ---------------- Données du PV ----------------
+       Informations propres au procès-verbal (lieu, heures, membres, observateurs, structures sans dépôt, notes par offre...).
+       Saisies dans la modale « Editer » (brouillon pvDraft, validé par « Enregistrer »), stockées dans
+       consRecord.pv = { v: { clé: texte }, n: { m, o, s } }. Seules les valeurs différentes des valeurs par défaut sont conservées.
+       Les clés sont celles du PV (data-k). */
+    let pvDraft = null;
+    const PV_UR = "عن الوحدة الجهوية للتكوين المستمر والترقية المهنية بسليانة";
+    const PV_OBS = [["جابر العابد", PV_UR], ["فريد المليتي", PV_UR]];
+    const PV_N_DEF = { m: 5, o: PV_OBS.length };
+
+    function heureDeISO(iso) { const m = /T(\d{2}):(\d{2})/.exec(String(iso || "")); return m ? `${m[1]}:${m[2]}` : ""; }
+    function pvStore() {
+      const o = pvDraft || (consRecord.pv = consRecord.pv || {});
+      o.v = o.v || {};
+      o.n = o.n || {};
+      return o;
+    }
+    function pvNb(k) { const n = pvStore().n[k]; return n !== undefined ? n : PV_N_DEF[k]; }
+    let pvLieuDef = ""; // « مقر <Representant> » du partenaire (rempli par pvPartenaire)
+    function pvDef(k) {
+      const c = consRecord; let m;
+      if (k === "lieu") return pvLieuDef;
+      if (k === "hcloture") return heureDeISO(c.dateCloture);
+      if ((m = /^t(\d+)$/.exec(k))) return heureDeISO(((c.offres || [])[Number(m[1])] || {}).dateRecu);
+      if ((m = /^o(\d+)n$/.exec(k))) return (PV_OBS[Number(m[1])] || [])[0] || "";
+      if ((m = /^o(\d+)s$/.exec(k))) return (PV_OBS[Number(m[1])] || [])[1] || PV_UR;
+      if (/^s\d+o$/.test(k)) return "لم يتم إيداع العرض";
+      return "";
+    }
+    function pvVal(k) { const v = pvStore().v[k]; return v !== undefined ? v : pvDef(k); }
+    function pvSet(k, val) {
+      const s = pvStore();
+      if (val === pvDef(k)) delete s.v[k]; else s.v[k] = val;
+    }
+
+    // Affiche le formulaire du PV (toujours modifiable) dans la modale Editer.
+    function renderPVData() {
+      const box = document.getElementById("cons_pv");
+      if (!box || !consRecord) return;
+      const c = consRecord, offres = c.offres || [];
+
+      const inp = (k, tp = "text") => {
+        const val = pvVal(k);
+        const shown = tp === "date" ? val.split("/").join("-") : val;
+        return `<input type="${tp}" dir="auto" class="cons_cell_in" data-pvk="${esc(k)}" data-pvt="${tp}" value="${esc(shown)}" />`;
+      };
+      const cnt = (k, lib) => `<label class="cons_pv_cnt">${lib} <input type="number" min="0" max="30" class="cons_cell_in" data-pvn="${k}" value="${pvNb(k)}" /></label>`;
+
+      const general = [
+        ["ساعة افتتاح الجلسة", "heure", "time"],
+        ["مكان الجلسة", "lieu", "text"],
+        ["جريدة الإعلان", "journal", "text"],
+        ["آخر أجل لقبول العروض (الساعة)", "hcloture", "time"],
+        ["تاريخ مراسلة الهياكل لاستكمال الوثائق", "courrier", "date"],
+        ["ساعة رفع الجلسة", "fin", "time"]
+      ].map(([lib, k, tp]) => `<tr><td class="lbl_fr">${lib}</td><td>${inp(k, tp)}</td></tr>`).join("");
+
+      const duo = (pref, n) => Array.from({ length: n }, (_, k) =>
+        `<tr><td class="num">${k + 1}</td><td>${inp(`${pref}${k}n`)}</td><td>${inp(`${pref}${k}s`)}</td></tr>`).join("");
+
+      box.innerHTML = `
+        <table class="cons_tbl cons_pv_tbl is_edit"><tbody>${general}</tbody></table>
+
+        ${cnt("m", "أعضاء اللجنة")}
+        <table class="cons_tbl cons_pv_tbl is_edit"><thead><tr><th class="num">#</th><th>الاسم واللقب</th><th>الصفة</th></tr></thead><tbody>${duo("m", pvNb("m"))}</tbody></table>
+
+        ${cnt("o", "الملاحظون")}
+        ${pvNb("o") ? `<table class="cons_tbl cons_pv_tbl is_edit"><thead><tr><th class="num">#</th><th>الاسم واللقب</th><th>الصفة</th></tr></thead><tbody>${duo("o", pvNb("o"))}</tbody></table>` : ""}
+
+
+        <p class="cons_pv_hint">الحقول المدخلة مباشرة في المحضر (المبالغ بلسان القلم، ملاحظات المحاور، أسباب الإقصاء...) تُحفظ هي أيضا تلقائيا.</p>`;
+    }
+
+    function initPVModal() {
+      const box = document.getElementById("cons_pv");
+      box.addEventListener("change", (e) => {
+        const el = e.target.closest(".cons_cell_in");
+        if (!el || !consRecord || !pvDraft) return;
+        if (el.dataset.pvn) {
+          pvStore().n[el.dataset.pvn] = Math.max(0, Math.min(30, parseInt(el.value, 10) || 0));
+          renderPVData();
+          return;
+        }
+        if (!el.dataset.pvk) return;
+        const val = el.dataset.pvt === "date" ? el.value.split("-").join("/") : el.value.trim();
+        pvSet(el.dataset.pvk, val);
+      });
+    }
+
+    // Appelée par l'onglet du PV (window.opener.pvSauver) quand « Enregistrer » y est cliqué.
+    window.pvSauver = async function (sv) {
+      if (!consRecord || !sv) return;
+      const vv = Object.assign({}, sv.v || {});
+      let majRetrait = false;
+      Object.keys(vv).forEach((k) => {
+        const m = /^ret(\d+)$/.exec(k);
+        if (!m) return;
+        const o = consRecord.offres[Number(m[1])], val = String(vv[k] || "").trim();
+        if (o && (val === "" || /^\d{4}\/\d{2}\/\d{2}$/.test(val))) { o.dateRetrait = val.split("/").join("-"); majRetrait = true; }
+        delete vv[k];
+      });
+      consRecord.pv = { v: vv, n: sv.n || {} };
+      if (majRetrait) { try { renderParvenues(consRecord.offres); } catch (e) {} }
+      try {
+        await apiCallDirect("enregistrerConsultationDTC", { consultation: consRecord });
+      } catch (err) {
+        alert(`خطأ أثناء حفظ بيانات المحضر : ${err.message}`);
+      }
+    };
+
+    /* ---------------- PV d'ouverture (محضر فتح العروض) ----------------
+       Génère dans un nouvel onglet un document RTL prêt à imprimer (A4) à partir de la consultation affichée. */
+    // Décision administrative d'une offre (même règle que الخلاصة des offres parvenues), en texte simple.
+    function pvDecision(o) {
+      const a = o.admin || {};
+      const lib = (k) => DTC_ADMIN_ROWS.find((r) => r.k === k).lib;
+      const ko = admExclus(o);
+      if (ko.length) return `مقصى ${ko.map((m) => "ل" + m).join("، ")}`;
+      const manque = DTC_ADMIN_ROWS.filter((r) => !["consultation", "cahier", "financiere"].includes(r.k) && !a[r.k]).map((r) => r.s || r.lib);
+      const comp = (typeof a.cahier === "string" ? ["إمضاء كراس الشروط"] : []).concat(manque);
+      return comp.length ? `طلب استكمال : ${comp.join("، ")}` : "الملف الإداري كامل";
+    }
+
+    // Partenaire (onglet partdtc de la Sheet Base) : nom arabe (rédacteur du PV) et Representant (lieu d'ouverture).
+    // Nombre de groupes (comme dtc) : thèmes du domaine dans la commission (listCommissionsDTC), sinon details de la consultation.
+    let pvCommissionsCache = null;
+    async function pvNbGroupes(c) {
+      const norm = (s) => String(s || "").trim();
+      const nb = (t) => Math.max(1, parseInt(t && t.groupes, 10) || 1);
+      let coms = [];
+      try { coms = pvCommissionsCache || (pvCommissionsCache = await apiCallDirect("listCommissionsDTC", {})) || []; } catch (err) { coms = []; }
+      // Domaine de la consultation dans la commission (comparaisons normalisées : id en texte, noms trimmés).
+      let dom = null;
+      const com = coms.find((x) => String(x.id) === String(c.commissionId));
+      if (com) {
+        const p = (com.partenaires || []).find((x) => norm(x.etablissement) === norm(c.etablissement) || (norm(c.sigle) && norm(x.sigle) === norm(c.sigle)));
+        if (p) dom = (p.domaines || []).find((x) => norm(x.nom) === norm(c.domaine)) || null;
+      }
+      if (!dom) { // secours : même domaine dans une autre commission / un autre partenaire
+        for (const co of coms) {
+          for (const p of co.partenaires || []) {
+            const d = (p.domaines || []).find((x) => norm(x.nom) === norm(c.domaine));
+            if (d) { dom = d; break; }
+          }
+          if (dom) break;
+        }
+      }
+      // Même nb de groupes pour chaque thème du domaine : on prend le max (robuste aux anciennes données en simple texte).
+      const themes = ((dom && dom.themes) || []).map((t) => (t && typeof t === "object" ? t : { nom: t, groupes: 1 }));
+      if (themes.length) return Math.max.apply(null, themes.map(nb));
+      const det = (c.details || []).filter((d) => d && d.nom);
+      if (det.length) return Math.max.apply(null, det.map(nb));
+      return 0;
+    }
+    let pvPartenaireCache = null;
+    async function pvPartenaire(c) {
+      let liste = [];
+      try { liste = pvPartenaireCache || (pvPartenaireCache = await apiCallDirect("listPartDTC", {})); } catch (err) { liste = []; }
+      const val = (p, ...cles) => { for (const k of cles) { const v = String(p[k] || "").trim(); if (v) return v; } return ""; };
+      const cle = String(c.etablissement || "").trim();
+      const sig = String(c.sigle || "").trim();
+      const p = liste.find((x) => val(x, "Partenaire", "Etablissement") === cle)
+        || liste.find((x) => sig && val(x, "Sigle") === sig) || {};
+      const representant = val(p, "Representant", "Représentant");
+      pvLieuDef = representant ? `مقر ${representant}` : "";
+      return { arabe: val(p, "Arabe") || sig || cle, representant, logo: val(p, "Logo", "logo") };
+    }
+
+    // Documents techniques d'un offre pour un محور : motifs d'exclusion (إقصائي) et éléments à compléter (استكمال).
+    function pvTechTheme(o, nom) {
+      const v = (o.tech && o.tech[nom]) || {};
+      const excl = [], manque = [];
+      const stt = statutTheme(o, nom);
+      if (stt === "absent") return { excl, manque };
+      if (STATUT_EXCL_LIB[stt]) { excl.push(STATUT_EXCL_LIB[stt]); return { excl, manque }; }
+      DTC_TECH_ROWS.flatMap((g) => g.rows).forEach((r) => {
+        if (r.type === "carte") {
+          if (CARTE_KO.includes(v.carte)) excl.push(CARTE_LIB[v.carte]);
+          else if (v.carte === "struct") manque.push(CARTE_LIB.struct);
+        } else if (!r.type && v[r.k] === false) {
+          if (r.elim) excl.push(r.exclTxt ? r.exclTxt.replace(/^ل/, "") : `${r.lib} (إقصائي)`); else manque.push(r.lib);
+        }
+      });
+      return { excl, manque };
+    }
+
+    // Chiffres -> lettres (arabe, masculin) : montants et nombre d'offres du PV.
+    const AR_U = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة", "عشرة", "أحد عشر", "اثنا عشر", "ثلاثة عشر", "أربعة عشر", "خمسة عشر", "ستة عشر", "سبعة عشر", "ثمانية عشر", "تسعة عشر"];
+    const AR_T = ["", "", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
+    const AR_H = ["", "مائة", "مائتان", "ثلاثمائة", "أربعمائة", "خمسمائة", "ستمائة", "سبعمائة", "ثمانمائة", "تسعمائة"];
+    function arMoins1000(n) {
+      const p = [], h = Math.floor(n / 100), r = n % 100;
+      if (h) p.push(AR_H[h]);
+      if (r) p.push(r < 20 ? AR_U[r] : (r % 10 ? `${AR_U[r % 10]} و${AR_T[Math.floor(r / 10)]}` : AR_T[r / 10]));
+      return p.join(" و");
+    }
+    function arMots(n) {
+      const k = Math.floor(n / 1000), r = n % 1000, p = [];
+      if (k) p.push(k === 1 ? "ألف" : k === 2 ? "ألفان" : k <= 10 ? `${AR_U[k]} آلاف` : `${arMoins1000(k)} ألفا`);
+      if (r) p.push(arMoins1000(r));
+      return p.join(" و");
+    }
+    function arCompte(n, sing, dual, plur, tam) {
+      return n === 1 ? `${sing} واحد` : n === 2 ? dual : n <= 10 ? `${arMots(n)} ${plur}` : `${arMots(n)} ${n % 100 === 0 ? sing : tam}`;
+    }
+    function arMontant(x) {
+      const t = Math.round(Number(x) * 1000);
+      if (!isFinite(t) || t <= 0) return "";
+      const d = Math.floor(t / 1000), m = t % 1000, p = [];
+      if (d) p.push(arCompte(d, "دينار", "ديناران", "دنانير", "دينارا"));
+      if (m) p.push(arCompte(m, "مليم", "مليمان", "مليمات", "مليما"));
+      return p.join(" و");
+    }
+
+    // N° de consultation affiché AAAA/NN (saisi « NN/AAAA »).
+    function numConsAff(n) {
+      const s = String(n || "").trim();
+      const m = /^(\d+)\s*\/\s*(\d{4})$/.exec(s);
+      return m ? `${m[2]}/${m[1].padStart(2, "0")}` : s;
+    }
+
+    // Offres techniques à compléter : pour chaque offre retenue, tous les critères de tous les محاور ayant une offre
+    // financière doivent être renseignés (نعم / لا / choix / texte). Retourne [{ i, manque }] pour les offres incomplètes.
+    function offresTechIncompletes(c) {
+      const rows = DTC_TECH_ROWS.flatMap((g) => g.rows);
+      const themes = c.themes || [];
+      const out = [];
+      (c.offres || []).forEach((o, i) => {
+        if (!estRetenue(o)) return;
+        let manque = 0;
+        themes.forEach((nom) => {
+          if (statutTheme(o, nom) !== "complet") return; // absent ou مقصى (une seule des deux offres) : rien à renseigner
+          const v = (o.tech && o.tech[nom]) || {};
+          rows.forEach((r) => {
+            const x = v[r.k];
+            if (x === undefined || x === null || String(x).trim() === "") manque++;
+          });
+        });
+        if (manque) out.push({ i, manque });
+      });
+      return out;
+    }
+
+
+    // Pièces manquantes (non éliminatoires) par offre acceptée : [{ i, o, items: [texte] }].
+    function complementsConsultation(c) {
+      const themes = c.themes || [];
+      const out = [];
+      (c.offres || []).forEach((o, i) => {
+        if (!estRetenue(o)) return;
+        const a = o.admin || {};
+        const items = [];
+        if (typeof a.cahier === "string") items.push("إمضاء كراس الشروط");
+        DTC_ADMIN_ROWS.filter((r) => !["consultation", "cahier", "financiere"].includes(r.k) && !a[r.k]).forEach((r) => items.push(r.s || r.lib));
+        themes.forEach((nom, j) => {
+          const m = pvTechTheme(o, nom).manque;
+          if (m.length) items.push(`المحور عدد ${j + 1} (${nom}) : ${m.join("، ")}`);
+        });
+        if (items.length) out.push({ i, o, items });
+      });
+      return out;
+    }
+
+    // Lettres de demande de complément (une par structure), dans un nouvel onglet prêt à imprimer.
+    async function genererLettresComplement() {
+      const c = consRecord;
+      if (!c) return;
+      const liste = complementsConsultation(c);
+      if (!liste.length) return;
+      const w = window.open("", "_blank");
+      if (!w) { alert("منع المتصفح فتح علامة تبويب جديدة. اسمح بالنوافذ المنبثقة لهذه الصفحة."); return; }
+      w.document.write("<p dir=\"rtl\" style=\"font-family:'Sakkal Majalla',Tahoma,Arial\">جاري إعداد المراسلات ...</p>");
+      const part = await pvPartenaire(c);
+      const idm = /[-\w]{20,}/.exec(String(part.logo || ""));
+      const logoUrl = idm ? `https://drive.google.com/thumbnail?id=${idm[0]}&sz=w600` : "";
+      const bdi = (t) => `<bdi dir="ltr">${esc(t)}</bdi>`;
+      const dFr = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? bdi(`${m[1]}/${m[2]}/${m[3]}`) : "..............."; };
+      const auj = dateDuJourISO();
+      const num = bdi(numConsAff(c.numCons) || "----");
+      const dom = esc(c.domaine || "----");
+      const dateOuv = c.dateProrogation || c.dateCloture || "";
+      const lettres = liste.map(({ o, i, items }) => `
+        <div class="lettre">
+          <div class="entete">${logoUrl ? `<img src="${esc(logoUrl)}" alt="" onerror="this.style.display='none'" />` : ""}<div class="ent_nom">${esc(part.arabe)}</div></div>
+          <p class="date">سليانة في ${dFr(auj)}</p>
+          <p class="dest"><strong>إلى السيد(ة) ممثل(ة) هيكل التكوين :</strong> ${esc(o.nom) || "........................"}</p>
+          <p><strong>الموضوع :</strong> طلب استكمال وثائق العرض (عرض رقم ${String(i + 1).padStart(2, "0")}) المتعلق بالاستشارة عدد ${num} في مجال ${dom}.</p>
+          <p>تحية طيبة وبعد،</p>
+          <p>في إطار الاستشارة عدد ${num} في مجال ${dom}، وبعد فتح العروض بتاريخ ${dFr(dateOuv)}، تبيّن للجنة فتح العروض أن ملف عرضكم ينقصه الوثائق أو المعطيات التالية :</p>
+          <ol>${items.map((t) => `<li>${esc(t)}</li>`).join("")}</ol>
+          <p>لذا نرجو منكم استكمال الوثائق أو المعطيات المذكورة وإيداعها لدى ${esc(part.representant || part.arabe)} في أجل أقصاه عشرة (10) أيام من تاريخ تسلم هذه المراسلة، وإلا تعذّر النظر في العرض أو المحاور المعنية.</p>
+          <p>وتفضلوا بقبول فائق الاحترام والتقدير.</p>
+          <p class="sign">الإمضاء</p>
+        </div>`).join("");
+      const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8" />
+<title>طلب استكمال — الاستشارة عدد ${esc(numConsAff(c.numCons) || "----")}</title>
+<style>
+  @page { size: A4; margin: 18mm 20mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Sakkal Majalla", "Traditional Arabic", Tahoma, Arial, sans-serif; font-size: 19px; line-height: 1.8; color: #000; margin: 0; padding: 20px; background: #fff; }
+  .barre { position: sticky; top: 0; background: #fff; padding: 6px 0; margin-bottom: 10px; }
+  .barre button { font: inherit; font-size: 15px; font-weight: 600; padding: 7px 18px; cursor: pointer; color: #fff; background: #198754; border: 0; border-radius: 8px; }
+  .lettre { break-after: page; page-break-after: always; max-width: 780px; margin: 0 auto 30px; }
+  .lettre:last-child { break-after: auto; page-break-after: auto; }
+  .entete { text-align: center; margin-bottom: 18px; }
+  .entete img { max-height: 110px; max-width: 100%; display: block; margin: 0 auto 6px; }
+  .ent_nom { font-weight: 700; font-size: 20px; }
+  p { margin: 8px 0; text-align: justify; }
+  .date { text-align: start; }
+  ol { margin: 6px 0; padding-inline-start: 26px; }
+  li { margin-bottom: 4px; }
+  .sign { text-align: left; margin-top: 30px; padding-inline-end: 30px; font-weight: 700; }
+  @media print { .barre { display: none; } body { padding: 0; } .lettre { margin: 0 auto; } }
+</style></head><body>
+<div class="barre"><button onclick="window.print()">طباعة</button></div>
+${lettres}
+</body></html>`;
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    }
+
+    async function genererPVOuverture() {
+      const c = consRecord;
+      if (!c) return;
+      // Garde-fou : le bouton est masqué tant que les offres techniques ne sont pas toutes remplies.
+      if (offresTechIncompletes(c).length) return;
+      // Ouvre l'onglet tout de suite (sinon le navigateur bloque la fenêtre après l'appel réseau).
+      const w = window.open("", "_blank");
+      if (!w) { alert("منع المتصفح فتح علامة تبويب جديدة. اسمح بالنوافذ المنبثقة لهذه الصفحة."); return; }
+      w.document.write("<p dir=\"rtl\" style=\"font-family:'Sakkal Majalla',Tahoma,Arial\">جاري إعداد المحضر ...</p>");
+      const part = await pvPartenaire(c);
+      const nbGroupes = await pvNbGroupes(c);
+      // Nombre de groupes en toutes lettres (calculé, non modifiable) : 1 = مجموعة (1) واحدة، 2 = مجموعتين (2)، 3-10 = ثلاث (3) مجموعات.
+      const GRP_WORDS = ["", "", "", "ثلاث", "أربع", "خمس", "ست", "سبع", "ثمان", "تسع", "عشر"];
+      const grpTxtN = (n) => {
+        n = parseInt(n, 10) || 0;
+        if (n < 1) return "";
+        if (n === 1) return "مجموعة (1) واحدة";
+        if (n === 2) return "مجموعتين (2)";
+        if (n <= 10) return `${GRP_WORDS[n]} (${n}) مجموعات`;
+        return `${n} مجموعة`;
+      };
+      const arabe = esc(part.arabe);
+      const lieuRec = part.representant ? esc(part.representant) : arabe; // Representant du partenaire (sans « مقر »)
+
+      const offres = c.offres || [];
+      const themes = c.themes || [];
+      const t = (o) => { const d = Date.parse(o.dateRecu || ""); return isNaN(d) ? Infinity : d; };
+      const ordre = offres.map((o, i) => ({ o, i })).sort((a, b) => (t(a.o) - t(b.o)) || (a.i - b.i) || 0);
+      const ret = ordre.filter(({ o }) => estRetenue(o));
+      const dateOuv = c.dateProrogation || c.dateCloture || "";
+      const num = `<bdi dir="ltr">${esc(numConsAff(c.numCons) || "----")}</bdi>`;
+      const dom = esc(c.domaine || "----");
+      // Nom du fichier Word : محضر فتح العروض المتعلق بالاستشارة عدد NN-AAAA في مجال <domaine>.
+      const fnClean = (x) => String(x || "").replace(/[\\/:*?"<>|]/g, "-").trim();
+      const fileName = `محضر فتح العروض المتعلق بالاستشارة عدد ${fnClean(String(numConsAff(c.numCons) || "").replace(/^(\d{4})\/(\d+)$/, "$2-$1"))} في مجال ${fnClean(c.domaine)}`;
+
+      // Champs à compléter (lieu, heures, membres...) : saisis via « Editer », stockés dans le navigateur (localStorage).
+      const KEY = `pv_ouverture_${c.id}`;
+      let sv = {};
+      // Source : données enregistrées avec la consultation ; repli sur l'ancien stockage navigateur.
+      try { sv = c.pv || JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { sv = {}; }
+      const V = Object.assign({}, sv.v || {}), N = sv.n || {};
+      Object.keys(V).forEach((k) => { if (/^ret[0-9]+$/.test(k)) delete V[k]; }); // source unique : dateRetrait de l'offre
+      const ef = (k, d = "", cls = "", tp = "") => `<span class="ef ${cls}" data-k="${esc(k)}" data-d="${esc(d)}"${tp ? ` data-t="${tp}"` : ""}>${esc(V[k] !== undefined ? V[k] : d)}</span>`;
+      const pad2 = (n) => String(n).padStart(2, "0");
+      // Dates du PV : AAAA/MM/JJ.
+      const pvDate = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? `<bdi dir="ltr">${m[1]}/${m[2]}/${m[3]}</bdi>` : "..............."; };
+      const heureDe = (iso) => { const m = /T(\d{2}):(\d{2})/.exec(String(iso || "")); return m ? `${m[1]}:${m[2]}` : ""; };
+      const nomO = (o) => esc(o.nom) || "----";
+      const valAdm = (o, k) => {
+        const a = o.admin || {};
+        if (k !== "consultation" && !a.consultation) return "لم يفتح";
+        if (k === "cahier") return cahierLib(a.cahier);
+        return a[k] ? "نعم" : "لا";
+      };
+
+      // 3. أعضاء اللجنة
+      const nbM = Math.max(1, N.m !== undefined ? N.m : 5);
+      const sifaM = (k) => ef(`m${k}s`, `عن ${part.arabe}`);
+      const UR = PV_UR, OBS = PV_OBS; // valeurs par défaut partagées avec la section « Données du PV »
+      const nbO = Math.max(0, N.o !== undefined ? N.o : OBS.length);
+      const observ = Array.from({ length: nbO }, (_, k) => `<tr><td>${ef(`o${k}n`, (OBS[k] || [])[0] || "", "dots")}</td><td>${ef(`o${k}s`, (OBS[k] || [])[1] || UR)}</td><td></td></tr>`).join("");
+      const membres = Array.from({ length: nbM }, (_, k) => `<tr><td>${ef(`m${k}n`, "", "dots")}</td><td>${sifaM(k)}</td><td></td></tr>`).join("");
+
+      // 5. قائمة الهياكل (offres par ordre d'arrivée + structures sans dépôt)
+      const SD = c.sansDepot || [];
+      const nbS = SD.length;
+      const lignesListe = ordre.map(({ o, i }) => `<tr><td class="c">${pad2(i + 1)}</td><td>${nomO(o)}</td><td class="c">${ef(`ret${i}`, String(o.dateRetrait || "").split("-").join("/"), "dt", "date")}</td><td class="c">${pvDate(o.dateRecu)}</td><td class="c">${ef(`t${i}`, heureDe(o.dateRecu), "dt", "time")}</td><td>${ef(`obs${i}`, "", "obs")}</td></tr>`).join("");
+      const lignesSans = Array.from({ length: nbS }, (_, k) => `<tr><td class="c">${pad2(offres.length + k + 1)}</td><td>${ef(`s${k}n`, (SD[k] || {}).nom || "", "dots")}</td><td class="c">${ef(`s${k}d`, String((SD[k] || {}).dateRetrait || "").split("-").join("/"), "dt", "date")}</td><td class="c">-</td><td class="c">-</td><td>${ef(`s${k}o`, "لم يتم إيداع العرض", "obs")}</td></tr>`).join("");
+
+      // 6. الوثائق الإدارية
+      const tableAdmin = ordre.length ? `
+        <table>
+          <thead><tr><th>الوثائق الإدارية المطلوبة</th>${ordre.map(({ o, i }) => `<th class="c">عرض رقم ${pad2(i + 1)}<br>${nomO(o)}</th>`).join("")}</tr></thead>
+          <tbody>${DTC_ADMIN_ROWS.map((r) => `<tr><td>${esc(r.lib)}</td>${ordre.map(({ o }) => `<td class="c">${esc(valAdm(o, r.k))}</td>`).join("")}</tr>`).join("")}</tbody>
+        </table>` : "";
+      // Observations (point 6) : récap des offres écartées / acceptées.
+      const nonRet = ordre.filter(({ o }) => !estRetenue(o));
+      const notesExcl = nonRet.length ? `<p><strong>ملاحظة :</strong></p><ol>${offres.map((o, i) => ({ o, i })).map(({ o, i }) => `<li>العرض رقم ${pad2(i + 1)} "${nomO(o)}" : ${estRetenue(o) ? "مقبول إداريا" : `تم إقصاؤه ${admExclus(o).map((m) => "ل" + esc(m)).join("، ")}، ولن يتم فتح عرضه المالي ولا الفني`}.</li>`).join("")}</ol>` : "";
+
+      // العروض المالية (محاور المشارك فيها فقط)
+      const natTheme = (j) => { const th = Number(c.hrtThemes && c.hrtThemes[j]) || 0, pr = Number(c.hrpThemes && c.hrpThemes[j]) || 0; return !(th > 0 || pr > 0) ? "" : th > pr ? "نظري" : "تطبيقي"; };
+      const lignesFin = ret.map(({ o, i }) => {
+        const ts = themes.map((nm, j) => ({ nm, j, m: o.couts ? o.couts[nm] : undefined })).filter((x) => x.m !== undefined && x.m !== null && x.m !== "" && !isNaN(Number(x.m)));
+        if (!ts.length) return `<tbody class="bloc"><tr><td class="c">${pad2(i + 1)}</td><td>${nomO(o)}</td><td colspan="5" class="c">—</td></tr></tbody>`;
+        return '<tbody class="bloc">' + ts.map(({ nm, j, m }, n) => `<tr>${n === 0 ? `<td class="c" rowspan="${ts.length}">${pad2(i + 1)}</td><td rowspan="${ts.length}">${nomO(o)}</td>` : ""}<td>محور عدد ${j + 1}<div class="sub">${esc(nm)}</div></td><td class="c">${esc(natTheme(j))}</td><td class="c"><bdi dir="ltr">${Number(m).toFixed(3)}</bdi> د.ت</td><td>${ef(`w${i}_${j}_${m}`, arMontant(m))}</td><td>${ef(`r${i}_${j}`, "", "obs")}</td></tr>`).join("") + '</tbody>';
+      }).join("");
+      const tableFin = (ret.length && themes.length) ? `
+        <table>
+          <thead><tr><th class="c" rowspan="2">رقم العرض</th><th rowspan="2">اسم هيكل التكوين</th><th rowspan="2">محور التكوين</th><th class="c" rowspan="2">طبيعة المحور</th><th class="c" colspan="2">كلفة اليوم التكويني للمنتفع الواحد خارج الأداء</th><th class="c" rowspan="2">ملاحظات اللجنة</th></tr><tr><th class="c">بالأرقام</th><th class="c">بلسان القلم</th></tr></thead>
+          ${lignesFin}
+        </table>` : `<p>لا توجد عروض مالية مفتوحة.</p>`;
+
+      // العروض الفنية : un tableau par offre retenue (م = محور)
+      const techVal = (o, nm, r) => {
+        const x = ((o.tech && o.tech[nm]) || {})[r.k];
+        if (r.type === "text" || r.type === "nature") return esc(x) || "----";
+        if (r.type === "carte") { const k = CARTE_OPTS.find((y) => y[0] === x); return k ? esc(k[1]) : "----"; }
+        return x === true ? "نعم" : x === false ? "لا" : "----";
+      };
+      const tableTech = ret.map(({ o, i }) => `
+        <h4 class="c">عرض رقم ${pad2(i + 1)} : ${nomO(o)}</h4>
+        <table class="tech">
+          <thead><tr><th colspan="2">وثائق ومعطيات العرض الفني</th>${themes.map((_, j) => `<th class="c">محور ${j + 1}</th>`).join("")}</tr></thead>
+          ${DTC_TECH_ROWS.map((grp) => '<tbody class="bloc">' + grp.rows.map((r, n) => `<tr>${!grp.g ? `<td colspan="2">${esc(r.lib)}</td>` : (n === 0 ? `<td rowspan="${grp.rows.length}" class="c">${esc(grp.g)}</td>` : "") + `<td>${esc(r.lib)}</td>`}${themes.map((nm) => `<td class="c">${techVal(o, nm, r)}</td>`).join("")}</tr>`).join("") + '</tbody>').join("")}
+        </table>`).join("");
+
+      // 7. العروض والمحاور المقصاة
+      const exclLignes = [];
+      ordre.forEach(({ o, i }) => {
+        if (!estRetenue(o)) { exclLignes.push({ i, o, cible: "العرض", motif: admExclus(o).join("، ") }); return; }
+        const g = {};
+        themes.forEach((nm, j) => { const r = pvTechTheme(o, nm); if (r.excl.length) { const m = r.excl.join("، "); (g[m] = g[m] || []).push(j + 1); } });
+        Object.keys(g).forEach((motif) => exclLignes.push({ i, o, cible: `${g[motif].length > 1 ? "المحاور" : "المحور"} عدد ${g[motif].join("، ")}`, motif }));
+      });
+      const tableExcl = exclLignes.length ? `
+        <table>
+          <thead><tr><th class="c">رقم العرض</th><th>اسم هيكل التكوين</th><th class="c">إقصاء العرض أو المحور</th><th>سبب الإقصاء</th><th>ملاحظات</th></tr></thead>
+          <tbody>${exclLignes.map((x, k) => `<tr><td class="c">${pad2(x.i + 1)}</td><td>${nomO(x.o)}</td><td class="c">${esc(x.cible)}</td><td>${esc(x.motif)} ${ef(`xm${k}`, "", "obs")}</td><td>${ef(`x${k}`, "", "obs")}</td></tr>`).join("")}</tbody>
+        </table>` : `<p>لا توجد عروض أو محاور مقصاة.</p>`;
+
+      // الوثائق أو المعطيات المنقوصة (غير إقصائية) -> مراسلة الهياكل
+      const incItems = ordre.map(({ o, i }) => {
+        if (!estRetenue(o)) return "";
+        const a = o.admin || {};
+        const admKo = typeof a.cahier === "string" || DTC_ADMIN_ROWS.some((r) => !["consultation", "cahier", "financiere"].includes(r.k) && !a[r.k]);
+        const parts = [];
+        if (admKo) parts.push(pvDecision(o));
+        themes.forEach((nm, j) => { const r = pvTechTheme(o, nm); if (r.manque.length) parts.push(`المحور عدد ${j + 1} : استكمال ${r.manque.join("، ")}`); });
+        return parts.length ? `<strong>عرض رقم ${pad2(i + 1)}${o.nom ? ` — ${esc(o.nom)}` : ""}</strong> : ${esc(parts.join(" — "))}` : "";
+      }).filter(Boolean);
+      // Numérotation 8.1، 8.2... (même rendu que 6.x) seulement s'il y a plusieurs offres concernées.
+      const incomplets = incItems.map((t, k) => `<p>${incItems.length > 1 ? `&#x200F;8&#x200F;.&#x200F;${k + 1}&#x200F;- ` : ""}${t}</p>`).join("");
+
+      const nbTxt = offres.length ? `${arCompte(offres.length, "عرض", "عرضان", "عروض", "عرضا")} (${pad2(offres.length)})` : "لا عروض";
+
+      const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+<title>محضر جلسة فتح العروض — الإستشارة عدد ${esc(numConsAff(c.numCons) || "----")}</title>
+<style>
+  @page { size: A4; margin: 18mm 15mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Sakkal Majalla", "Traditional Arabic", Tahoma, Arial, sans-serif; font-size: 17px; line-height: 1.7; color: #000; margin: 0; padding: 20px; background: #fff; }
+  h1 { text-align: center; font-size: 24px; margin: 10px 0 2px; }
+  h2 { text-align: center; font-size: 19px; margin: 0 0 16px; font-weight: 700; }
+  h3 { font-size: 18px; margin: 16px 0 4px; }
+  h4 { font-size: 17px; margin: 10px 0 4px; }
+  h4.c { text-align: center; }
+  p { margin: 6px 0; text-align: justify; }
+  /* Bordure extérieure 1.5pt + retrait de 1px : évite que le trait droit soit rogné/éclairci à l'impression (RTL, border-collapse). */
+  table { width: calc(100% - 2px); border-collapse: collapse; border: 1.5pt solid #000; margin: 8px 1px 12px; font-size: 15px; }
+  table.tech { table-layout: fixed; font-size: 13px; }
+  th, td { border: 0.75pt solid #000; padding: 4px 8px; vertical-align: middle; }
+  tbody, thead { border: 0; }
+  th { background: #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .c { text-align: center; }
+  thead { display: table-header-group; }
+  tr, tbody.bloc { break-inside: avoid; page-break-inside: avoid; }
+  h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; break-inside: avoid; }
+  /* Réserve ~4 lignes sous un titre : s'il tombe en bas de page, il passe à la page suivante. */
+  h3::after, h4::after { content: ""; display: block; height: 7em; margin-bottom: -7em; }
+  .sub { font-size: 13px; }
+  ul, ol { margin: 4px 0; padding-inline-start: 22px; }
+  li { margin-bottom: 4px; }
+  .ef.dots:empty::before { content: "..............."; }
+  .ef.dt { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+  .ed-only { display: none; font: inherit; font-size: 14px; padding: 3px 12px; cursor: pointer; margin-inline-end: 6px; color: #1f4e79; background: #eaf2fb; border: 1px solid #9dbbe0; border-radius: 6px; }
+  .ed-only:hover { background: #d6e6f7; }
+  body.editing .ed-only { display: inline-block; }
+  body.editing .noedit { display: none; }
+  body.editing .ef { background: #fff8c4; outline: 1px dashed #b59b00; min-width: 3em; display: inline-block; padding: 0 3px; cursor: text; }
+  .barre { position: sticky; top: 0; text-align: left; margin-bottom: 10px; }
+  .barre { display: flex; gap: 8px; padding: 6px 0; background: #fff; z-index: 5; }
+  .barre button { font: inherit; font-size: 15px; font-weight: 600; padding: 7px 18px; cursor: pointer; color: #fff; background: #1f6feb; border: 0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: background .15s, transform .05s; }
+  .barre button:hover { background: #1558c0; }
+  .barre button:active { transform: translateY(1px); }
+  .barre button#bprint { background: #198754; }
+  .barre button#bprint:hover { background: #136c43; }
+  .barre button#bdl { background: #6f42c1; }
+  .barre button#bdl:hover { background: #59359a; }
+  body.editing .barre button#bed { background: #d97706; }
+  body.editing .barre button#bed:hover { background: #b45f04; }
+  @media print { .barre, .ed-only { display: none !important; } body { padding: 0; } body.editing .ef { background: none; outline: none; } }
+</style></head><body>
+<div class="barre"><button id="bed"><i class="bi bi-pencil-square"></i> تعديل</button><button class="noedit" id="bprint" onclick="window.print()"><i class="bi bi-printer"></i> طباعة</button><button class="noedit" id="bdl"><i class="bi bi-file-earmark-word"></i> تنزيل Word</button></div>
+<h1>محضر جلسة فتح العروض المتعلقة بالإستشارة عدد ${num}</h1>
+<h2>لفائدة المؤسسات التابعة لقطاع ${dom}</h2>
+
+<h3>1- التاريخ والتوقيت :</h3>
+<p>يوم ${pvDate(dateOuv)} على الساعة ${ef("heure", "", "dots", "time")}.</p>
+
+<h3>2- مكان عقد الجلسة :</h3>
+<p>${ef("lieu", pvLieuDef, "dots")}</p>
+
+<h3>3- أعضاء لجنة فتح العروض :</h3>
+<table><thead><tr><th>الاسم واللقب</th><th>الصفة</th><th class="c">الإمضاء</th></tr></thead><tbody id="tb_m">${membres}</tbody></table>
+<button class="ed-only" data-add="m"><i class="bi bi-plus-lg"></i> عضو</button><button class="ed-only" data-del="m"><i class="bi bi-dash-lg"></i> عضو</button>
+<h4>الملاحظون :</h4>
+<table><thead><tr><th>الاسم واللقب</th><th>الصفة</th><th class="c">الإمضاء</th></tr></thead><tbody id="tb_o">${observ}</tbody></table>
+<button class="ed-only" data-add="o"><i class="bi bi-plus-lg"></i> ملاحظ</button><button class="ed-only" data-del="o"><i class="bi bi-dash-lg"></i> ملاحظ</button>
+
+<h3>4- تقديم عملية الاستشارة :</h3>
+<p><strong>مرجع عملية الاستشارة :</strong> استشارة عدد ${num}.</p>
+<p><strong>موضوع الاستشارة :</strong> اختيار هياكل تكوين لإنجاز برنامج تكويني في مجال ${dom} لفائدة ${grpTxtN(nbGroupes)} من أصحاب المهنة بولاية سليانة.</p>
+<p><strong>تاريخ الإعلان عن عملية الاستشارة :</strong> ${pvDate(c.dateAnnonce)} بجريدة ${ef("journal", "", "dots")}.</p>
+<p><strong>آخر أجل لقبول العروض :</strong> ${pvDate(c.dateCloture)} على الساعة ${ef("hcloture", heureDe(c.dateCloture), "dots dt", "time")}${c.dateProrogation ? ` — بعد التمديد إلى ${pvDate(c.dateProrogation)} على الساعة <bdi dir="ltr">${esc(heureDe(c.dateProrogation) || "........")}</bdi>` : ""}.</p>
+
+<h3>5- قائمة الهياكل التكوينية التي تسلمت كراس الشروط والمضمنة بسجل ${arabe} حسب ترتيب ورودها :</h3>
+<table>
+  <thead><tr><th class="c">رقم العرض</th><th>اسم هيكل التكوين</th><th class="c">تاريخ سحب كراس الشروط</th><th class="c">تاريخ الإيداع</th><th class="c">توقيت الإيداع</th><th>الملاحظات</th></tr></thead>
+  <tbody>${lignesListe}</tbody><tbody id="tb_s" data-base="${offres.length}">${lignesSans}</tbody>
+</table>
+
+<h4>الخلاصة :</h4>
+<p>عدد العروض الواردة على ${lieuRec} : ${nbTxt}، وردت في الآجال وفي ظروف مغلقة ولا تحمل هوية الهياكل المترشحة على الظرف الخارجي للعرض.</p>
+${ordre.length ? `
+<h3>6- فتح العروض :</h3>
+<p>&#x200F;6&#x200F;.&#x200F;1&#x200F;- ترتيب العروض تصاعديا من عرض رقم 01 إلى عرض رقم ${pad2(offres.length)} حسب تسلسل ورودها وإمضائها من طرف أعضاء اللجنة.</p>
+<p>&#x200F;6&#x200F;.&#x200F;2&#x200F;- فتح الظرف الخارجي للعرض وترقيم وإمضاء الظرفين المضمنين به.</p>
+<p>&#x200F;6&#x200F;.&#x200F;3&#x200F;- التثبت من صحة ومدى مطابقة الوثائق الإدارية المطلوبة طبقا للفصل الرابع من كراس الشروط وإمضائها وذلك طبقا للجدول التالي :</p>
+<h4 class="c">الوثائق الإدارية المودعة من طرف هياكل التكوين</h4>
+${tableAdmin}${notesExcl}
+<p>&#x200F;6&#x200F;.&#x200F;4&#x200F;- فتح الظرف المتعلق بالعرض المالي، والتأشير عليه بإمضاءات أعضاء اللجنة، ثم التثبت من الأسعار المقترحة لكل محور تكويني، وذلك باعتماد كلفة المشاركة اليومية للمنتفع الواحد، بالدينار التونسي ودون احتساب الأداء على القيمة المضافة، طبقًا لما ورد بالملحق عدد (5).
+
+وفي صورة وجود اختلاف بين المبلغ المدوّن بالأرقام والمبلغ المبيّن بلسان القلم، يُعتمد المبلغ الوارد بلسان القلم.
+
+أما العروض المالية التي تتجاوز المبالغ القصوى المعمول بها، فتُحال على أنظار اللجنة الداخلية بالمركز للنظر فيها واتخاذ ما تراه مناسبًا.</p>
+<h4 class="c">العروض المالية المودعة من طرف هياكل التكوين</h4>
+${tableFin}
+<p>&#x200F;6&#x200F;.&#x200F;5&#x200F;- فتح الظرف الخاص بالعرض الفني وإمضاء الوثائق الفنية المضمنة به من طرف أعضاء اللجنة والتثبت من مدى توفر ومطابقة الوثائق المطلوبة والمنصوص عليها بالفصل الرابع من كراس الشروط وذلك طبقا للجداول التالية :</p>
+<h4 class="c">وثائق العروض الفنية المودعة من طرف هياكل التكوين</h4>
+${tableTech || "<p>لا توجد عروض فنية مفتوحة.</p>"}
+
+<h3>7- العروض والمحاور المقصاة :</h3>
+<p>طبقا للفصل السادس من كراس الشروط تم إقصاء العروض والمحاور التالية بصفة آلية دون مراسلتها :</p>
+${tableExcl}
+${incomplets ? `<h3>8- الوثائق أو المعطيات المنقوصة غير الإقصائية :</h3>${incomplets}<p>واتفقت اللجنة على مراسلة الهياكل التكوينية المعنية لاستكمالها بتاريخ ${ef("courrier", "", "dots dt", "date")} في أجل أقصاه عشرة (10) أيام.</p>` : ""}` : ""}
+<p>ورفعت الجلسة في يومه على الساعة ${ef("fin", "", "dots", "time")}.</p>
+<script>
+(function () {
+  var KEY = ${JSON.stringify(KEY)}, FN = ${JSON.stringify(fileName)}, ed = false, btn = document.getElementById("bed");
+  function efs() { return Array.prototype.slice.call(document.querySelectorAll(".ef")); }
+  // Champs date / heure : sélecteur natif en mode édition (texte aaaa/mm/jj ou hh:mm une fois enregistré).
+  function toIn(t, tp) {
+    if (tp === "date") { var a = t.split("/"); return a.length === 3 && a[0].length === 4 ? a.join("-") : ""; }
+    return /^\\d{2}:\\d{2}/.test(t) ? t.slice(0, 5) : "";
+  }
+  function setEd(v) {
+    efs().forEach(function (e) {
+      var tp = e.dataset.t;
+      if (!tp) { e.contentEditable = v ? "true" : "false"; return; }
+      e.contentEditable = "false";
+      var inp = e.querySelector("input");
+      if (v && !inp) {
+        var txt = e.textContent.trim();
+        inp = document.createElement("input"); inp.type = tp; inp.value = toIn(txt, tp);
+        inp.style.font = "inherit"; inp.style.direction = "ltr";
+        e.textContent = ""; e.appendChild(inp);
+      } else if (!v && inp) {
+        e.textContent = tp === "date" ? inp.value.split("-").join("/") : inp.value;
+      }
+    });
+  }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function mk(k, i, base) {
+    if (k === "m" || k === "o") return '<tr><td><span class="ef dots" data-k="' + k + i + 'n" data-d=""></span></td><td><span class="ef" data-k="' + k + i + 's" data-d=""></span></td><td></td></tr>';
+    return '<tr><td class="c">' + pad(base + i + 1) + '</td><td><span class="ef dots" data-k="s' + i + 'n" data-d=""></span></td><td class="c"><span class="ef dt" data-t="date" data-k="s' + i + 'd" data-d=""></span></td><td class="c">-</td><td class="c">-</td><td><span class="ef obs" data-k="s' + i + 'o" data-d="لم يتم إيداع العرض">لم يتم إيداع العرض</span></td></tr>';
+  }
+  function save() {
+    var v = {};
+    efs().forEach(function (e) { var t = e.textContent.trim(); if (t !== (e.dataset.d || "").trim() || /^ret[0-9]+$/.test(e.dataset.k)) v[e.dataset.k] = t; });
+    var n = { m: document.getElementById("tb_m").rows.length, o: document.getElementById("tb_o").rows.length, s: document.getElementById("tb_s").rows.length };
+    try { localStorage.setItem(KEY, JSON.stringify({ v: v, n: n })); } catch (x) {}
+    try { if (window.opener && window.opener.pvSauver) window.opener.pvSauver({ v: v, n: n }); else alert("صفحة الاستشارة مغلقة : لم تُحفظ البيانات."); } catch (x) { alert("تعذّر الحفظ."); }
+  }
+  // Imprimer : masqué pendant l'édition et tant qu'un champ reste vide ou sur sa valeur par défaut (les champs d'observations peuvent rester vides ; une valeur par défaut compte comme remplie).
+  var bprint = document.getElementById("bprint");
+  function blanks() {
+    return efs().filter(function (e) { if (e.classList.contains("obs")) return false; return !e.textContent.trim(); }).length;
+  }
+  var bdl = document.getElementById("bdl");
+  function syncPrint() { var d = (!ed && blanks() === 0) ? "" : "none"; if (bprint) bprint.style.display = d; if (bdl) bdl.style.display = d; }
+  // Téléchargement Word : document HTML ouvert par Word (.doc), sans barre ni boutons d'édition.
+  function dlWord() {
+    var c = document.documentElement.cloneNode(true);
+    Array.prototype.slice.call(c.querySelectorAll(".barre,.ed-only,script,link")).forEach(function (n) { n.parentNode.removeChild(n); });
+    var h = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40" dir="rtl" lang="ar"><head><meta charset="utf-8"><title>' + document.title + '</title>'
+      + '<!' + '--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-' + '->'
+      + '<style>' + c.querySelector("style").innerHTML + ' @page Section1 { size: 21cm 29.7cm; margin: 18mm 15mm; } div.Section1 { page: Section1; } table { width: 100%; border-collapse: collapse; border: 1pt solid #000; margin: 8px 0 12px; } body { padding: 0; }</style></head><body dir="rtl"><div class="Section1">'
+      + c.querySelector("body").innerHTML + '</div></body></html>';
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\ufeff", h], { type: "application/msword" }));
+    a.download = FN + ".doc";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+  if (bdl) bdl.onclick = dlWord;
+  btn.onclick = function () {
+    ed = !ed; document.body.classList.toggle("editing", ed); setEd(ed);
+    if (!ed) save();
+    btn.innerHTML = ed ? '<i class="bi bi-floppy"></i> حفظ' : '<i class="bi bi-pencil-square"></i> تعديل';
+    syncPrint();
+  };
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-add],[data-del]"); if (!b) return;
+    var k = b.dataset.add || b.dataset.del, tb = document.getElementById("tb_" + k);
+    if (b.dataset.add) { tb.insertAdjacentHTML("beforeend", mk(k, tb.rows.length, +tb.dataset.base || 0)); setEd(true); }
+    else if (tb.rows.length > (k === "m" ? 1 : 0)) tb.deleteRow(-1);
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target.classList && e.target.classList.contains("ef")) e.preventDefault(); });
+  document.addEventListener("paste", function (e) {
+    if (!(e.target.classList && e.target.classList.contains("ef"))) return;
+    e.preventDefault();
+    document.execCommand("insertText", false, (e.clipboardData || window.clipboardData).getData("text").replace(/\\s+/g, " "));
+  });
+  // Un même champ présent plusieurs fois (ex. طبيعة المحور) reste synchronisé.
+  document.addEventListener("input", function (e) {
+    var s = e.target; if (!s.classList || !s.classList.contains("ef")) return;
+    efs().forEach(function (o) { if (o !== s && o.dataset.k === s.dataset.k) o.textContent = s.textContent; });
+    syncPrint();
+  });
+  syncPrint();
+})();
+<\/script>
+</body></html>`;
+
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    }
+
+    // « التقييم منتهي » : case de la section « نتيجة الاستشارة » ; enregistrée immédiatement.
+    function initEvalTerminee() {
+      const chk = document.getElementById("cons_eval_fin");
+      if (!chk) return;
+      chk.addEventListener("change", async () => {
+        if (!consRecord) { chk.checked = false; return; }
+        const ancien = !!consRecord.evalTerminee;
+        const consultation = { ...consRecord, evalTerminee: chk.checked };
+        chk.disabled = true;
+        try {
+          await apiCallDirect("enregistrerConsultationDTC", { consultation });
+          consRecord = consultation;
+          afficherConsultation(consRecord);
+        } catch (err) {
+          chk.checked = ancien;
+          alert(`خطأ أثناء الحفظ : ${err.message}`);
+        } finally {
+          chk.disabled = false;
+        }
+      });
+    }
+
+    // ---- Modale Editer : état (stocké) et offres ----
+    const DTC_ETATS = ["lancée", "prorogée", "évaluation", "fructueuse", "infructueuse"];
+
+    // Libellés affichés (les valeurs stockées restent en français).
+    const ETAT_AR = { "lancée": "جارية", "prorogée": "ممدّدة", "évaluation": "قيد التقييم", "fructueuse": "مثمرة", "infructueuse": "غير مثمرة", "prévue": "مبرمجة", "annoncée": "معلنة" };
+    function etatCapitalise(e) { return e ? (ETAT_AR[String(e).toLowerCase()] || e) : ""; }
+
+    // Valeur du select : état enregistré ; sinon dérivé des dates pour les anciennes consultations.
+    function etatParDefaut(c) {
+      if (!c) return "";
+      { const eff = etatEffectif(c); if (DTC_ETATS.includes(eff)) return eff; }
+      if (c.etat) return c.etat;
+      const m = { "Annoncée": "lancée", "Prorogée": "prorogée", "Fructueuse": "fructueuse", "Infructueuse": "infructueuse" };
+      return m[etatConsultation(c)] || "";
+    }
+
+    // Modale Editer (même contenu que dtc.html#consultations) : N°, domaine (lecture seule) et dates.
+    async function ouvrirModalEdition() {
+      if (!consRecord) return;
+      try { await pvPartenaire(consRecord); } catch (e) { /* lieu par défaut vide */ }
+      const c = consRecord;
+      const select = document.getElementById("dtc_cons_domaine");
+      select.innerHTML = `<option value="0">${esc(`${c.sigle || c.etablissement} - ${c.domaine}`)}</option>`;
+      select.value = "0";
+      document.getElementById("dtc_cons_num").value = c.numCons || "";
+      document.getElementById("dtc_cons_annonce").value = c.dateAnnonce || "";
+      document.getElementById("dtc_cons_cloture").value = versDateHeure(c.dateCloture);
+      document.getElementById("dtc_cons_proroge").value = versDateHeure(c.dateProrogation);
+      document.getElementById("dtc_cons_etat").value = etatParDefaut(c);
+      // Brouillon des données du PV (copie), validé seulement par « Enregistrer ».
+      pvDraft = JSON.parse(JSON.stringify(c.pv || {}));
+      sdDraft = JSON.parse(JSON.stringify(c.sansDepot || []));
+      renderSdModal();
+      renderPVData();
+      openFormModal("dtc_modal_consultation");
+    }
+
+    async function enregistrerEdition() {
+      const annonce = document.getElementById("dtc_cons_annonce").value;
+      const cloture = document.getElementById("dtc_cons_cloture").value;
+      const proroge = document.getElementById("dtc_cons_proroge").value;
+
+      // Mêmes contrôles que dtc.html (dates facultatives, ordre chronologique).
+      if (cloture && !annonce) { alert("أدخل تاريخ الإعلان قبل تاريخ الغلق."); return; }
+      if (proroge && !cloture) { alert("أدخل تاريخ الغلق قبل تاريخ التمديد."); return; }
+      if (annonce && cloture && cloture.slice(0, 10) < annonce) { alert("لا يمكن أن يسبق تاريخ الغلق تاريخ الإعلان."); return; }
+      if (proroge && proroge < cloture) { alert("لا يمكن أن يسبق تاريخ التمديد تاريخ الغلق."); return; }
+
+      // On repart de l'enregistrement complet : ouverture, offres et thèmes fructueux restent intacts.
+      const consultation = {
+        ...consRecord,
+        numCons: document.getElementById("dtc_cons_num").value.trim(),
+        dateAnnonce: annonce,
+        dateCloture: cloture,
+        dateProrogation: proroge || "",
+        etat: document.getElementById("dtc_cons_etat").value,
+        evalTerminee: !!consRecord.evalTerminee,
+        offres: consRecord.offres || [],
+        sansDepot: (sdDraft || []).map((x) => ({ nom: String(x.nom || "").trim(), dateRetrait: x.dateRetrait || "" })).filter((x) => x.nom || x.dateRetrait),
+        pv: { v: (pvDraft && pvDraft.v) || {}, n: (pvDraft && pvDraft.n) || {} }
+      };
+
+      const btn = document.getElementById("dtc_consultation_btn_enregistrer");
+      btn.disabled = true;
+      try {
+        await apiCallDirect("enregistrerConsultationDTC", { consultation });
+        consRecord = consultation;
+        pvDraft = null; sdDraft = null;
+        afficherConsultation(consRecord);
+        closeFormModal("dtc_modal_consultation");
+      } catch (err) {
+        alert(`خطأ أثناء الحفظ : ${err.message}`);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // Même principe que fi.html : appel direct vers l'API Apps Script.
+    async function apiCallDirect(action, payload = {}) {
+      if (window.URSPerm) URSPerm.verifierAppel(action, payload); // droits (permissions.js)
+      const res = await fetch(GAS_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action, ...payload })
+      });
+      if (!res.ok) throw new Error(`خطأ في الشبكة (${res.status})`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "خطأ غير معروف في الخادم");
+      return data.result;
+    }
+  </script>
+</body>
+</html>

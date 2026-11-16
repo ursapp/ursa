@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coordination — URSAPP</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/navbar.css" />
+  <link rel="stylesheet" href="css/spinner.css" />
+  <script src="js/spinner.js"></script>
+  <style>
+    /* ============================================================
+       Styles propres à coord.html
+       ============================================================ */
+    [hidden] { display: none !important; }
+
+    /* Badge d'état des classes (colonne "État" du tableau) */
+    .etat_badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: var(--fs_sm);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .etat_badge.is_prevue { background: #f3f4f6; color: #6b7280; }
+    .etat_badge.is_actif { background: #d1fae5; color: #065f46; }
+    .etat_badge.is_close { background: #fee2e2; color: #991b1b; }
+    .etat_badge.is_facture { background: #dbeafe; color: #1e40af; }
+
+
+    /* Section "Classes" reprise telle quelle de pp.html */
+    .pp_table td, .pp_table th {
+      padding: var(--space_1) var(--space_2);
+      vertical-align: top;
+      text-align: left;
+    }
+    .pp_table td:last-child, .pp_table th:last-child {
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    /* Modale de connexion (profils "coord", indépendante de la connexion
+       principale de l'app — voir onglet "coord" de la Sheet Paramètres) :
+       grille d'initiales + mot de passe + "Rester connecté(e)", sur le
+       même modèle que la modale de index.html. */
+    .login_modal_overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(22, 38, 42, 0.82);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space_6);
+    }
+    .login_modal_overlay.is_visible { display: flex; }
+    .login_modal {
+      background: var(--color_paper_raised);
+      border-radius: var(--radius_md);
+      width: 100%;
+      max-width: 440px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.32);
+      padding: var(--space_6);
+    }
+    .login_modal_header h2 {
+      margin: 0 0 var(--space_2) 0;
+      font-family: var(--font_display);
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+      justify-content: center;
+    }
+    .login_modal_note {
+      font-size: var(--fs_sm);
+      color: var(--text_secondary);
+      margin: 0 0 var(--space_5) 0;
+      font-style: italic;
+      text-align: center;
+    }
+    .login_users_grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--space_4);
+      padding: 0 0 var(--space_5) 0;
+    }
+    .login_user_badge {
+      width: 52px;
+      height: 52px;
+      font-size: var(--fs_md);
+      box-shadow: 0 0 0 2px transparent;
+      transition: box-shadow 120ms ease, transform 120ms ease, opacity 120ms ease;
+    }
+    .login_user_badge:not(.is_disabled):hover { transform: translateY(-2px); }
+    .login_user_badge.is_selected {
+      box-shadow: 0 0 0 3px var(--color_teal_light);
+      background: var(--color_seal_light);
+    }
+    .login_user_badge.is_disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .login_user_badge.is_disabled:hover { background: var(--color_seal); }
+    .login_password_form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_4);
+      padding-top: var(--space_5);
+      border-top: 1px solid var(--border_soft);
+    }
+    .login_password_form label {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space_2);
+      font-size: var(--fs_sm);
+      font-weight: 600;
+      color: var(--text_secondary);
+    }
+    .login_password_form input[type="password"] {
+      font-family: inherit;
+      font-size: var(--fs_base);
+      padding: var(--space_3);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper_raised);
+      color: var(--text_primary);
+      transition: outline-color 120ms ease;
+    }
+    .login_password_form input[type="password"]:focus {
+      outline: 2px solid var(--color_teal_light);
+      outline-offset: 1px;
+    }
+    .login_password_form input[type="password"]:disabled {
+      background: var(--color_paper);
+      color: var(--text_secondary);
+      cursor: not-allowed;
+    }
+    .login_remember_row {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center;
+      gap: var(--space_2);
+      font-size: var(--fs_sm);
+      font-weight: 400;
+      color: var(--text_secondary);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .login_remember_row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--color_seal);
+      cursor: pointer;
+    }
+    .login_password_error {
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+      color: var(--color_danger);
+      font-size: var(--fs_sm);
+      margin: 0;
+    }
+    .login_password_form_actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space_4);
+      margin-top: var(--space_1);
+    }
+    .btn_login {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space_2);
+      flex-shrink: 0;
+      padding: var(--space_2) var(--space_5);
+      border: none;
+      border-radius: var(--radius_sm);
+      background: var(--color_seal);
+      color: var(--color_ink);
+      font-family: inherit;
+      font-size: var(--fs_sm);
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: var(--shadow_card);
+      transition: background 120ms ease, transform 120ms ease;
+    }
+    .btn_login:hover { background: var(--color_seal_light); }
+    .btn_login:active { transform: translateY(1px); }
+
+    /* En-tête de "Mes classes" : titre à gauche, bouton Guide à droite */
+    #classes .panel_header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space_3);
+    }
+    #classes .panel_header h2 { margin: 0; }
+    .btn_guide {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space_2);
+      margin-left: auto;
+      padding: var(--space_2) var(--space_4);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper_raised);
+      color: var(--text_primary);
+      font-family: inherit;
+      font-size: var(--fs_sm);
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 120ms ease, transform 120ms ease;
+    }
+    .btn_guide:hover { background: var(--color_paper); }
+    .btn_guide:active { transform: translateY(1px); }
+
+    /* Modale Guide */
+    .guide_overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(22, 38, 42, 0.82);
+      z-index: 600;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space_4);
+    }
+    .guide_overlay.is_visible { display: flex; }
+    .guide_dialog {
+      background: var(--color_paper_raised);
+      color: var(--text_primary);
+      border-radius: var(--radius_md);
+      width: 100%;
+      max-width: 860px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.32);
+      overflow: hidden;
+    }
+    .guide_header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space_3);
+      padding: var(--space_4) var(--space_5);
+      border-bottom: 1px solid var(--border_soft);
+    }
+    .guide_header h3 {
+      margin: 0;
+      font-family: var(--font_display);
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+    }
+    .guide_header_actions { display: flex; align-items: center; gap: var(--space_2); min-width: 0; }
+    .guide_search {
+      display: flex;
+      align-items: center;
+      gap: var(--space_2);
+      padding: 0 var(--space_2);
+      border: 1px solid var(--border_soft);
+      border-radius: var(--radius_sm);
+      background: var(--color_paper);
+      color: var(--text_secondary);
+      min-width: 0;
+    }
+    .guide_search:focus-within { outline: 2px solid var(--color_teal_light); outline-offset: 1px; }
+    .guide_search input {
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text_primary);
+      font-family: inherit;
+      font-size: var(--fs_sm);
+      padding: var(--space_2) 0;
+      width: 200px;
+      min-width: 0;
+    }
+    .guide_search_count { font-size: var(--fs_sm); white-space: nowrap; min-width: 3.2em; text-align: right; }
+    mark.guide_mark { background: #fde68a; color: inherit; border-radius: 2px; padding: 0 1px; }
+    mark.guide_mark.is_current { background: #f59e0b; }
+    @media (max-width: 600px) {
+      .guide_header { flex-wrap: wrap; }
+      .guide_header_actions { width: 100%; }
+      .guide_search { flex: 1; }
+      .guide_search input { width: 100%; }
+    }
+    .guide_close {
+      border: none;
+      background: transparent;
+      color: var(--text_secondary);
+      font-size: var(--fs_md);
+      cursor: pointer;
+      padding: var(--space_1) var(--space_2);
+      border-radius: var(--radius_sm);
+    }
+    .guide_close:hover { background: var(--color_paper); color: var(--text_primary); }
+    .guide_nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space_2);
+      padding: var(--space_3) var(--space_5);
+      border-bottom: 1px solid var(--border_soft);
+      background: var(--color_paper);
+    }
+    .guide_nav a {
+      font-size: var(--fs_sm);
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border_soft);
+      background: var(--color_paper_raised);
+      color: var(--text_secondary);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .guide_nav a:hover { color: var(--text_primary); border-color: var(--color_teal_light); }
+    .guide_body {
+      padding: var(--space_4) var(--space_5) var(--space_6);
+      overflow-y: auto;
+      line-height: 1.55;
+      scroll-behavior: smooth;
+    }
+    .guide_body section { margin-bottom: var(--space_6); scroll-margin-top: var(--space_2); }
+    .guide_body { counter-reset: guide_sec; }
+    .guide_body h4 { counter-increment: guide_sec; }
+    .guide_body h4::before { content: counter(guide_sec) ". "; }
+    .guide_body h4 {
+      margin: 0 0 var(--space_2) 0;
+      font-family: var(--font_display);
+      font-size: var(--fs_md);
+      padding-bottom: var(--space_1);
+      border-bottom: 2px solid var(--color_teal_light);
+    }
+    .guide_body h5 { margin: var(--space_3) 0 var(--space_1) 0; font-size: var(--fs_base); }
+    .guide_body p { margin: 0 0 var(--space_2) 0; }
+    .guide_body ul, .guide_body ol { margin: 0 0 var(--space_2) 0; padding-left: 1.3em; }
+    .guide_body li { margin-bottom: 4px; }
+    .guide_body kbd {
+      font-family: inherit;
+      font-size: 0.85em;
+      padding: 1px 6px;
+      border: 1px solid var(--border_soft);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      background: var(--color_paper);
+    }
+    .guide_note {
+      margin: var(--space_2) 0;
+      padding: var(--space_2) var(--space_3);
+      border-left: 4px solid var(--color_teal_light);
+      background: var(--color_paper);
+      border-radius: var(--radius_sm);
+      font-size: var(--fs_sm);
+    }
+    .guide_note.is_warn { border-left-color: #d97706; }
+    .guide_table_wrap { overflow-x: auto; margin-bottom: var(--space_2); }
+    .guide_table { border-collapse: collapse; width: 100%; font-size: var(--fs_sm); }
+    .guide_table th, .guide_table td {
+      border: 1px solid var(--border_soft);
+      padding: var(--space_1) var(--space_2);
+      text-align: left;
+      vertical-align: top;
+    }
+    .guide_table th { background: var(--color_paper); }
+    @media (max-width: 600px) {
+      .guide_overlay { padding: 0; }
+      .guide_dialog { max-height: 100vh; height: 100vh; border-radius: 0; }
+      .guide_header, .guide_nav, .guide_body { padding-left: var(--space_3); padding-right: var(--space_3); }
+    }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="page_title_group">
+      <span class="page_eyebrow">COORD · COORDINATION</span>
+      <h1 class="page_title">Coordination</h1>
+    </div>
+    <div class="navbar_actions">
+      <span class="user_badge" id="coord_user_badge">--</span>
+      <button type="button" class="btn_logout_navbar" id="coord_btn_logout" hidden title="Se déconnecter">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="app_content app_content_metier">
+
+    <!-- ============================================================
+         Section "Classes" — reprise à l'identique de la section #classes
+         de pp.html (même structure, mêmes colonnes, même logique
+         de chargement via listClassesPP). Masquée tant que l'utilisateur
+         n'est pas connecté ; une fois connecté, ne montre que les classes
+         correspondant à son Etablissement et à ses Classes (onglet "coord").
+         "Afficher" importe la classe depuis Drive en ouvrant class.html
+         (classes FAD classiques) ou pfe.html (classes de niveau 6/6),
+         avec ?gclasse=<id> — même bascule que pp.html (voir renderPPClasseTable
+         ci-dessous), sans toutefois permettre la création (pas de bouton
+         "Nouvelle classe" ici : réservé à pp.html).
+         ============================================================ -->
+    <section id="classes" class="panel" hidden>
+      <div class="panel_header">
+        <h2><i class="bi bi-book"></i> Mes classes</h2>
+        <button type="button" class="btn_guide" id="coord_btn_guide" aria-haspopup="dialog">
+          <i class="bi bi-question-circle"></i> Guide
+        </button>
+      </div>
+
+      <table class="data_table pp_table">
+        <thead>
+          <tr>
+            <th>Classe</th>
+            <th>Début</th>
+            <th>Fin</th>
+            <th>État</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="pp_classe_table_body"></tbody>
+      </table>
+      <div class="empty_state" id="pp_classe_empty" hidden>
+        <i class="bi bi-inbox"></i>Aucune classe ni module enregistré.
+      </div>
+    </section>
+
+  </main>
+
+  <div class="login_modal_overlay" id="coord_login_modal">
+    <div class="login_modal">
+      <div class="login_modal_header">
+        <h2><i class="bi bi-person-circle"></i> Qui êtes-vous ?</h2>
+        <p class="login_modal_note">Choisissez votre profil et saisissez votre mot de passe.</p>
+      </div>
+      <div class="login_users_grid" id="coord_login_users_grid">
+        <span class="spinner" role="status" aria-label="Chargement"></span>
+      </div>
+
+      <form class="login_password_form" id="coord_login_form">
+        <label>Mot de passe
+          <input type="password" id="coord_login_password" autocomplete="current-password" disabled required />
+        </label>
+        <p class="login_password_error" id="coord_login_error" hidden></p>
+        <div class="login_password_form_actions">
+          <label class="login_remember_row">
+            <input type="checkbox" id="coord_login_remember" /> Rester connecté(e)
+          </label>
+          <button type="submit" class="btn_login"><i class="bi bi-box-arrow-in-right"></i> Se connecter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ============================================================
+       Modale "Guide" : mode d'emploi détaillé de class.html
+       (ouverte depuis le bouton Guide de l'en-tête de "Mes classes").
+       ============================================================ -->
+  <div class="guide_overlay" id="coord_guide_modal" role="dialog" aria-modal="true" aria-labelledby="coord_guide_titre">
+    <div class="guide_dialog">
+      <div class="guide_header">
+        <h3 id="coord_guide_titre"><i class="bi bi-journal-text"></i> <span id="coord_guide_titre_txt">Guide de la page « Classe »</span></h3>
+        <div class="guide_header_actions">
+          <div class="guide_search" role="search">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input type="search" id="coord_guide_search" placeholder="Rechercher dans le guide…" autocomplete="off" aria-label="Rechercher dans le guide" />
+            <span class="guide_search_count" id="coord_guide_search_count" aria-live="polite"></span>
+          </div>
+          <button type="button" class="guide_close" id="coord_guide_close" aria-label="Fermer"><i class="bi bi-x-lg"></i></button>
+        </div>
+      </div>
+      <nav class="guide_nav" aria-label="Sommaire du guide">
+        <a data-guide="class" href="#g_vue">Vue d'ensemble</a>
+        <a data-guide="class" href="#g_barre">Barre d'actions</a>
+        <a data-guide="class" href="#g_editer">Editer la classe</a>
+        <a data-guide="class" href="#g_inscrits">Inscrits</a>
+        <a data-guide="class" href="#g_ens">Enseignants</a>
+        <a data-guide="class" href="#g_coord">Coordination</a>
+        <a data-guide="class" href="#g_plan">Plan d'étude</a>
+        <a data-guide="class" href="#g_tut">Tutorat</a>
+        <a data-guide="class" href="#g_reg">Regroupements</a>
+        <a data-guide="class" href="#g_exam">Examen</a>
+        <a data-guide="class" href="#g_compteurs">Compteurs</a>
+        <a data-guide="class" href="#g_print">Imprimer / Notifier</a>
+        <a data-guide="class" href="#g_factu">Facturation</a>
+        <a data-guide="class" href="#g_etats">États &amp; droits</a>
+        <a data-guide="licence" href="#g_pfe">Projets de fin d'études</a>
+        <a data-guide="class" href="#g_conseils">Conseils</a>
+        <a data-guide="mod" href="#g_m_vue">Module : vue d'ensemble</a>
+        <a data-guide="mod" href="#g_m_editer">Editer le module</a>
+        <a data-guide="mod" href="#g_m_inscrits">Module : inscrits</a>
+        <a data-guide="mod" href="#g_m_planning">Planning</a>
+        <a data-guide="mod" href="#g_m_compteurs">Module : compteurs</a>
+        <a data-guide="mod" href="#g_m_check">Check Tutorat</a>
+        <a data-guide="mod" href="#g_m_factu">Module : facturation</a>
+        <a data-guide="mod" href="#g_m_etats">Module : états &amp; droits</a>
+        <a data-guide="mod" href="#g_m_conseils">Module : conseils</a>
+      </nav>
+
+      <div class="guide_body" id="coord_guide_body">
+
+        <section data-guide="class" id="g_vue">
+          <h4>Vue d'ensemble</h4>
+          <p>Depuis <strong>Mes classes</strong>, le bouton <strong>Afficher</strong> ouvre la page de la classe (ou de la formation à distance). Elle sert à suivre toute la vie d'une classe : fiche, inscrits, enseignants, plan d'étude, planification du tutorat et des regroupements, examens, compteurs d'heures, impression et notification.</p>
+          <p>Sous le titre, un bandeau rappelle la fiche : <em>Etablissement, Cycle, Spécialité, Promotion, Niveau, Semestre</em>. Les sections sont des <strong>accordéons</strong> : <em>Plan d'étude</em>, <em>Répartition tutorat</em> et <em>Regroupements</em> sont repliées par défaut ; le chevron en déplie une et replie les autres. Les panneaux <em>Inscrits</em>, <em>Enseignants</em>, <em>Coordination</em> et <em>Compteurs</em> s'ouvrent un à la fois.</p>
+          <div class="guide_note"><strong>Important :</strong> toute modification n'est enregistrée sur Drive qu'avec le bouton <strong>Enregistrer</strong> de la barre du haut. Valider une fenêtre (matière, semaine, etc.) ne fait que mettre la modification en mémoire.</div>
+          <div class="guide_note" data-guide="licence" hidden>Les classes de niveau <strong>6/6</strong> (projets de fin d'études) s'ouvrent dans une page dédiée : voir la rubrique « Projets de fin d'études (niveau 6/6) » de ce guide.</div>
+        </section>
+
+        <section data-guide="class" id="g_barre">
+          <h4>La barre d'actions (en haut à droite)</h4>
+          <ul>
+            <li><strong>Retour</strong> : revient à la liste « Mes classes ».</li>
+            <li><strong>Editer</strong> : ouvre la fiche de la classe (état, dates, heures, accès aux Inscrits / Enseignants / Coordination).</li>
+            <li><strong>Enregistrer</strong> : sauvegarde toute la classe sur Drive.</li>
+            <li><strong>Imprimer</strong> : choix des sections à imprimer (voir « Imprimer et Notifier »).</li>
+            <li><strong>Notifier</strong> : génère le document de notification des séances à venir. Il n'apparaît que s'il reste au moins une séance de tutorat ou de regroupement planifiée à partir de la semaine en cours.</li>
+            <li><strong>Facturation</strong> : visible uniquement aux états <em>Clôturée</em> et <em>Facturée</em> (voir « Facturation » et « États de la classe et droits »).</li>
+            <li><strong>Icône de déconnexion</strong> : quitte la session.</li>
+          </ul>
+          <p>Le message orange <strong>« Données à enregistrer ! »</strong> signale des modifications non sauvegardées : cliquez sur <em>Enregistrer</em> avant de quitter la page. Un petit spinner indique un chargement en cours.</p>
+        </section>
+
+        <section data-guide="class" id="g_editer">
+          <h4>Editer la classe (fiche)</h4>
+          <p>Les champs d'identité (Etablissement, Classe, Spécialité, Promotion, Niveau, Semestre, responsable) sont <strong>figés</strong> : la classe est créée par l'administration. Restent modifiables :</p>
+          <ul>
+            <li><strong>État</strong> : <em>Prévue</em>, <em>En cours</em>, <em>Clôturée</em> (et <em>Facturée</em>, réservé à l'administration).</li>
+            <li><strong>Date début de formation</strong> : demandée dès l'état <em>En cours</em>.</li>
+            <li><strong>Date fin de formation</strong> : demandée à <em>Clôturée</em> ; elle est pré-remplie avec la dernière date planifiée (tutorat, regroupement ou examen) et reste modifiable.</li>
+            <li><strong>Heures de tutorat par étudiant</strong> (140 h par défaut) et <strong>Heures de regroupement par étudiant</strong> (84 h par défaut, 84 h minimum) : visibles pour vous, <strong>modifiables par l'administration seulement</strong>. Elles alimentent les statistiques d'en-tête des sections et conditionnent l'ajout de nouvelles semaines.</li>
+            <li>Boutons <strong>Inscrits</strong>, <strong>Enseignants</strong>, <strong>Coordination</strong> : ouvrent les panneaux correspondants. Puis <strong>Enregistrer</strong>.</li>
+          </ul>
+        </section>
+
+        <section data-guide="class" id="g_inscrits">
+          <h4>Inscrits (liste des étudiants)</h4>
+          <p>Panneau ouvert via <em>Editer &gt; Inscrits</em>. Le compteur indique le nombre d'étudiants. Colonnes : CIN, Nom, Téléphone, Téléphone 2, Email, Actions.</p>
+          <ul>
+            <li><strong>Ajouter un étudiant</strong> : CIN (8 chiffres), prénom, nom, téléphones, email. Un bouton permet de reprendre les données depuis la base.</li>
+            <li><strong>Importer depuis la base</strong> : liste de candidats (CIN, Nom, Prénom, Année) ; cochez puis <em>Ajouter la sélection</em>. <em>Tout cocher / décocher</em> accélère la sélection.</li>
+            <li><strong>Importer xlsx</strong> : choisissez un fichier Excel, vérifiez l'aperçu (CIN, Nom, Téléphones, Email), cochez les lignes puis <em>Importer la sélection</em>.</li>
+            <li><strong>Récupérer du semestre précédent</strong> : reprend des étudiants de la classe du semestre précédent (affiché quand une source existe).</li>
+            <li><strong>Vider liste</strong> : supprime tous les inscrits — à utiliser avec précaution.</li>
+            <li>Ces actions de masse sont masquées sur mobile ; utilisez un ordinateur.</li>
+          </ul>
+        </section>
+
+        <section data-guide="class" id="g_ens">
+          <h4>Enseignants</h4>
+          <p>Liste des enseignants avec leurs matières enseignées. <strong>Ajouter</strong> ou modifier demande : Prénom, Nom, CIN (8 chiffres), Téléphone, Email, <strong>Adresse personnelle complète (15 caractères minimum)</strong>, Rôle (<em>Enseignant</em>, <em>Coordinateur</em> ou les deux), Banque, RIB (20 chiffres) et Fonction (utilisée dans le mémoire de coordination, ex. « Coordinateur pédagogique »).</p>
+          <p>Un enseignant doit exister ici (ou dans la base) pour pouvoir être affecté à une matière du plan d'étude.</p>
+        </section>
+
+        <section data-guide="class" id="g_coord">
+          <h4>Coordination (intervenants et frais)</h4>
+          <p>Liste des intervenants rémunérés pour la coordination : Nom, CIN, <strong>Montant brut</strong>, <strong>Retenues (15 %)</strong>, <strong>Montant net</strong>, Total brut, RIB, Banque.</p>
+          <ul>
+            <li>Les retenues et le net se calculent à partir du brut avec le taux de retenue paramétré (15 % par défaut).</li>
+            <li>CIN, banque et RIB se remplissent automatiquement depuis la base quand l'intervenant y existe ; sinon une zone permet de le créer.</li>
+            <li><strong>Récupérer des intervenants</strong> : reprend ceux du semestre précédent, <em>montants inclus</em>.</li>
+            <li>Une fois la classe <strong>Facturée</strong>, le bouton d'ajout et la colonne Actions disparaissent.</li>
+          </ul>
+        </section>
+
+        <section data-guide="class" id="g_plan">
+          <h4>Plan d'étude</h4>
+          <p>Le plan liste les matières de la classe. En-tête : <em>heures planifiées / heures dues</em>. Colonnes :</p>
+          <div class="guide_table_wrap">
+            <table class="guide_table">
+              <thead><tr><th>Colonne</th><th>Signification</th></tr></thead>
+              <tbody>
+                <tr><td>Code / Matière</td><td>Identification de la matière.</td></tr>
+                <tr><td>FI</td><td>Heures du programme en formation initiale ordinaire (référence de comparaison).</td></tr>
+                <tr><td>Tutorat</td><td>Heures en ligne ; affiché <em>réalisées / total</em>.</td></tr>
+                <tr><td>Reg. classe, Reg. G1, Reg. G2</td><td>Heures de regroupement pour la classe entière ou pour chaque groupe ; affichées <em>réalisées / total</em>.</td></tr>
+                <tr><td>Éval</td><td>Heures d'évaluation (une matière doit avoir des heures d'éval pour être choisie à l'examen).</td></tr>
+                <tr><td>Total % FI</td><td>(Tutorat + Reg. classe + Reg. G1) × 100 ÷ FI.</td></tr>
+                <tr><td>Enseignant / Actions</td><td>Enseignant affecté ; crayon pour modifier.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Ajouter une matière</strong> ouvre la fenêtre <em>Matière</em> (code, nom, FI, tutorat, regroupements, éval, enseignant — avec création rapide d'un enseignant si besoin). Le bouton <strong>Imprimer</strong> du panneau imprime le plan seul.</p>
+          <div class="guide_note">Le bouton d'ajout disparaît quand la classe est <em>Facturée</em>, ou quand les heures de tutorat <em>et</em> de regroupement des matières ont atteint les heures dues par la classe.</div>
+        </section>
+
+        <section data-guide="class" id="g_tut">
+          <h4>Répartition tutorat</h4>
+          <p>L'en-tête affiche <em>Heures planifiées : X / 140 h</em> (la cible vient de la fiche). <strong>Planifier tutorat</strong> ouvre la fenêtre d'une semaine.</p>
+          <ol>
+            <li>Choisissez le <strong>numéro de semaine</strong> et la <strong>date de début (un lundi)</strong>. Si ce n'est pas un lundi, un avertissement vous le signale (vacances, jour férié ?).</li>
+            <li>Pour chaque jour <strong>du lundi au samedi</strong>, choisissez la matière et les heures. <strong>Le samedi est facultatif</strong> : laissez sa matière vide pour ne pas le planifier ; s'il est rempli, il s'affiche au tableau et dans la notification.</li>
+            <li>Une séance dure <strong>2 h par défaut</strong>. Une soirée peut aller jusqu'à <strong>3 h</strong> : soit 1 séance de 3 h, soit <strong>2 séances</strong> (bouton +) dont le total ne dépasse pas 3 h, la 2<sup>e</sup> commençant après la 1<sup>re</sup>.</li>
+            <li><strong>Enregistrer</strong> la semaine ; <strong>Supprimer la semaine</strong> si besoin.</li>
+          </ol>
+          <h5>Saisie des heures</h5>
+          <p>Tapez l'heure en <strong>hhmm sans les deux points</strong> (ex. <kbd>1800</kbd>). Les flèches <kbd>↑</kbd> / <kbd>↓</kbd> changent l'heure de ±15 min, avec <kbd>Maj</kbd> de ±1 h.</p>
+          <div class="guide_note">Il n'y a pas de plafond sur le nombre de semaines : on peut en ajouter tant que les heures planifiées restent <strong>sous</strong> les heures dues. Le bouton <em>Planifier tutorat</em> disparaît une fois la cible atteinte (les semaines existantes restent modifiables via le crayon).</div>
+        </section>
+
+        <section data-guide="class" id="g_reg">
+          <h4>Regroupements</h4>
+          <p>L'en-tête affiche <em>Heures planifiées : X / 84 h</em> et <em>Semaines planifiées</em>. Un regroupement a lieu le <strong>samedi et/ou le dimanche</strong>. <strong>Planifier regroupements</strong> ouvre la fenêtre d'une semaine :</p>
+          <ul>
+            <li>En haut, deux boutons de jour : <strong>Samedi</strong> (à gauche) et <strong>Dimanche</strong> (à droite). <strong>Dimanche est affiché par défaut</strong> ; une seule section est visible à la fois.</li>
+            <li>Dans la section du jour : <strong>Ajouter une séquence</strong> (matière, public <em>G1</em>, <em>G2</em> ou <em>G1 + G2</em> (classe entière), heure de début et de fin).</li>
+            <li>Un jour <strong>sans séquence n'est pas pris en compte</strong>.</li>
+            <li>La date est <strong>automatique</strong> : le prochain dimanche après la dernière séance ; conservée telle quelle pour une semaine existante.</li>
+            <li>Les heures du samedi et du dimanche se <strong>comptent indépendamment</strong> (jusqu'à 6 h par jour).</li>
+            <li>Même saisie d'heures que pour le tutorat (<kbd>hhmm</kbd>, flèches, <kbd>Maj</kbd>).</li>
+          </ul>
+          <div class="guide_note">Le compteur global vaut <strong>84 h</strong>, sauf si la fiche indique une valeur supérieure (le samedi peut ajouter des heures) : il prend alors cette valeur. Comme pour le tutorat, <em>Planifier regroupements</em> disparaît quand la cible est atteinte.</div>
+        </section>
+
+        <section data-guide="class" id="g_exam">
+          <h4>Examen</h4>
+          <p>Le bouton <strong>Planifier examen</strong> (dans Regroupements) n'apparaît que lorsque les heures de regroupement <strong>déjà écoulées</strong> atteignent 90 % des heures dues, et jamais sur une classe facturée. Il ne dépend ni du nombre de semaines ni de leur numéro.</p>
+          <p>Dans la fenêtre <em>Examen</em> : choisissez la <strong>date</strong> puis ajoutez des <strong>séances</strong> (matière avec heures d'éval, début, fin). <em>Supprimer l'examen</em> l'annule.</p>
+        </section>
+
+        <section data-guide="class" id="g_compteurs">
+          <h4>Compteurs</h4>
+          <p>Disponibles à partir de l'état <strong>En cours</strong> (rien à compter pour une classe <em>Prévue</em>). Deux boutons :</p>
+          <ul>
+            <li><strong>Tutorat</strong> : tableau <em>par matière</em> (heures planifiées et réalisées, séances) ; un bouton bascule vers <em>par enseignant</em>, et inversement.</li>
+            <li><strong>Regroupements</strong> : heures par enseignant et par semaine, avec totaux de ligne et de colonne.</li>
+          </ul>
+          <p>La croix du panneau le referme.</p>
+          <h5>Check Tutorat (classe Clôturée)</h5>
+          <p>Quand la classe est <strong>Clôturée</strong> et que les heures réalisées ne sont pas encore confirmées, le bouton <strong>Check Tutorat</strong> apparaît :</p>
+          <ol>
+            <li>Il propose de <strong>copier le tableau du tutorat par matière</strong> : acceptez, puis collez-le (<kbd>Ctrl</kbd>+<kbd>V</kbd>) dans le corps du mail que vous envoyez à l'administration.</li>
+            <li>La première demande est datée et la classe est enregistrée. Vous pouvez relancer ensuite (la copie est reproposée à chaque clic).</li>
+            <li>L'administration saisit alors les heures réellement réalisées, qui alimentent les mémoires de règlement.</li>
+          </ol>
+        </section>
+
+        <section data-guide="class" id="g_print">
+          <h4>Imprimer et Notifier</h4>
+          <h5>Imprimer</h5>
+          <p>Cochez les sections à inclure (<em>Tout cocher / décocher</em> disponible) : Fiche signalétique, Plan d'étude, Répartition tutorat, Regroupements, <em>Tutorat et regroupements alternés</em> (vue chronologique, décochée par défaut), Compteur de regroupements, Compteur de tutorat par matière et par enseignant. Puis <em>Imprimer la sélection</em>.</p>
+          <h5>Notifier</h5>
+          <p>Produit le document de notification des séances à venir (tutorat et regroupements des semaines en cours et suivantes) : vous pouvez choisir les semaines à y faire figurer. Les samedis facultatifs n'y apparaissent que s'ils sont remplis.</p>
+        </section>
+
+        <section data-guide="class" id="g_factu">
+          <h4>Facturation</h4>
+          <p>Le bouton <strong>facturation</strong> de la barre d'actions n'apparaît que lorsque la classe est <strong>Clôturée</strong> (ou déjà <strong>Facturée</strong>). Il génère le dossier de facturation de la classe, prêt à imprimer.</p>
+          <h5>Avant de lancer la facturation</h5>
+          <ul>
+            <li>Le <strong>plan d'étude</strong> est complet et chaque matière a son <strong>enseignant</strong>.</li>
+            <li>Les <strong>enseignants</strong> et les <strong>intervenants de la coordination</strong> sont renseignés (CIN, banque, RIB, montants).</li>
+            <li>Les <strong>heures de tutorat réalisées</strong> sont confirmées : faites votre <strong>Check Tutorat</strong> (voir « Compteurs ») ; l'administration saisit ensuite les heures, qui alimentent les mémoires de règlement.</li>
+            <li>Les dates de <strong>début et de fin</strong> de formation sont renseignées dans <em>Editer</em>, et la classe est enregistrée.</li>
+          </ul>
+          <h5>La fenêtre « Facturation »</h5>
+          <ol>
+            <li><strong>N° mémoire</strong> : par défaut la case <em>Numéro automatique</em> est cochée et le numéro est calculé à partir de la date ; décochez-la pour saisir un numéro à la main.</li>
+            <li><strong>Date de la mémoire</strong> : aujourd'hui par défaut ; en mode automatique, le numéro suit la date choisie.</li>
+            <li><strong>Générer le dossier</strong> : si le numéro ou la date ont changé, la classe est enregistrée automatiquement, puis le dossier s'ouvre à l'impression. Si un numéro et une date existent déjà, ils sont repris tels quels.</li>
+          </ol>
+          <h5>Contenu du dossier</h5>
+          <ul>
+            <li>Fiche signalétique de la classe.</li>
+            <li><strong>Mémoire de règlement</strong>, <strong>mémoires de formation</strong> (un par enseignant) et <strong>mémoires de coordination</strong> (un par intervenant).</li>
+            <li>Plan d'étude, <strong>liste des enseignants</strong> et <strong>liste des intervenants</strong>.</li>
+            <li><strong>SG1</strong> (contenu des séances de regroupement, à faire signer) et <strong>SG2</strong> (décompte des heures par enseignant).</li>
+            <li>Une <strong>feuille de vérification</strong> en dernière page : la liste des pièces à classer dans le dossier physique, avec des cases à cocher.</li>
+          </ul>
+          <div class="guide_note is_warn"><strong>Après facturation :</strong> quand l'administration passe la classe à l'état <em>Facturée</em>, le N° et la date de mémoire deviennent <strong>définitifs</strong>. La fenêtre s'ouvre alors en lecture seule avec le bouton <strong>Voir le dossier</strong> pour le consulter ou le réimprimer. Plus aucun ajout n'est possible (matière, semaine, examen, intervenant).</div>
+          <p>Vous ne pouvez pas choisir vous-même l'état <em>Facturée</em> : il est réservé à l'administration, qui gère aussi le suivi de réception et de transfert du dossier.</p>
+        </section>
+
+        <section data-guide="class" id="g_etats">
+          <h4>États de la classe et droits</h4>
+          <div class="guide_table_wrap">
+            <table class="guide_table">
+              <thead><tr><th>État</th><th>Dates demandées</th><th>Ce que cela change</th></tr></thead>
+              <tbody>
+                <tr><td>Prévue</td><td>Aucune</td><td>Compteurs masqués ; planification libre.</td></tr>
+                <tr><td>En cours</td><td>Début</td><td>Compteurs disponibles.</td></tr>
+                <tr><td>Clôturée</td><td>Début et fin</td><td>Check Tutorat et Facturation apparaissent.</td></tr>
+                <tr><td>Facturée</td><td>Début et fin</td><td>Réservé à l'administration. Plus aucun ajout (matière, semaine, examen, intervenant) ; modifications des éléments existants seulement. Dossier de facturation consultable en lecture seule.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Vos droits (coordination) :</strong> vous consultez et planifiez la classe, mais vous ne modifiez pas les heures de tutorat/regroupement par étudiant, et vous ne pouvez pas choisir l'état <em>Facturée</em>. La saisie des heures réalisées est faite par l'administration après votre Check Tutorat.</p>
+        </section>
+
+        <section data-guide="licence" id="g_pfe" hidden>
+          <h4>Projets de fin d'études (niveau 6/6)</h4>
+          <p>Pour une classe de niveau <strong>6/6</strong> (dernière année de licence, mémoire de fin d'études), le bouton <strong>Afficher</strong> ouvre la page <strong>Projets de fin d'études</strong> et non la page de classe décrite plus haut. C'est une page jumelle, <strong>sans</strong> tutorat, regroupements, examens ni compteurs : on y gère les inscrits, les frais de coordination, les modules d'encadrement et les soutenances.</p>
+          <h5>Barre d'actions et fiche</h5>
+          <ul>
+            <li><strong>Retour</strong>, <strong>Editer</strong>, <strong>Enregistrer</strong>, <strong>Imprimer</strong>, <strong>facturation</strong> (états Clôturée et Facturée uniquement) et déconnexion, comme sur la page de classe. Le message « Données à enregistrer ! » signale ce qui n'est pas sauvegardé.</li>
+            <li><strong>Editer</strong> : l'identité de la classe est figée ; vous faites évoluer l'<strong>état</strong> (Prévue, En cours, Clôturée) et les <strong>dates</strong> de formation. <em>Facturée</em> est réservé à l'administration. Les boutons <strong>Inscrits</strong> et <strong>Frais de coordination</strong> ouvrent les panneaux correspondants.</li>
+          </ul>
+          <h5>Inscrits</h5>
+          <p>Mêmes outils que sur la page de classe : <strong>Ajouter un étudiant</strong>, <strong>Importer xlsx</strong> (aperçu, cases à cocher, <em>Importer la sélection</em>), <strong>Récupérer du semestre précédent</strong> et <strong>Vider liste</strong>. Pour la récupération, selon le semestre, la liste peut être entièrement précochée ou à cocher au cas par cas (décision de passage).</p>
+          <h5>Frais de coordination</h5>
+          <ul>
+            <li>Les intervenants sont choisis dans la base parmi ceux qui ont le rôle <strong>Coordinateur</strong> ; un intervenant absent peut être créé sur place.</li>
+            <li>Le <strong>brut global de coordination (500 DT)</strong> est à <strong>partager</strong> entre les intervenants : le premier reçoit 500 DT par défaut, le suivant le reste, etc. La part reste modifiable, mais ne peut pas dépasser ce qui reste à répartir.</li>
+            <li>Retenues (15 %) et montant net se recalculent en direct. Avec <em>Récupérer du semestre précédent</em>, les montants ne sont pas repris tels quels : chaque intervenant reçoit sa part par défaut sur le brut du semestre en cours.</li>
+            <li>Cette section n'est pas proposée dans l'impression. Une fois la classe <em>Facturée</em>, l'ajout et la colonne Actions disparaissent.</li>
+          </ul>
+          <h5>Plan d'étude (modules d'encadrement)</h5>
+          <p><strong>Ajouter un module</strong> : code, intitulé du module, <strong>étudiant(s)</strong> (cases à cocher parmi les inscrits, au moins un) et <strong>encadrant</strong> (enseignants de la base, avec création rapide possible). Dans le tableau, les colonnes FI, Tutorat, Reg. classe, Reg. G2 et Total % FI restent vides (pas de suivi horaire en PFE) ; <strong>Reg. G1</strong> est calculé automatiquement (14 h pour 1 étudiant, 28 h dès 2 étudiants) et <strong>Éval</strong> vaut toujours 1. Un module sans encadrant affiche « Non assigné ».</p>
+          <h5>Soutenances</h5>
+          <ul>
+            <li><strong>Planifier une soutenance</strong> : étudiant, sujet, date, heure, salle, <strong>président du jury</strong>, <strong>rapporteur</strong>, <strong>encadrant</strong> (membre du jury) et <strong>note / 20</strong> (entre 0 et 20, facultative au départ).</li>
+            <li>Dès que vous choisissez l'étudiant, le <strong>sujet</strong> et l'<strong>encadrant</strong> sont préremplis depuis son module.</li>
+            <li>Le tableau est trié par date et heure : n°, date, heure, salle, étudiant, sujet, jury, note.</li>
+            <li><strong>Contrôles :</strong> deux soutenances ne peuvent pas occuper la même salle au même créneau, et un membre du jury ne peut pas siéger deux fois au même moment. Un avertissement s'affiche ; vous pouvez enregistrer quand même après confirmation.</li>
+          </ul>
+          <h5>Imprimer et facturation</h5>
+          <p><strong>Imprimer</strong> propose : Fiche signalétique, Liste des inscrits, Plan d'étude et Soutenances. Le bouton <strong>facturation</strong> apparaît aux états Clôturée et Facturée ; une fois la classe <em>Facturée</em> (par l'administration), plus aucun module, soutenance ou intervenant ne peut être ajouté, et l'état n'est plus modifiable de votre côté.</p>
+          <div class="guide_note">Le plan d'étude et les soutenances sont des sections repliables (repliées par défaut) : le chevron de l'une replie l'autre. Pensez à <strong>Enregistrer</strong> avant de quitter la page.</div>
+        </section>
+
+        <section data-guide="class" id="g_conseils">
+          <h4>Conseils et dépannage</h4>
+          <ul>
+            <li><strong>Enregistrez souvent</strong> ; surveillez le message « Données à enregistrer ! ».</li>
+            <li><strong>Un bouton manque ?</strong> Vérifiez l'état de la classe et les heures déjà planifiées : <em>Planifier tutorat / regroupements</em> disparaissent quand la cible d'heures est atteinte, <em>Planifier examen</em> avant 90 % d'heures écoulées, <em>Notifier</em> sans séance à venir, <em>Facturation</em> avant la clôture.</li>
+            <li><strong>Une semaine refusée ?</strong> Contrôlez que la date de début est bien un lundi, qu'une soirée de tutorat ne dépasse pas 3 h et que la 2<sup>e</sup> séance commence après la 1<sup>re</sup>.</li>
+            <li><strong>Un enseignant est introuvable ?</strong> Ajoutez-le d'abord dans le panneau <em>Enseignants</em> (adresse complète de 15 caractères minimum, RIB de 20 chiffres).</li>
+            <li><strong>Heures cibles à corriger ?</strong> Demandez à l'administration de modifier les constantes de la fiche.</li>
+            <li>Pour toute autre anomalie, contactez l'administration en précisant la classe et la section concernée.</li>
+          </ul>
+        </section>
+
+        <section data-guide="mod" id="g_m_vue" hidden>
+          <h4>Vue d'ensemble du module</h4>
+          <p>Depuis <strong>Mes classes</strong>, le bouton <strong>Afficher</strong> d'un module ouvre la page <strong>Formation modulaire</strong>. Elle sert à planifier les séances d'un module (tutorat et regroupement), suivre les heures et gérer les inscrits.</p>
+          <p>Sous le titre, un bandeau rappelle la fiche : <em>Etablissement, Module, Promotion, Semestre</em> (« ---- » tant qu'une information n'est pas renseignée). La barre du haut contient <strong>Retour</strong> (vers Mes classes), <strong>Editer</strong>, <strong>Enregistrer</strong>, <strong>facturation</strong> (états <em>Clôturée</em> et <em>Facturée</em> uniquement) et l'icône de <strong>déconnexion</strong>. Il n'y a pas d'impression depuis cette page.</p>
+          <div class="guide_note"><strong>Important :</strong> les modifications ne sont enregistrées sur Drive qu'avec le bouton <strong>Enregistrer</strong>. Le message orange <strong>« Données à enregistrer ! »</strong> signale ce qui n'est pas encore sauvegardé.</div>
+          <div class="guide_note">Contrairement à une classe, un module n'a <strong>ni semaines, ni plan d'étude, ni examen</strong> : vous planifiez simplement des <strong>séances</strong>. Un module peut comporter plusieurs chapitres et <strong>plusieurs enseignants</strong> : chaque séance porte son enseignant.</div>
+        </section>
+
+        <section data-guide="mod" id="g_m_editer" hidden>
+          <h4>Editer le module</h4>
+          <p>La fenêtre <em>Edition Module</em> regroupe : Etablissement, <strong>Module</strong> (saisi librement), Abréviation, Promotion, Semestre (1 ou 2 et année), <strong>Enseignant par défaut des séances</strong> (proposé à la création d'une séance, modifiable séance par séance), puis :</p>
+          <ul>
+            <li><strong>État</strong> : <em>Prévue</em>, <em>En cours</em>, <em>Clôturée</em> (et <em>Facturée</em>, réservé à l'administration).</li>
+            <li><strong>Date début</strong> : demandée dès <em>En cours</em> ; <strong>Date fin</strong> : demandée à <em>Clôturée</em> (pré-remplie avec la dernière séance planifiée, modifiable).</li>
+            <li><strong>Heures de tutorat</strong> et <strong>heures de regroupement par étudiant</strong> : saisies par l'administration, en <strong>lecture seule</strong> pour vous. Il n'y a <strong>aucune valeur par défaut</strong> : tant qu'elles sont vides, aucune cible ni aucun plafond ne s'affiche.</li>
+            <li>Le bouton <strong>Inscrits</strong> ouvre la liste des étudiants.</li>
+          </ul>
+        </section>
+
+        <section data-guide="mod" id="g_m_inscrits" hidden>
+          <h4>Inscrits du module</h4>
+          <p>Panneau ouvert via <em>Editer &gt; Inscrits</em> ; le compteur indique le nombre d'étudiants (CIN, Nom, Téléphones, Email, Actions).</p>
+          <ul>
+            <li><strong>Ajouter un étudiant</strong> : CIN, prénom, nom, téléphone(s), email.</li>
+            <li><strong>Importer xlsx</strong> : choisissez le fichier Excel, vérifiez l'aperçu, cochez les lignes puis <em>Importer la sélection</em> (<em>Tout cocher / décocher</em> disponible).</li>
+            <li><strong>Vider liste</strong> : supprime tous les inscrits — à utiliser avec précaution.</li>
+          </ul>
+        </section>
+
+        <section data-guide="mod" id="g_m_planning" hidden>
+          <h4>Planning des séances</h4>
+          <p>L'en-tête affiche <em>Tutorat : X / cible h</em> et <em>Regroupement par étudiant : X / cible h</em> (un tiret tant que la cible n'est pas saisie). <strong>Planifier une séance</strong> ouvre la fenêtre :</p>
+          <ol>
+            <li><strong>Séance</strong> : <em>Tutorat</em> ou <em>Regroupement</em>.</li>
+            <li><strong>Groupes</strong> (regroupement seulement) : <em>G1</em>, <em>G2</em> ou <em>G1 + G2</em> (classe entière).</li>
+            <li><strong>Enseignant</strong> de la séance (par défaut celui du module) et <strong>Chapitre</strong> (facultatif).</li>
+            <li><strong>Date</strong> : par défaut le lendemain de la dernière séance. Un regroupement a normalement lieu un <strong>samedi ou un dimanche</strong> ; sinon un avertissement s'affiche.</li>
+            <li><strong>Début / Fin</strong> : séance de <strong>2 h par défaut</strong> (tutorat 19:00–21:00, regroupement 08:00–10:00). Tapez l'heure en <strong>hhmm sans les deux points</strong> ; les flèches <kbd>↑</kbd> / <kbd>↓</kbd> changent de ±15 min, avec <kbd>Maj</kbd> de ±1 h.</li>
+            <li><strong>Enregistrer</strong> ; <strong>Supprimer la séance</strong> pour l'annuler.</li>
+          </ol>
+          <p>Le tableau est trié par date et donne : date, jour, début, fin, durée, séance, groupes, chapitre, enseignant ; le crayon modifie une séance.</p>
+          <h5>Contrôles automatiques</h5>
+          <ul>
+            <li>Deux séances ne peuvent pas <strong>se chevaucher</strong> le même jour (ce sont les mêmes étudiants, quel que soit l'enseignant) : la séance est refusée.</li>
+            <li><strong>Tutorat : 3 h maximum par jour.</strong> Au-delà, une confirmation est demandée.</li>
+            <li>Si les heures planifiées dépassent les <strong>heures dues par étudiant</strong>, une confirmation est demandée.</li>
+          </ul>
+          <div class="guide_note">Les heures de regroupement se comptent <strong>par étudiant</strong> : un étudiant n'appartient qu'à un groupe, donc on retient le plus grand de G1 ou G2, plus les séances G1 + G2. Une nature de séance dont les heures dues sont atteintes n'est plus proposée à la création ; <em>Planifier une séance</em> disparaît quand les deux sont atteintes, ou quand le module est <em>Facturé</em>.</div>
+        </section>
+
+        <section data-guide="mod" id="g_m_compteurs" hidden>
+          <h4>Compteurs du module</h4>
+          <p>Visibles à partir de l'état <strong>En cours</strong> (rien à compter pour un module <em>Prévu</em>). Il n'y a pas de bouton de filtre : deux tableaux s'affichent ensemble.</p>
+          <ul>
+            <li><strong>Tableau global</strong> : lignes Tutorat et Regroupement (par étudiant, avec le détail <em>dont G1</em>, <em>dont G2</em>, <em>dont G1 + G2</em>), colonnes <em>dues par étudiant</em>, <em>planifiées</em> et <em>réalisées</em>, plus un total. Une ligne <strong>sous l'objectif</strong> est colorée.</li>
+            <li><strong>Tableau par enseignant</strong> : chapitre(s), tutorat planifié, <strong>tutorat réalisé</strong>, regroupement planifié et total planifié (heures brutes de séance). Le tutorat réalisé de chaque enseignant est saisi par l'administration (voir « Check Tutorat »).</li>
+          </ul>
+        </section>
+
+        <section data-guide="mod" id="g_m_check" hidden>
+          <h4>Check Tutorat</h4>
+          <p>Quand le module est <strong>Clôturé</strong>, qu'il y a du tutorat dû ou planifié et que les heures réalisées ne sont pas encore confirmées, le bouton <strong>Check Tutorat</strong> apparaît :</p>
+          <ol>
+            <li>Il propose de <strong>copier un tableau</strong> (une ligne par enseignant : Module, Enseignant, Chapitre(s), heures planifiées, réalisées) avec le message « Merci de vérifier les heures de tutorat réalisées ci-dessous » et le rappel des heures dues par étudiant. Acceptez, puis collez-le (<kbd>Ctrl</kbd>+<kbd>V</kbd>) dans le mail à l'administration.</li>
+            <li>La première demande est datée et le module enregistré ; vous pouvez relancer ensuite.</li>
+            <li>L'administration saisit les <strong>heures réalisées de chaque enseignant</strong> en cliquant la cellule correspondante du tableau par enseignant ; le bouton disparaît dès qu'une valeur est saisie.</li>
+          </ol>
+        </section>
+
+        <section data-guide="mod" id="g_m_factu" hidden>
+          <h4>Facturation du module</h4>
+          <p>Le bouton <strong>facturation</strong> n'apparaît que lorsque le module est <strong>Clôturé</strong> (ou déjà <strong>Facturé</strong>). Il génère un dossier de même forme que celui d'une classe, en plus léger.</p>
+          <h5>Avant de lancer la facturation</h5>
+          <ul>
+            <li>Chaque séance a son <strong>enseignant</strong> (et, si besoin, son chapitre).</li>
+            <li>Les <strong>heures de tutorat réalisées</strong> de chaque enseignant sont confirmées (Check Tutorat). Sinon une confirmation est demandée et elles comptent pour 0 h.</li>
+            <li>Les dates de <strong>début et de fin</strong> sont renseignées dans <em>Editer</em>, et le module est enregistré.</li>
+          </ul>
+          <h5>La fenêtre « Facturation »</h5>
+          <ol>
+            <li><strong>N° mémoire</strong> : numéro automatique (calculé à partir de la date) ou saisi à la main.</li>
+            <li><strong>Date de la mémoire</strong> : aujourd'hui par défaut.</li>
+            <li><strong>Générer le dossier</strong> : si le numéro ou la date ont changé, le module est enregistré, puis le dossier s'ouvre à l'impression.</li>
+          </ol>
+          <h5>Contenu du dossier</h5>
+          <ul>
+            <li>Fiche signalétique du module.</li>
+            <li><strong>Mémoire de règlement</strong> et un <strong>mémoire de formation par enseignant</strong> (regroupement planifié + tutorat réalisé, au taux horaire en vigueur, retenues déduites).</li>
+            <li><strong>Liste des enseignants</strong> avec leurs chapitres.</li>
+            <li><strong>SG1</strong> (séances de regroupement, à faire signer) et <strong>SG2</strong> (décompte des heures par enseignant).</li>
+            <li>Une <strong>feuille de vérification</strong> en dernière page, avec des cases à cocher.</li>
+          </ul>
+          <div class="guide_note is_warn"><strong>Après facturation :</strong> quand l'administration passe le module à l'état <em>Facturée</em>, le N° et la date de mémoire deviennent <strong>définitifs</strong> ; la fenêtre s'ouvre en lecture seule (<strong>Voir le dossier</strong>). Vous ne pouvez pas choisir vous-même l'état <em>Facturée</em>.</div>
+        </section>
+
+        <section data-guide="mod" id="g_m_etats" hidden>
+          <h4>États du module et droits</h4>
+          <div class="guide_table_wrap">
+            <table class="guide_table">
+              <thead><tr><th>État</th><th>Dates demandées</th><th>Ce que cela change</th></tr></thead>
+              <tbody>
+                <tr><td>Prévue</td><td>Aucune</td><td>Compteurs masqués ; planification libre.</td></tr>
+                <tr><td>En cours</td><td>Début</td><td>Compteurs disponibles.</td></tr>
+                <tr><td>Clôturée</td><td>Début et fin</td><td>Check Tutorat et Facturation apparaissent.</td></tr>
+                <tr><td>Facturée</td><td>Début et fin</td><td>Réservé à l'administration. Plus aucune séance ne peut être planifiée (les existantes restent modifiables). Dossier de facturation consultable en lecture seule.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Vos droits (coordination) :</strong> vous planifiez les séances et gérez les inscrits, mais vous ne modifiez pas les heures dues par étudiant et vous ne choisissez pas l'état <em>Facturée</em> ; une fois le module facturé, son état est verrouillé de votre côté.</p>
+        </section>
+
+        <section data-guide="mod" id="g_m_conseils" hidden>
+          <h4>Conseils et dépannage (module)</h4>
+          <ul>
+            <li><strong>Enregistrez souvent</strong> ; surveillez « Données à enregistrer ! ».</li>
+            <li><strong>« Planifier une séance » a disparu ?</strong> Le module est facturé, ou les heures dues sont atteintes pour le tutorat <em>et</em> le regroupement.</li>
+            <li><strong>Séance refusée ?</strong> Vérifiez qu'elle ne chevauche pas une autre séance du même jour et que l'heure de fin est après le début.</li>
+            <li><strong>Pas de cible d'heures affichée ?</strong> Les heures dues sont saisies par l'administration : demandez-lui de les renseigner.</li>
+            <li><strong>Check Tutorat absent ?</strong> Il n'apparaît qu'à l'état Clôturé, tant que les heures réalisées ne sont pas confirmées.</li>
+            <li><strong>Facturation absente ?</strong> Elle n'apparaît qu'aux états Clôturé et Facturé.</li>
+          </ul>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+/* ============================================================
+   COORD.JS
+   Connexion indépendante de la session principale de l'app (onglet
+   "coord" de la Sheet Paramètres : Initiales | Nom | M2p | Etablissement
+   | Classes), stockée sous une clé de session distincte pour ne pas
+   interférer avec urs_current_user (index.html / *.html). Une
+   fois connecté, la section "Classes" (copie de celle de pp.html) est
+   affichée, filtrée aux classes dont le nom contient l'Etablissement
+   ET les Classes du profil connecté (ex. Etablissement "ISETS", Classes
+   "LATI Pr" -> ne montre que "ISETS LATI Pr2 4-6 1-2026" et similaires).
+   Etablissement/Classes peuvent contenir plusieurs valeurs séparées par
+   ";" (correspondance si au moins une valeur de chaque colonne matche).
+   ============================================================ */
+
+const COORD_SESSION_KEY = "urs_coord_user";
+let coordUsers = [];
+let coordUser = null;
+let coordUtilisateurSelectionne = null;
+let ppClasseListCache = [];
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("coord_btn_logout").addEventListener("click", deconnecterCoord);
+  document.getElementById("coord_login_form").addEventListener("submit", onSubmitLogin);
+  initGuide();
+
+  coordUser = getCoordUser();
+  mettreAJourEtatConnexion();
+  if (!coordUser) {
+    ouvrirModaleConnexion();
+  } else {
+    afficherClasses();
+  }
+});
+
+/* ---------------- Session coord (indépendante de session.js) ----------------
+   "Rester connecté(e)" détermine où la session est mémorisée : coché ->
+   localStorage (persiste après fermeture du navigateur), décoché ->
+   sessionStorage (effacé à la fermeture de l'onglet). getCoordUser()
+   regarde les deux (localStorage en priorité). */
+
+function getCoordUser() {
+  try {
+    const brut = localStorage.getItem(COORD_SESSION_KEY) || sessionStorage.getItem(COORD_SESSION_KEY);
+    return brut ? JSON.parse(brut) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function setCoordUser(user, resterConnecte) {
+  const { M2p, ...sansMotDePasse } = user;
+  const valeur = JSON.stringify(sansMotDePasse);
+  if (resterConnecte) {
+    localStorage.setItem(COORD_SESSION_KEY, valeur);
+    sessionStorage.removeItem(COORD_SESSION_KEY);
+  } else {
+    sessionStorage.setItem(COORD_SESSION_KEY, valeur);
+    localStorage.removeItem(COORD_SESSION_KEY);
+  }
+  coordUser = sansMotDePasse;
+}
+
+function deconnecterCoord() {
+  localStorage.removeItem(COORD_SESSION_KEY);
+  sessionStorage.removeItem(COORD_SESSION_KEY);
+  coordUser = null;
+  document.getElementById("classes").hidden = true;
+  mettreAJourEtatConnexion();
+  ouvrirModaleConnexion();
+}
+
+function initialesCoordUser(user) {
+  if (!user) return "?";
+  if (user.Initiales) return user.Initiales;
+  if (user.Nom) {
+    return user.Nom.trim().split(/\s+/).map((mot) => mot[0]).join("").toUpperCase().slice(0, 2);
+  }
+  return "?";
+}
+
+function mettreAJourEtatConnexion() {
+  const badge = document.getElementById("coord_user_badge");
+  badge.textContent = initialesCoordUser(coordUser);
+  document.getElementById("coord_btn_logout").hidden = !coordUser;
+}
+
+/* ---------------- Modale de connexion (grille d'initiales) ---------------- */
+
+function ouvrirModaleConnexion() {
+  document.getElementById("coord_login_modal").classList.add("is_visible");
+  reinitialiserFormulaireConnexion();
+  chargerProfilsConnexion();
+}
+
+function reinitialiserFormulaireConnexion() {
+  coordUtilisateurSelectionne = null;
+  document.getElementById("coord_login_password").value = "";
+  document.getElementById("coord_login_password").disabled = true;
+  document.getElementById("coord_login_error").hidden = true;
+  document.getElementById("coord_login_remember").checked = false;
+}
+
+async function chargerProfilsConnexion() {
+  const grid = document.getElementById("coord_login_users_grid");
+  grid.innerHTML = `${Spinner.html()}`;
+  try {
+    coordUsers = await apiCall("listUsersCoord", {});
+
+    if (!coordUsers.length) {
+      grid.innerHTML = `<p>Aucun utilisateur configuré (onglet "coord" de Paramètres).</p>`;
+      return;
+    }
+
+    grid.innerHTML = coordUsers.map((u, i) => {
+      const aAcces = String(u.M2p || "").trim() !== "";
+      return `
+      <button type="button" class="user_badge login_user_badge ${aAcces ? "" : "is_disabled"}"
+              data-index="${i}" ${aAcces ? "" : "disabled"}
+              ${aAcces ? "" : 'title="Accès non configuré"'}>
+        ${initialesCoordUser(u)}
+      </button>`;
+    }).join("");
+
+    grid.querySelectorAll(".login_user_badge:not(.is_disabled)").forEach((btn) => {
+      btn.addEventListener("click", () => selectionnerProfilConnexion(coordUsers[Number(btn.dataset.index)], btn));
+    });
+  } catch (err) {
+    grid.innerHTML = `<p class="error_state">Erreur : ${err.message}</p>`;
+  }
+}
+
+function selectionnerProfilConnexion(user, btn) {
+  coordUtilisateurSelectionne = user;
+  document.getElementById("coord_login_error").hidden = true;
+  document.querySelectorAll("#coord_login_users_grid .login_user_badge").forEach((b) => b.classList.remove("is_selected"));
+  btn.classList.add("is_selected");
+  const champMotDePasse = document.getElementById("coord_login_password");
+  champMotDePasse.disabled = false;
+  champMotDePasse.focus();
+}
+
+function onSubmitLogin(e) {
+  e.preventDefault();
+  const user = coordUtilisateurSelectionne;
+  const passwordInput = document.getElementById("coord_login_password");
+  const errorEl = document.getElementById("coord_login_error");
+
+  if (!user) {
+    errorEl.textContent = "Choisissez d'abord votre profil ci-dessus.";
+    errorEl.hidden = false;
+    return;
+  }
+  if (String(passwordInput.value) !== String(user.M2p || "")) {
+    errorEl.textContent = "Mot de passe incorrect.";
+    errorEl.hidden = false;
+    return;
+  }
+
+  const resterConnecte = document.getElementById("coord_login_remember").checked;
+  setCoordUser(user, resterConnecte);
+  mettreAJourEtatConnexion();
+  document.getElementById("coord_login_modal").classList.remove("is_visible");
+  afficherClasses();
+}
+
+
+/* ---------------- Modale Guide (mode d'emploi de class.html) ---------------- */
+
+
+function classesCoordUser() {
+  return String((coordUser && coordUser["Classes"]) || "")
+    .split(";").map((v) => v.trim().toLowerCase()).filter(Boolean);
+}
+
+// Un profil sans "Classes" renseignées n'a pas de guide : le bouton est masqué.
+function mettreAJourBoutonGuide() {
+  const btn = document.getElementById("coord_btn_guide");
+  if (btn) btn.hidden = !coordUser || classesCoordUser().length === 0;
+}
+
+// Adapte le guide au profil du coordinateur connecté (colonne "Classes" de
+// l'onglet "coord", valeurs séparées par ";"). Combinaisons possibles :
+//  - LA... / LTI (licence)      : guide de la page classe + rubrique PFE (6/6)
+//  - BT... / CAP (professionnel): guide de la page classe
+//  - mod... (modulaire)         : guide de la page module
+//  - licence + mod, pro + mod   : guide classe (avec PFE pour la licence) ET guide module
+// Un profil sans aucune de ces valeurs reconnues reçoit le guide classe,
+// ou le guide module s'il voit des modules.
+function profilGuideCoordUser() {
+  const valeurs = classesCoordUser();
+  const licence = valeurs.some((v) => /(^|[^a-z])(la|lti)/.test(v));
+  const pro = valeurs.some((v) => /(^|[^a-z])(bt|cap)/.test(v));
+  let mod = valeurs.some((v) => /(^|[^a-z])mod/.test(v));
+  if (!licence && !pro && !mod) {
+    mod = ppModuleListCache.some((m) => moduleVisiblePourCoordUser((m.name || "").replace(/\.html?$/i, "").replace(/_/g, " ")));
+  }
+  const classe = licence || pro || !mod;
+  return { licence, pro, mod, classe };
+}
+
+function adapterGuideAuProfil() {
+  const t = profilGuideCoordUser();
+  const visible = (g) => (g === "class" && t.classe) || (g === "licence" && t.licence) || (g === "mod" && t.mod);
+  document.querySelectorAll("#coord_guide_modal [data-guide]").forEach((el) => {
+    el.hidden = !visible(el.dataset.guide);
+  });
+  let titre;
+  if (t.mod && t.classe) titre = t.licence ? "Guide — classes de licence et modules" : "Guide — classes et modules";
+  else if (t.mod) titre = "Guide de la page « Formation modulaire »";
+  else titre = t.licence ? "Guide — classes de licence" : "Guide de la page « Classe »";
+  document.getElementById("coord_guide_titre_txt").textContent = titre;
+}
+
+function initGuide() {
+  const modal = document.getElementById("coord_guide_modal");
+  const body = document.getElementById("coord_guide_body");
+  const ouvrir = () => {
+    adapterGuideAuProfil();
+    reinitialiserRecherche();
+    modal.classList.add("is_visible");
+    document.body.style.overflow = "hidden";
+    body.scrollTop = 0;
+    document.getElementById("coord_guide_close").focus();
+  };
+  const fermer = () => {
+    reinitialiserRecherche();
+    modal.classList.remove("is_visible");
+    document.body.style.overflow = "";
+    document.getElementById("coord_btn_guide")?.focus();
+  };
+
+  // ----- Recherche dans le guide : surlignage des occurrences (sans accents ni
+  // casse), compteur n/N ; Entrée = suivante, Maj+Entrée = précédente. Seules
+  // les rubriques visibles pour le profil sont parcourues. -----
+  const champ = document.getElementById("coord_guide_search");
+  const compteur = document.getElementById("coord_guide_search_count");
+  let marques = [];
+  let courante = -1;
+  const plier = (t) => Array.from(t).map((c) => c.normalize("NFD")[0].toLowerCase()).join("");
+
+  const effacerMarques = () => {
+    body.querySelectorAll("mark.guide_mark").forEach((m) => m.replaceWith(document.createTextNode(m.textContent)));
+    body.normalize();
+    marques = [];
+    courante = -1;
+  };
+  const allerA = (i) => {
+    if (!marques.length) return;
+    if (marques[courante]) marques[courante].classList.remove("is_current");
+    courante = (i + marques.length) % marques.length;
+    const m = marques[courante];
+    m.classList.add("is_current");
+    m.scrollIntoView({ block: "center", behavior: "smooth" });
+    compteur.textContent = `${courante + 1}/${marques.length}`;
+  };
+  const rechercher = () => {
+    effacerMarques();
+    const q = plier(champ.value.trim());
+    compteur.textContent = "";
+    if (!q) return;
+    const noeuds = [];
+    const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const n = walker.currentNode;
+      if (n.parentElement && !n.parentElement.closest("[hidden]") && n.nodeValue.trim()) noeuds.push(n);
+    }
+    noeuds.forEach((n) => {
+      const texte = n.nodeValue;
+      const plie = plier(texte);
+      let debut = 0, idx = plie.indexOf(q);
+      if (idx === -1) return;
+      const frag = document.createDocumentFragment();
+      while (idx !== -1) {
+        if (idx > debut) frag.appendChild(document.createTextNode(texte.slice(debut, idx)));
+        const mk = document.createElement("mark");
+        mk.className = "guide_mark";
+        mk.textContent = texte.slice(idx, idx + q.length);
+        frag.appendChild(mk);
+        marques.push(mk);
+        debut = idx + q.length;
+        idx = plie.indexOf(q, debut);
+      }
+      if (debut < texte.length) frag.appendChild(document.createTextNode(texte.slice(debut)));
+      n.replaceWith(frag);
+    });
+    if (marques.length) allerA(0);
+    else compteur.textContent = "0 résultat";
+  };
+  champ.addEventListener("input", rechercher);
+  champ.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); allerA(courante + (e.shiftKey ? -1 : 1)); }
+    else if (e.key === "Escape" && champ.value) { e.stopPropagation(); champ.value = ""; rechercher(); }
+  });
+  const reinitialiserRecherche = () => { champ.value = ""; effacerMarques(); compteur.textContent = ""; };
+
+  document.getElementById("coord_btn_guide").addEventListener("click", ouvrir);
+  document.getElementById("coord_guide_close").addEventListener("click", fermer);
+  // Clic sur le fond (hors de la boîte) ferme la modale
+  modal.addEventListener("click", (e) => { if (e.target === modal) fermer(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.classList.contains("is_visible")) fermer();
+  });
+  // Le sommaire fait défiler le corps du guide (sans changer l'URL de la page)
+  modal.querySelectorAll(".guide_nav a").forEach((a) => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      const cible = body.querySelector(a.getAttribute("href"));
+      if (cible) body.scrollTo({ top: cible.offsetTop - body.offsetTop, behavior: "smooth" });
+    });
+  });
+}
+
+function afficherClasses() {
+  document.getElementById("classes").hidden = false;
+  mettreAJourBoutonGuide();
+  loadPPClasses();
+}
+
+let ppModuleListCache = [];
+
+// Un module n'a pas de "Classe" : le profil coord ne filtre que sur
+// l'Etablissement (le Sigle doit apparaître dans le nom du fichier).
+function moduleVisiblePourCoordUser(nomModule) {
+  if (!coordUser) return false;
+  const nom = (nomModule || "").toLowerCase();
+  const etablissements = String(coordUser["Etablissement"] || "")
+    .split(";").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return etablissements.length === 0 || etablissements.some((e) => nom.includes(e));
+}
+
+/* ---------------- Tableau des classes (repris de pp.html) ---------------- */
+
+async function loadPPClasses() {
+  const tbody = document.getElementById("pp_classe_table_body");
+  tbody.innerHTML = `${Spinner.tableRow(5)}`;
+
+  try {
+    const [classes, modules] = await Promise.all([
+      apiCall("listClassesPP", {}),
+      apiCall("listModulesPP", {}).catch(() => [])
+    ]);
+    ppClasseListCache = classes;
+    ppModuleListCache = modules;
+    renderPPClasseTable();
+  } catch (err) {
+    tbody.innerHTML = `<tr class="table_state_row"><td colspan="5"><span class="error_state">Erreur de chargement : ${err.message}</span></td></tr>`;
+  }
+}
+
+// Filtre les classes selon le profil coord connecté : le nom de fichier
+// (nomenclature "<Sigle>_<Classe>_Pr<promotion>_<niveau>_<semestre>", ex.
+// "ISETS LATI Pr2 4-6 1-2026" une fois les "_" remplacés par des espaces)
+// doit contenir au moins une valeur de la colonne Etablissement (le Sigle,
+// ex. "ISETS") ET au moins une valeur de la colonne Classes (ex. "LATI Pr").
+function classeVisiblePourCoordUser(nomClasse) {
+  if (!coordUser) return false;
+  const nom = (nomClasse || "").toLowerCase();
+
+  const decouper = (valeur) => String(valeur || "")
+    .split(";")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+
+  const etablissements = decouper(coordUser["Etablissement"]);
+  const classes = decouper(coordUser["Classes"]);
+
+  const etablissementOk = etablissements.length === 0 || etablissements.some((e) => nom.includes(e));
+  const classeOk = classes.length === 0 || classes.some((c) => nom.includes(c));
+  return etablissementOk && classeOk;
+}
+
+function renderPPClasseTable() {
+  const tbody = document.getElementById("pp_classe_table_body");
+  const emptyEl = document.getElementById("pp_classe_empty");
+
+  // Nomenclature Drive : "<Sigle>_<Classe>_Pr<promotion>_<niveau>_<semestre>"
+  // (voir nomFichierClasse() côté Code.gs, seule source de vérité pour le
+  // nom du fichier).
+  const nomClasse = (c) => {
+    let name = (c.name || "").replace(/\.html?$/i, "").replace(/_/g, " ");
+    // Afficher le niveau avec "/" : X-Y -> X/Y (ex. 4-6 -> 4/6),
+    // le semestre final (ex. 1-2026) reste inchangé.
+    name = name.replace(/(\d)-(\d)(?=\s|$)/, "$1/$2");
+    return name;
+  };
+
+  // Une classe de niveau "6/6" (dernière année de licence, mémoire de fin
+  // d'études) s'ouvre dans pfe.html au lieu de class.html — même logique
+  // que pp.html. On se base sur le champ "Niveau" du récap (voir
+  // listClassesPP() côté Code.gs), avec repli sur le nom de fichier
+  // (…_6-6_…, "/" y étant remplacé par "-", cf. nomFichierClasse() côté
+  // Code.gs) si ce champ n'est pas renvoyé par le backend. class.html /
+  // pfe.html importent ensuite eux-mêmes la classe depuis Drive via ce
+  // paramètre "gclasse" (chargerClasse) : coord.html ne fait qu'y rediriger.
+  const estNiveau6sur6 = (c) => (c["Niveau"] || "").trim() === "6/6" || /_6-6_/.test(c.name || "");
+  const urlClasse = (c) => `${estNiveau6sur6(c) ? "pfe.html" : "class.html"}?gclasse=${c.id}`;
+
+  // Les modules (formation modulaire) sont listés avec les classes ; ils ne
+  // sont filtrés que sur l'Etablissement du profil (pas de "Classe").
+  const nomModule = (c) => (c.name || "").replace(/\.html?$/i, "").replace(/_/g, " ");
+  const nomAffiche = (c) => c._type === "module" ? nomModule(c) : nomClasse(c);
+  const tous = ppClasseListCache.filter((c) => classeVisiblePourCoordUser(nomClasse(c))).map((c) => ({ ...c, _type: "classe" }))
+    .concat(ppModuleListCache.filter((c) => moduleVisiblePourCoordUser(nomModule(c))).map((c) => ({ ...c, _type: "module" })));
+  // Tri : d'abord par état (En cours, Prévue, Clôturée, Facturée), puis par
+  // nom à l'intérieur d'un même état. "Prévue" est l'état par défaut quand
+  // rien n'est enregistré (même règle que le badge ci-dessous).
+  const etatBrut = (c) => (c.etat || c["État"] || c["Etat"] || "").trim() || "Prévue";
+  const ORDRE_ETATS = { "En cours": 0, "Prévue": 1, "Close": 2, "Facturée": 3 };
+  const rangEtat = (c) => ORDRE_ETATS[etatBrut(c)] ?? 99;
+  const filtered = tous
+    .sort((a, b) => rangEtat(a) - rangEtat(b)
+      || nomAffiche(a).localeCompare(nomAffiche(b), "fr", { numeric: true, sensitivity: "base" }));
+
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "";
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+  if (emptyEl) emptyEl.hidden = true;
+
+  // État de la classe (même libellé que le tableau de pp.html#classes) :
+  // champ "etat" de la fiche classe, repli sur la colonne du récap.
+  // Badge coloré pour rendre l'état lisible d'un coup d'œil. La valeur
+  // brute vient du récap Drive (listClassesPP) ou du champ "etat" de la
+  // fiche ; "Prévue" est la valeur par défaut quand rien n'est enregistré.
+  const etatBadge = (c) => {
+    const brut = etatBrut(c);
+    const libelle = brut === "Close" ? "Clôturée" : brut;
+    const cls = brut === "Prévue" ? "is_prevue"
+      : brut === "En cours" ? "is_actif"
+      : brut === "Facturée" ? "is_facture"
+      : "is_close";
+    return `<span class="etat_badge ${cls}">${libelle}</span>`;
+  };
+
+  tbody.innerHTML = filtered.map((c) => `
+    <tr>
+      <td>${nomAffiche(c)}</td>
+      <td>${c["Début"] || ""}</td>
+      <td>${c["Fin"] || ""}</td>
+      <td>${etatBadge(c)}</td>
+      <td><div class="row_btns">
+        <a class="btn_info" href="${c._type === "module" ? `mod.html?gmodule=${c.id}` : urlClasse(c)}">
+          <i class="bi bi-eye"></i> Afficher
+        </a>
+      </div></td>
+    </tr>`).join("");
+}
+  </script>
+</body>
+</html>
