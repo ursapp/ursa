@@ -1815,6 +1815,20 @@
         if (breadcrumb) breadcrumb.hidden = true;
         const eyebrow = document.querySelector(".page_eyebrow");
         if (eyebrow) eyebrow.textContent = "COORD · COORDINATION";
+        // Déconnexion (session coordination) : efface urs_coord_user puis retour à coord.html.
+        const btnLogout = document.getElementById("navbar_btn_logout");
+        if (btnLogout) {
+          btnLogout.hidden = false;
+          btnLogout.addEventListener("click", () => {
+            const alerte = document.getElementById("navbar_alert_save");
+            if (alerte && !alerte.hidden && !confirm("Des données ne sont pas enregistrées. Se déconnecter quand même ?")) return;
+            try {
+              localStorage.removeItem("urs_coord_user");
+              sessionStorage.removeItem("urs_coord_user");
+            } catch (err) { /* stockage indisponible : on redirige quand même */ }
+            window.location.href = "coord.html";
+          });
+        }
         // "Facturée" est un état réservé à l'admin (pp) : le coordinateur
         // ne peut pas le choisir dans la liste (option masquée +
         // désactivée), mais l'option reste dans le DOM pour que la valeur
@@ -1848,6 +1862,7 @@
       try {
         await Promise.all([loadPartenaireOptions(), loadEnsFormOptions(), chargerFraisPP()]);
         await chargerClasseExistante(fileId);
+        rafraichirSelectEnseignants();
         actualiserInfosFiche();
         updateDateVisibility();
       } finally {
@@ -2569,23 +2584,60 @@
       }
     }
 
+    // Établissement de la classe (même valeur que le select de la fiche :
+    // Sigle, à défaut Etablissement). Sert de critère de filtre sur la colonne
+    // "Etablissement" de l'onglet "ensform".
+    function etablissementClasse() {
+      return document.getElementById("classe_partenaire")?.value || "";
+    }
+
+    // Un enregistrement ensform appartient à l'établissement de la classe si sa
+    // colonne "Etablissement" correspond au sigle OU au nom complet du
+    // partenaire (comparaison insensible à la casse et aux espaces).
+    function ensDeLEtablissement(rec) {
+      const val = String((rec && rec["Etablissement"]) || "").trim().toLowerCase();
+      if (!val) return false;
+      const cle = etablissementClasse();
+      const partner = partenairesCache.find(p => (p["Sigle"] || p["Etablissement"]) === cle);
+      const candidats = [cle, partner && partner["Sigle"], partner && partner["Etablissement"]]
+        .map(v => String(v || "").trim().toLowerCase()).filter(Boolean);
+      return candidats.includes(val);
+    }
+
+    // Enseignants proposables : rôle voulu + établissement de la classe. Les noms
+    // déjà utilisés par la classe (matières) restent toujours visibles, pour ne
+    // pas faire disparaître une affectation existante dont la ligne ensform n'a
+    // pas (encore) d'établissement renseigné.
+    function ensFiltres(role, nomsConserves = []) {
+      return (ensFormCache || []).filter((e) =>
+        (e["Rôle"] || "").split(";").map(r => r.trim()).includes(role) &&
+        (ensDeLEtablissement(e) || nomsConserves.includes(nomCompletEns(e)))
+      );
+    }
+
+    function rafraichirSelectEnseignants(valeurActuelle) {
+      const select = document.getElementById("matiere_enseignant");
+      if (!select) return;
+      const utilises = matieres.map(m => m.enseignant).filter(Boolean);
+      select.innerHTML = `<option value="">Aucun enseignant</option>` +
+        `<option value="__new__">+ Nouvel enseignant...</option>` +
+        // On exclut les intervenants dont le seul rôle est "Coordinateur"
+        // (ils ne peuvent pas être assignés comme enseignant d'une matière).
+        ensFiltres("Enseignant", utilises)
+          .map((e) => {
+            const nom = nomCompletEns(e);
+            const role = (e["Rôle"] || "").replace(";", " et ");
+            return `<option value="${nom}">${nom}${role ? " (" + role + ")" : ""}</option>`;
+          })
+          .join("");
+      if (valeurActuelle) select.value = valeurActuelle;
+    }
+
     async function loadEnsFormOptions(valeurActuelle) {
       const select = document.getElementById("matiere_enseignant");
       try {
         ensFormCache = await apiCallDirect("listEnsForm", {});
-        select.innerHTML = `<option value="">Aucun enseignant</option>` +
-          `<option value="__new__">+ Nouvel enseignant...</option>` +
-          ensFormCache
-            // On exclut les intervenants dont le seul rôle est "Coordinateur"
-            // (ils ne peuvent pas être assignés comme enseignant d'une matière).
-            .filter((e) => (e["Rôle"] || "").split(";").map(r => r.trim()).includes("Enseignant"))
-            .map((e) => {
-              const nom = nomCompletEns(e);
-              const role = (e["Rôle"] || "").replace(";", " et ");
-              return `<option value="${nom}">${nom}${role ? " (" + role + ")" : ""}</option>`;
-            })
-            .join("");
-        if (valeurActuelle) select.value = valeurActuelle;
+        rafraichirSelectEnseignants(valeurActuelle);
       } catch (err) {
         select.innerHTML = `<option value="">Erreur de chargement</option>`;
       }
@@ -2596,7 +2648,7 @@
     // comme enseignant de la matière. Retourne null si la validation échoue
     // ou en cas d'erreur réseau (le formulaire matière ne doit alors pas
     // être soumis). En-têtes cibles de l'onglet "ensform" : CIN | Prénom |
-    // Nom | Rôle | Coordonnées | Banque | RIB | Fonction (Coordonnées =
+    // Nom | Rôle | Etablissement | Coordonnées | Banque | RIB | Fonction (Coordonnées =
     // Tél/Email/Adresse combinés, même principe que "partpp" ; Fonction =
     // intitulé utilisé dans le mémoire individuel de coordination).
     async function creerEnseignantDepuisFormulaire() {
@@ -2637,6 +2689,7 @@
         "Prénom": prenom,
         "Nom": nom,
         "Rôle": document.getElementById("ens_new_role").value,
+        "Etablissement": etablissementClasse(),
         "Coordonnées": coordonnees,
         "Banque": document.getElementById("ens_new_banque").value.trim(),
         "RIB": rib,
@@ -2797,6 +2850,8 @@
         "Prénom": document.getElementById("enseignant_prenom").value.trim(),
         "Nom": nom,
         "Rôle": document.getElementById("enseignant_role").value,
+        // Création : établissement de la classe ; édition : on conserve celui déjà enregistré.
+        "Etablissement": (row && (ensFormCache || []).find((x) => Number(x._row) === Number(row))?.["Etablissement"]) || etablissementClasse(),
         "Coordonnées": coordonnees,
         "Banque": document.getElementById("enseignant_banque").value.trim(),
         "RIB": rib,
@@ -3002,8 +3057,7 @@
       if (!select) return;
       select.innerHTML = `<option value="">----</option>` +
         `<option value="__new__">+ Nouveau intervenant...</option>` +
-        (ensFormCache || [])
-          .filter((e) => (e["Rôle"] || "").split(";").map(r => r.trim()).includes("Coordinateur"))
+        ensFiltres("Coordinateur", [valeurActuelle, ...intervenants.map(it => it.nom)].filter(Boolean))
           .map((e) => {
             const nom = nomCompletEns(e);
             return `<option value="${nom}">${nom}</option>`;
@@ -3079,6 +3133,7 @@
         "Prénom": prenom,
         "Nom": nom,
         "Rôle": "Coordinateur",
+        "Etablissement": etablissementClasse(),
         "Coordonnées": coordonnees,
         "Banque": banque,
         "RIB": rib,
@@ -7829,8 +7884,7 @@
     // Enseignants sélectionnables comme surveillant G2 : tous les
     // enseignants sauf celui de la matière de l'examen.
     function getExamEnseignantOptionsHTML(selected, exclude) {
-      const list = (ensFormCache || [])
-        .filter(e => (e["Rôle"] || "").split(";").map(r => r.trim()).includes("Enseignant"))
+      const list = ensFiltres("Enseignant", [selected].filter(Boolean))
         .filter(e => nomCompletEns(e) !== exclude);
       let html = `<option value="">----</option>`;
       html += list.map(e => {
