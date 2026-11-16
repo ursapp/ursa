@@ -149,6 +149,14 @@
   }
 }
 
+/* Sections des pages métier : ni fond blanc ni padding — le header pêche et
+   le tableau reposent directement sur le fond de page et le header occupe
+   toute la largeur de la section. */
+.block_metiers {
+  background: transparent;
+  padding: 0;
+}
+
 /* Pages à sidebar : le .panel occupe toute la largeur sans marge (voir
    .app_shell .app_content ci-dessus, sans padding latéral) donc plus de
    coins arrondis, plus de bordure ; fond teinté de la couleur du sidebar
