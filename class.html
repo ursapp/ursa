@@ -1273,7 +1273,7 @@
           <i class="bi bi-printer"></i> Imprimer
         </button>
         <button type="button" class="btn_info no_mobile" id="matiere_btn_nouveau">
-          <i class="bi bi-plus-lg"></i> Ajouter une matière
+          <i class="bi bi-plus-lg"></i> <span id="matiere_btn_nouveau_label">Ajouter</span>
         </button>
         <button type="button" class="btn_info section_toggle_btn" id="plan_btn_hide" title="Développer la section" aria-label="Développer la section">
           <i class="bi bi-chevron-down"></i>
@@ -2345,7 +2345,7 @@
         document.getElementById("classe_specialite").innerHTML = `<option value="">----</option>`;
         document.getElementById("classe_niveau").innerHTML = `<option value="">----</option>`;
         if (partner) {
-          const domaine = (partner["Domaine"] || "").toString().trim().toUpperCase();
+          const domaine = normaliserDomaine(partner["Domaine"]);
           if (domaine === "ES") {
             classeSelect.insertAdjacentHTML("beforeend", `<option value="LA">Licence (LA)</option>`);
           } else if (domaine === "FP") {
@@ -2604,6 +2604,7 @@
           })
           .join("");
         if (valeurActuelle) select.value = valeurActuelle;
+        appliquerTerminologieDomaine();
       } catch (err) {
         select.innerHTML = `<option value="">Erreur de chargement</option>`;
       }
@@ -2746,27 +2747,39 @@
     }
 
     // Alerte bas-droite : enseignants du plan d'étude dont la Banque et/ou le
-    // RIB manquent dans la base ensform. Libellé affiché au survol (CSS).
+    // RIB manquent dans la base ensform, et matières sans enseignant attribué.
+    // Libellé affiché au survol (CSS).
     let ensFormCharge = false;
     function majAlerteEnseignants() {
       const box = document.getElementById("alerte_ens_bancaire");
       const tip = document.getElementById("alerte_ens_bancaire_tip");
       if (!box || !tip) return;
-      if (!ensFormCharge) { box.hidden = true; return; }
-      const manque = (rec, bq, rb) => !String((rec && rec["Banque"]) || bq || "").trim() || !String((rec && rec["RIB"]) || rb || "").trim();
-      const trouver = (nom) => (ensFormCache || []).find((e) => nomCompletEns(e) === nom);
-      const noms = [...new Set((matieres || []).map((m) => m.enseignant).filter(Boolean))];
-      const incomplets = noms.filter((nom) => {
-        const rec = trouver(nom);
-        return !rec || manque(rec);
-      });
-      // Intervenants de coordination : banque/RIB de la base ensform, à défaut ceux saisis sur la ligne.
-      (intervenants || []).forEach((it) => {
-        if (!it || !it.nom || incomplets.includes(it.nom)) return;
-        if (manque(trouver(it.nom), it.banque, it.rib)) incomplets.push(it.nom);
-      });
-      if (incomplets.length === 0) { box.hidden = true; return; }
-      tip.innerHTML = `Banque et/ou RIB manquant pour :<ul>${incomplets.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`;
+      // Matières du plan d'étude sans enseignant attribué (contrôle possible
+      // même avant le chargement de la base ensform).
+      const sansEns = [...new Set((matieres || [])
+        .filter((m) => m && !String(m.enseignant || "").trim())
+        .map((m) => String(m.matiere || "").trim())
+        .filter(Boolean))];
+      let incomplets = [];
+      if (ensFormCharge) {
+        const manque = (rec, bq, rb) => !String((rec && rec["Banque"]) || bq || "").trim() || !String((rec && rec["RIB"]) || rb || "").trim();
+        const trouver = (nom) => (ensFormCache || []).find((e) => nomCompletEns(e) === nom);
+        const noms = [...new Set((matieres || []).map((m) => m.enseignant).filter(Boolean))];
+        incomplets = noms.filter((nom) => {
+          const rec = trouver(nom);
+          return !rec || manque(rec);
+        });
+        // Intervenants de coordination : banque/RIB de la base ensform, à défaut ceux saisis sur la ligne.
+        (intervenants || []).forEach((it) => {
+          if (!it || !it.nom || incomplets.includes(it.nom)) return;
+          if (manque(trouver(it.nom), it.banque, it.rib)) incomplets.push(it.nom);
+        });
+      }
+      if (incomplets.length === 0 && sansEns.length === 0) { box.hidden = true; return; }
+      let html = "";
+      if (sansEns.length) html += `${sansEns.length > 1 ? "Matières" : "Matière"} sans enseignant :<ul>${sansEns.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`;
+      if (incomplets.length) html += `Banque et/ou RIB manquant pour :<ul>${incomplets.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`;
+      tip.innerHTML = html;
       box.hidden = false;
     }
 
@@ -2967,7 +2980,112 @@
       setSpan("semestre", (semNum && semAnnee) ? `${semNum}-${semAnnee}` : "----");
       updateInscritsPrecedentVisibility();
       updateFraisPrecedentVisibility();
+      appliquerTerminologieDomaine();
     }
+
+    /* ===== Terminologie selon le Domaine de l'établissement (partpp :
+       Etablissement | Arabe | Sigle | Domaine) =====
+       FP (Formation Professionnelle) : compétence / formateur
+       ES (Enseignement supérieur)    : matière / enseignant (termes d'origine) */
+    function normaliserDomaine(v) {
+      const t = (v || "").toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (t === "fp" || t.startsWith("formation")) return "FP";
+      if (t === "es" || t.startsWith("enseignement")) return "ES";
+      return "";
+    }
+    let terminoDomaine = "ES";
+    const terminoOrig = new WeakMap();      // Text node -> texte d'origine
+    const terminoAttrOrig = new WeakMap();  // Element -> {attr: valeur d'origine}
+    const TERMINO_ATTRS = ["title", "placeholder", "aria-label"];
+    const TERMINO_FP = [
+      [/\bmatières\b/g, "compétences"], [/\bMatières\b/g, "Compétences"], [/\bMATIÈRES\b/g, "COMPÉTENCES"],
+      [/\bmatière(s?)\b/g, "compétence$1"], [/\bMatière/g, "Compétence"], [/\bMATIÈRE/g, "COMPÉTENCE"],
+      [/\benseignant(e?)(s?)\b/g, (m, f, pl) => (f ? "formatrice" : "formateur") + pl],
+      [/\bEnseignant(e?)(s?)\b/g, (m, f, pl) => (f ? "Formatrice" : "Formateur") + pl],
+      [/\bENSEIGNANT(S?)\b/g, "FORMATEUR$1"],
+      [/\benseignée(s?)\b/g, "dispensée$1"], [/\benseigné(s?)\b/g, "dispensé$1"]
+    ];
+    function terminoConvertir(txt) {
+      if (terminoDomaine !== "FP" || !txt) return txt;
+      let out = txt;
+      for (const [re, rep] of TERMINO_FP) out = out.replace(re, rep);
+      return out;
+    }
+    let terminoBusy = false;
+    function terminoTraiterNoeud(root) {
+      if (!root) return;
+      if (root.nodeType === 3) {
+        const par = root.parentNode;
+        if (par && /^(SCRIPT|STYLE|TEXTAREA)$/.test(par.nodeName)) return;
+        let orig = terminoOrig.get(root);
+        // Texte modifié par l'application depuis : il devient le nouvel original
+        if (orig === undefined || root.__terminoLast !== root.nodeValue) orig = root.nodeValue;
+        terminoOrig.set(root, orig);
+        const v = terminoConvertir(orig);
+        if (root.nodeValue !== v) root.nodeValue = v;
+        root.__terminoLast = v;
+        return;
+      }
+      if (root.nodeType !== 1 || /^(SCRIPT|STYLE|TEXTAREA)$/.test(root.nodeName)) return;
+      let store = terminoAttrOrig.get(root);
+      for (const a of TERMINO_ATTRS) {
+        if (!root.hasAttribute(a)) continue;
+        const cur = root.getAttribute(a);
+        store = store || {};
+        if (store[a] === undefined || store["_" + a] !== cur) store[a] = cur;
+        const v = terminoConvertir(store[a]);
+        if (cur !== v) root.setAttribute(a, v);
+        store["_" + a] = v;
+      }
+      if (store) terminoAttrOrig.set(root, store);
+      for (const c of root.childNodes) terminoTraiterNoeud(c);
+    }
+    function terminoAppliquerTout() {
+      terminoBusy = true;
+      try {
+        terminoTraiterNoeud(document.body);
+        document.title = terminoConvertir(document.__terminoTitle ??= document.title);
+      } finally { terminoBusy = false; }
+    }
+    function appliquerTerminologieDomaine() {
+      const sel = document.getElementById("classe_partenaire");
+      const val = sel ? sel.value : "";
+      const partner = (typeof partenairesCache !== "undefined" ? partenairesCache : [])
+        .find(p => (p["Sigle"] || p["Etablissement"]) === val);
+      const dom = partner ? normaliserDomaine(partner["Domaine"]) : "";
+      const nouveau = dom === "FP" ? "FP" : "ES";
+      if (nouveau === terminoDomaine && document.body.__terminoInit) {
+        const l = document.getElementById("matiere_btn_nouveau_label");
+        if (l && partner) l.textContent = nouveau === "FP" ? "Ajouter une compétence" : "Ajouter une matière";
+        return;
+      }
+      terminoDomaine = nouveau;
+      document.body.__terminoInit = true;
+      terminoAppliquerTout();
+      // Libellé du bouton : "Ajouter" pendant le chargement, puis selon le domaine
+      const lbl = document.getElementById("matiere_btn_nouveau_label");
+      if (lbl && partner) lbl.textContent = nouveau === "FP" ? "Ajouter une compétence" : "Ajouter une matière";
+    }
+    // Contenu généré dynamiquement (tableaux, modales...) : on l'adapte aussi
+    new MutationObserver(muts => {
+      if (terminoBusy || terminoDomaine !== "FP") return;
+      terminoBusy = true;
+      try {
+        for (const m of muts) {
+          if (m.type === "characterData") terminoTraiterNoeud(m.target);
+          else if (m.type === "attributes") terminoTraiterNoeud(m.target);
+          else m.addedNodes.forEach(terminoTraiterNoeud);
+        }
+      } finally { terminoBusy = false; }
+    }).observe(document.documentElement, {
+      childList: true, subtree: true, characterData: true,
+      attributes: true, attributeFilter: TERMINO_ATTRS
+    });
+    // Messages alert / confirm / prompt
+    ["alert", "confirm", "prompt"].forEach(fn => {
+      const o = window[fn].bind(window);
+      window[fn] = (msg, ...rest) => o(terminoConvertir(String(msg ?? "")), ...rest);
+    });
 
     // ------------------------------------------------------------
     // LISTE DES INSCRITS
