@@ -803,6 +803,9 @@
             <label>Heures de tutorat par étudiant
               <input type="number" id="classe_heures_tutorat" min="0" step="0.5" value="140" />
             </label>
+            <label class="print_check" id="label_tutorat_3h">
+              <input type="checkbox" id="classe_tutorat_3h" /> Tutorat 3 heures
+            </label>
             <label>Heures de regroupement par étudiant
               <input type="number" id="classe_heures_reg" min="84" step="0.5" value="84" title="84 h minimum ; au-delà, le compteur global s'adapte à cette valeur" />
             </label>
@@ -1054,14 +1057,14 @@
                      séances d'examen — le renommer casserait ces liens (voir
                      openEnseignantForm/openEnseignantFormNouveau, qui basculent
                      l'attribut readonly selon le mode). -->
+                <label class="ens_new_cin">CIN
+                  <input type="text" id="enseignant_cin" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 chiffres" />
+                </label>
                 <label class="ens_new_prenom">Prénom
                   <input type="text" id="enseignant_prenom" />
                 </label>
                 <label class="ens_new_nom">Nom
                   <input type="text" id="enseignant_nom" required />
-                </label>
-                <label class="ens_new_cin">CIN
-                  <input type="text" id="enseignant_cin" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 chiffres" />
                 </label>
                 <label class="ens_new_telephone">Téléphone
                   <input type="tel" id="enseignant_telephone" required />
@@ -1422,25 +1425,16 @@
         <div class="modal_body">
           <form id="tut_week_form">
             <input type="hidden" id="tut_week_edit_index" />
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space_3); margin-bottom: var(--space_3);">
-              <label style="display:flex; flex-direction:column; gap:var(--space_1); font-size:var(--fs_sm); color:var(--text_secondary);">
-                Semaine
-                <input type="number" id="tut_week_num" min="1" step="1" required />
-              </label>
-              <label style="display:flex; flex-direction:column; gap:var(--space_1); font-size:var(--fs_sm); color:var(--text_secondary);">
-                Date de début (lundi)
-                <input type="date" id="tut_week_date" required />
-                <span id="tut_week_date_warning" class="tut_time_hint_warning" hidden>
-                  <i class="bi bi-exclamation-triangle"></i> Cette date n'est pas un lundi (vacances / jour férié ?).
-                </span>
-              </label>
-            </div>
+            <!-- Numéro de semaine et date de début (lundi) : attribués automatiquement
+                 (semaine suivante / lundi suivant la dernière séance) ou conservés tels
+                 quels pour une semaine existante (comme la modale Regroupement). -->
+            <input type="hidden" id="tut_week_num" />
+            <input type="hidden" id="tut_week_date" />
 
-            <h4 style="margin: var(--space_3) 0 var(--space_2) 0;">Séances par jour</h4>
-            <p class="seq_time_hint">
+                        <p class="seq_time_hint">
               <i class="bi bi-info-circle"></i> saisir heure hhmm sans les deux points (:) — changer heure par flèches ↑ / ↓ : +/- 15 min (↑ / ↓ + Maj : +/- 1 h)
             </p>
-            <p class="seq_time_hint">
+            <p class="seq_time_hint" id="tut_hint_3h">
               <i class="bi bi-info-circle"></i> séance de 2 h par défaut — une soirée peut durer jusqu'à 3 h : 1 séance de 3 h, ou 2 séances (bouton +) dont le total ne dépasse pas 3 h
             </p>
             <p class="seq_time_hint">
@@ -1667,6 +1661,9 @@
     const HEURES_TUTORAT_DEFAUT = 140;
     const HEURES_REG_DEFAUT = 84;
     let heuresTutoratEtudiant = HEURES_TUTORAT_DEFAUT;
+    // "Tutorat 3 heures" (case admin, modale Editer) : coché = soirée jusqu'à
+    // 3 h (1 ou 2 séances, durée libre) ; décoché = séance unique de 2 h exactement.
+    function tutorat3h() { return !!document.getElementById("classe_tutorat_3h")?.checked; }
     let heuresRegEtudiant = HEURES_REG_DEFAUT;
     // Pas de plafond sur le nombre de semaines : on peut planifier une
     // nouvelle semaine (tutorat ou regroupement) tant que les heures
@@ -1862,10 +1859,13 @@
         if (optFacturee) { optFacturee.hidden = true; optFacturee.disabled = true; }
         // Constantes d'heures par étudiant : réservées à l'admin, le
         // coordinateur les voit mais ne peut pas les modifier.
-        ["classe_heures_tutorat", "classe_heures_reg"].forEach(id => {
+        ["classe_heures_tutorat", "classe_heures_reg", "classe_tutorat_3h"].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.disabled = true;
         });
+        // Case "Tutorat 3 heures" : invisible en accès invité.
+        const lbl3h = document.getElementById("label_tutorat_3h");
+        if (lbl3h) { lbl3h.hidden = true; lbl3h.style.display = "none"; }
       }
 
       // Le spinner couvre tout le chargement initial (options partenaires /
@@ -2052,6 +2052,7 @@
           setUnsavedChanges();
         }
       });
+      document.getElementById("classe_tutorat_3h")?.addEventListener("change", () => setUnsavedChanges());
       ["classe_heures_tutorat", "classe_heures_reg"].forEach(id => {
         document.getElementById(id)?.addEventListener("input", () => {
           lireConstantesDepuisFormulaire();
@@ -2450,12 +2451,35 @@
         if (container) container.hidden = e.target.value !== "__new__";
       });
       // Prénom : première lettre en majuscule ; Nom : tout en majuscule (mise en forme en direct)
-      document.getElementById("ens_new_prenom")?.addEventListener("input", (e) => {
-        const v = e.target.value;
-        e.target.value = v ? v.charAt(0).toUpperCase() + v.slice(1) : v;
+      ["ens_new_prenom", "enseignant_prenom"].forEach((id) => {
+        document.getElementById(id)?.addEventListener("input", (e) => {
+          const v = e.target.value;
+          e.target.value = v ? v.charAt(0).toUpperCase() + v.slice(1) : v;
+        });
       });
-      document.getElementById("ens_new_nom")?.addEventListener("input", (e) => {
-        e.target.value = e.target.value.toUpperCase();
+      ["ens_new_email", "enseignant_email", "fint_new_email"].forEach((id) => {
+        document.getElementById(id)?.addEventListener("input", (e) => {
+          e.target.value = e.target.value.toLowerCase();
+        });
+      });
+      // Rôle Enseignant (Formateur en FP) : recopié dans Fonction tant que celle-ci
+      // est vide ou contient encore la valeur recopiée automatiquement.
+      [["ens_new_role", "ens_new_fonction"], ["enseignant_role", "enseignant_fonction"]].forEach(([r, f]) => {
+        document.getElementById(r)?.addEventListener("change", (e) => {
+          const fonc = document.getElementById(f);
+          if (!fonc) return;
+          const auto = ["Enseignant", "Formateur"];
+          if (e.target.value === "Enseignant") {
+            if (!fonc.value.trim() || auto.includes(fonc.value.trim())) fonc.value = terminoConvertir("Enseignant");
+          } else if (auto.includes(fonc.value.trim())) {
+            fonc.value = "";
+          }
+        });
+      });
+      ["ens_new_nom", "enseignant_nom"].forEach((id) => {
+        document.getElementById(id)?.addEventListener("input", (e) => {
+          e.target.value = e.target.value.toUpperCase();
+        });
       });
       // Reg. G2 toujours égal à Reg. G1
       document.getElementById("matiere_reg_g1")?.addEventListener("input", (e) => {
@@ -2679,50 +2703,71 @@
     // Nom | Rôle | Etablissement | Coordonnées | Banque | RIB | Fonction (Coordonnées =
     // Tél/Email/Adresse combinés, même principe que "partpp" ; Fonction =
     // intitulé utilisé dans le mémoire individuel de coordination).
-    async function creerEnseignantDepuisFormulaire() {
-      const cin = document.getElementById("ens_new_cin").value.trim();
+    // Un numéro de téléphone comporte 8 chiffres et ne commence jamais par
+    // 0, 1, 6 ou 8 (préfixe +216 / 00216 et séparateurs tolérés).
+    function telephoneValide(t) {
+      const c = String(t || "").replace(/[\s.\-]/g, "").replace(/^(\+|00)216/, "");
+      return /^[2-579][0-9]{7}$/.test(c);
+    }
+    const MSG_TEL = "Le numéro de téléphone doit comporter 8 chiffres et ne commence jamais par 0, 1, 6 ou 8.";
+
+    // Lecture + validation communes aux deux formulaires enseignant
+    // (prefix "ens_new_" = ajout rapide Matière, "enseignant_" = modale Editer).
+    // cinObligatoire : CIN de 8 chiffres exigé (toute création). Retourne
+    // { record (sans Etablissement), nomComplet } ou null si validation échouée.
+    function lireEnseignantDepuisChamps(prefix, cinObligatoire) {
+      const val = (k) => document.getElementById(prefix + k).value.trim();
+      const cin = val("cin");
+      if (cinObligatoire && !cin) {
+        alert("Le CIN est obligatoire (8 chiffres).");
+        return null;
+      }
       if (cin && !/^[0-9]{8}$/.test(cin)) {
         alert("Le CIN doit comporter exactement 8 chiffres.");
         return null;
       }
-      const rib = document.getElementById("ens_new_rib").value.trim();
+      const rib = val("rib");
       if (rib && !/^[0-9]{20}$/.test(rib)) {
         alert("Le RIB doit comporter exactement 20 chiffres.");
         return null;
       }
-      const prenom = document.getElementById("ens_new_prenom").value.trim();
-      const nom = document.getElementById("ens_new_nom").value.trim();
+      const prenom = val("prenom");
+      const nom = val("nom");
       if (!nom) { alert("Le nom de l'enseignant est requis."); return null; }
-      const nomComplet = prenom ? `${prenom} ${nom}` : nom;
-
-      const telephone = document.getElementById("ens_new_telephone").value.trim();
-      const email = document.getElementById("ens_new_email").value.trim();
-      const adresse = document.getElementById("ens_new_adresse").value.trim();
+      const telephone = val("telephone");
+      const email = val("email").toLowerCase();
+      const adresse = val("adresse");
       if (!telephone || !email || !adresse) {
         alert("Téléphone, email et adresse sont obligatoires.");
         return null;
       }
+      if (!telephoneValide(telephone)) { alert(MSG_TEL); return null; }
       if (adresse.length < 15) {
         alert("Merci de saisir l'adresse personnelle complète (rue, ville...), au moins 15 caractères.");
         return null;
       }
-      const coordonnees = [
-        telephone ? `Tél : ${telephone}` : "",
-        email ? `Email : ${email}` : "",
-        adresse ? `Adresse : ${adresse}` : ""
-      ].filter(Boolean).join("\n");
-
-      const record = {
-        "CIN": cin,
-        "Prénom": prenom,
-        "Nom": nom,
-        "Rôle": document.getElementById("ens_new_role").value,
-        "Etablissement": etablissementClasse(),
-        "Coordonnées": coordonnees,
-        "Banque": document.getElementById("ens_new_banque").value.trim(),
-        "RIB": rib,
-        "Fonction": document.getElementById("ens_new_fonction").value.trim()
+      const coordonnees = [`Tél : ${telephone}`, `Email : ${email}`, `Adresse : ${adresse}`].join("\n");
+      return {
+        nomComplet: prenom ? `${prenom} ${nom}` : nom,
+        record: {
+          "CIN": cin,
+          "Prénom": prenom,
+          "Nom": nom,
+          "Rôle": document.getElementById(prefix + "role").value,
+          "Coordonnées": coordonnees,
+          "Banque": val("banque"),
+          "RIB": rib,
+          // Rôle Enseignant : la fonction reprend le rôle (Formateur en FP) si vide
+          "Fonction": val("fonction") || (document.getElementById(prefix + "role").value === "Enseignant" ? terminoConvertir("Enseignant") : "")
+        }
       };
+    }
+
+    async function creerEnseignantDepuisFormulaire() {
+      const lu = lireEnseignantDepuisChamps("ens_new_", true);
+      if (!lu) return null;
+      const nomComplet = lu.nomComplet;
+      const record = { ...lu.record, "Etablissement": etablissementClasse() };
       try {
         await apiCallDirect("createEnsForm", { record });
         await loadEnsFormOptions(nomComplet);
@@ -2882,46 +2927,15 @@
     // pas par nom.
     async function onSubmitEnseignantForm(e) {
       e.preventDefault();
-      const cin = document.getElementById("enseignant_cin").value.trim();
-      if (cin && !/^[0-9]{8}$/.test(cin)) {
-        alert("Le CIN doit comporter exactement 8 chiffres.");
-        return;
-      }
-      const rib = document.getElementById("enseignant_rib").value.trim();
-      if (rib && !/^[0-9]{20}$/.test(rib)) {
-        alert("Le RIB doit comporter exactement 20 chiffres.");
-        return;
-      }
-      const nom = document.getElementById("enseignant_nom").value.trim();
-      if (!nom) { alert("Le nom de l'enseignant est requis."); return; }
-      const telephone = document.getElementById("enseignant_telephone").value.trim();
-      const email = document.getElementById("enseignant_email").value.trim();
-      const adresse = document.getElementById("enseignant_adresse").value.trim();
-      if (!telephone || !email || !adresse) {
-        alert("Téléphone, email et adresse sont obligatoires.");
-        return;
-      }
-      if (adresse.length < 15) {
-        alert("Merci de saisir l'adresse personnelle complète (rue, ville...), au moins 15 caractères.");
-        return;
-      }
       const row = document.getElementById("enseignant_row").value;
-      const coordonnees = [
-        telephone ? `Tél : ${telephone}` : "",
-        email ? `Email : ${email}` : "",
-        adresse ? `Adresse : ${adresse}` : ""
-      ].filter(Boolean).join("\n");
+      // Création : CIN obligatoire. Édition : format vérifié seulement (une
+      // fiche ancienne sans CIN reste modifiable).
+      const lu = lireEnseignantDepuisChamps("enseignant_", !row);
+      if (!lu) return;
       const record = {
-        "CIN": cin,
-        "Prénom": document.getElementById("enseignant_prenom").value.trim(),
-        "Nom": nom,
-        "Rôle": document.getElementById("enseignant_role").value,
+        ...lu.record,
         // Création : établissement de la classe ; édition : on conserve celui déjà enregistré.
-        "Etablissement": (row && (ensFormCache || []).find((x) => Number(x._row) === Number(row))?.["Etablissement"]) || etablissementClasse(),
-        "Coordonnées": coordonnees,
-        "Banque": document.getElementById("enseignant_banque").value.trim(),
-        "RIB": rib,
-        "Fonction": document.getElementById("enseignant_fonction").value.trim()
+        "Etablissement": (row && (ensFormCache || []).find((x) => Number(x._row) === Number(row))?.["Etablissement"]) || etablissementClasse()
       };
       const submitBtn = document.querySelector("#enseignant_form button[type=submit]");
       if (submitBtn) { submitBtn.disabled = true; }
@@ -3000,6 +3014,7 @@
     const TERMINO_FP = [
       [/\bmatières\b/g, "compétences"], [/\bMatières\b/g, "Compétences"], [/\bMATIÈRES\b/g, "COMPÉTENCES"],
       [/\bmatière(s?)\b/g, "compétence$1"], [/\bMatière/g, "Compétence"], [/\bMATIÈRE/g, "COMPÉTENCE"],
+      [/\bNouvel enseignant\b/g, "Nouveau formateur"], [/\bnouvel enseignant\b/g, "nouveau formateur"],
       [/\benseignant(e?)(s?)\b/g, (m, f, pl) => (f ? "formatrice" : "formateur") + pl],
       [/\bEnseignant(e?)(s?)\b/g, (m, f, pl) => (f ? "Formatrice" : "Formateur") + pl],
       [/\bENSEIGNANT(S?)\b/g, "FORMATEUR$1"],
@@ -3266,7 +3281,11 @@
     // creerEnseignantDepuisFormulaire, rôle "Coordinateur" fixé).
     async function creerIntervenantDepuisFormulaire() {
       const cin = document.getElementById("fint_new_cin").value.trim();
-      if (cin && !/^[0-9]{8}$/.test(cin)) {
+      if (!cin) {
+        alert("Le CIN est obligatoire (8 chiffres).");
+        return null;
+      }
+      if (!/^[0-9]{8}$/.test(cin)) {
         alert("Le CIN doit comporter exactement 8 chiffres.");
         return null;
       }
@@ -3281,12 +3300,13 @@
       const nomComplet = prenom ? `${prenom} ${nom}` : nom;
 
       const telephone = document.getElementById("fint_new_telephone").value.trim();
-      const email = document.getElementById("fint_new_email").value.trim();
+      const email = document.getElementById("fint_new_email").value.trim().toLowerCase();
       const adresse = document.getElementById("fint_new_adresse").value.trim();
       if (!telephone || !email || !adresse) {
         alert("Téléphone, email et adresse sont obligatoires.");
         return null;
       }
+      if (!telephoneValide(telephone)) { alert(MSG_TEL); return null; }
       if (adresse.length < 15) {
         alert("Merci de saisir l'adresse personnelle complète (rue, ville...), au moins 15 caractères.");
         return null;
@@ -8891,6 +8911,8 @@
 
       const container = document.getElementById("tut_jours_container");
       container.innerHTML = '';
+      const hint3h = document.getElementById("tut_hint_3h");
+      if (hint3h) hint3h.hidden = !tutorat3h();
       const joursList = JOURS_SEMAINE;
 
       let dateDebut = week?.dateDebut || '';
@@ -8918,7 +8940,7 @@
           <input type="text" class="tut_debut tut_time_input" placeholder="19:00" value="${defaultDebut}" maxlength="5" />
           <input type="text" class="tut_fin tut_time_input" placeholder="21:00" value="${defaultFin}" maxlength="5" />
           <select class="tut_matiere">${getMatiereOptionsForTutorat(selectedMatiere)}</select>
-          <button type="button" class="btn_ghost tut_s2_add" title="Ajouter une 2e séance (soirée de ${TUT_MAX_SOIREE_H} h max)" aria-label="Ajouter une 2e séance"${s2 ? ' hidden' : ''}><i class="bi bi-plus-lg"></i></button>
+          <button type="button" class="btn_ghost tut_s2_add" title="Ajouter une 2e séance (soirée de ${TUT_MAX_SOIREE_H} h max)" aria-label="Ajouter une 2e séance"${(s2 || !tutorat3h()) ? ' hidden' : ''}><i class="bi bi-plus-lg"></i></button>
           <div class="tut_seance2"${s2 ? '' : ' hidden'}>
             <span class="tut_s2_label">2e séance</span>
             <input type="text" class="tut_debut2 tut_time_input" placeholder="20:30" value="${s2?.debut || ''}" maxlength="5" />
@@ -8956,7 +8978,7 @@
         });
         div.querySelector('.tut_s2_remove').addEventListener('click', () => {
           s2Bloc.hidden = true;
-          s2AddBtn.hidden = false;
+          s2AddBtn.hidden = !tutorat3h();
           div.querySelector('.tut_matiere2').value = '';
           s2Debut.value = '';
           s2Fin.value = '';
@@ -9115,8 +9137,13 @@
           valid = false;
           return;
         }
+        if (!tutorat3h() && (end - start) > 120) {
+          alert(`${JOURS_LABELS[jour]} : la séance de tutorat ne peut pas dépasser 2 h (cochez « Tutorat 3 heures » dans Editer pour aller jusqu'à 3 h).`);
+          valid = false;
+          return;
+        }
         let seance2 = null;
-        if (matiere2) {
+        if (matiere2 && tutorat3h()) {
           const debut2 = row.querySelector('.tut_debut2').value;
           const fin2 = row.querySelector('.tut_fin2').value;
           const start2 = timeToMinutes(debut2);
@@ -9137,10 +9164,9 @@
         // Une soirée dure au plus TUT_MAX_SOIREE_H heures (1 ou 2 séances).
         const totalSoiree = durationInHours(debut, fin) + (seance2 ? durationInHours(seance2.debut, seance2.fin) : 0);
         if (totalSoiree > TUT_MAX_SOIREE_H + 1e-9) {
-          if (!confirm(`${JOURS_LABELS[jour]} : ${totalSoiree.toFixed(1)} h de tutorat dans la soirée (maximum ${TUT_MAX_SOIREE_H} h). Continuer quand même ?`)) {
-            valid = false;
-            return;
-          }
+          alert(`${JOURS_LABELS[jour]} : ${totalSoiree.toFixed(1)} h de tutorat dans la soirée (maximum ${TUT_MAX_SOIREE_H} h).`);
+          valid = false;
+          return;
         }
         jours[jour] = seance2 ? { matiere, debut, fin, seance2 } : { matiere, debut, fin };
       });
@@ -9288,6 +9314,7 @@
 
         // Constantes d'heures par étudiant (140 h / 84 h si absentes).
         document.getElementById("classe_heures_tutorat").value = Number(c.heuresTutoratEtudiant) > 0 ? c.heuresTutoratEtudiant : HEURES_TUTORAT_DEFAUT;
+        document.getElementById("classe_tutorat_3h").checked = c.tutorat3h === true;
         document.getElementById("classe_heures_reg").value = Number(c.heuresRegEtudiant) > 0 ? c.heuresRegEtudiant : HEURES_REG_DEFAUT;
         lireConstantesDepuisFormulaire();
         appliquerConstantesHeures();
@@ -9333,6 +9360,7 @@
         // coordinateur renvoie simplement les valeurs chargées).
         heuresTutoratEtudiant: heuresTutoratEtudiant,
         heuresRegEtudiant: heuresRegEtudiant,
+        tutorat3h: tutorat3h(),
         responsableNom: document.getElementById("classe_responsable_nom").value,
         responsableFonction: document.getElementById("classe_responsable_fonction").value,
         numeroMemoire: document.getElementById("classe_numero_memoire").value,
