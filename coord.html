@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Coordination — URSAPP</title>
+  <link rel="icon" type="image/png" href="ursapp.png" />
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
   <link rel="stylesheet" href="css/variables.css" />
@@ -38,10 +39,11 @@
       vertical-align: top;
       text-align: left;
     }
-    .pp_table td:last-child, .pp_table th:last-child {
+    .pp_table td:last-child {
       text-align: center;
       vertical-align: middle;
     }
+    .pp_table th:last-child { vertical-align: middle; }
 
     /* Modale de connexion (profils "coord", indépendante de la connexion
        principale de l'app — voir onglet "coord" de la Sheet Paramètres) :
@@ -93,8 +95,7 @@
     /* Ligne au-dessus des champs ; pendant la connexion puis le chargement
        des classes (.is_connecting), un trait lumineux la parcourt en boucle.
        (Pas de .is_loading : cette classe déclenche le spinner global.) */
-    .login_password_form::before,
-    .anim_line::before {
+    .login_password_form::before {
       content: "";
       position: absolute;
       top: 0;
@@ -106,14 +107,9 @@
         linear-gradient(90deg, transparent, var(--color_teal_light), transparent) -40% 0 / 40% 100% no-repeat,
         var(--border_soft);
     }
-    .login_password_form.is_connecting::before,
-    .anim_line.is_connecting::before {
+    .login_password_form.is_connecting::before {
       animation: login_line_sweep 1.1s ease-in-out infinite;
     }
-    .anim_line { position: relative; height: 2px; }
-    .anim_line::before { top: 0; }
-    .classes_loading { margin-bottom: var(--space_4); }
-    .classes_loading .login_status { margin-bottom: var(--space_2); }
     .login_status {
       min-height: 1.4em;
       margin: 0 0 var(--space_2) 0;
@@ -128,8 +124,7 @@
       to   { background-position: 140% 0, 0 0; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .login_password_form.is_connecting::before,
-      .anim_line.is_connecting::before { animation-duration: 3s; }
+      .login_password_form.is_connecting::before { animation-duration: 3s; }
     }
     .login_password_form input[type="text"],
     .login_password_form input[type="password"] {
@@ -287,7 +282,10 @@
       cursor: pointer;
     }
     .btn_settings_icon:hover { background: var(--color_paper); }
-    .settings_actions { display: flex; justify-content: flex-end; margin-top: var(--space_5); }
+    .settings_actions { display: flex; justify-content: flex-end; gap: var(--space_3); margin-top: var(--space_5); }
+    .settings_input_wrap input[readonly] { cursor: default; }
+    .settings_input_wrap input:not([readonly]) { background: var(--color_paper_raised); }
+    .settings_field.is_locked { opacity: 0.5; }
     .settings_note { font-size: var(--fs_sm); font-style: italic; color: var(--text_secondary); margin: var(--space_4) 0 0 0; }
 
     /* En-tête de "Mes classes" : titre à gauche, bouton Guide à droite */
@@ -512,11 +510,6 @@
         </button>
       </div>
 
-      <div class="classes_loading" id="coord_classes_loading" hidden>
-        <p class="login_status is_active" role="status">Chargement de mes classes</p>
-        <div class="anim_line is_connecting"></div>
-      </div>
-
       <table class="data_table pp_table">
         <thead>
           <tr>
@@ -544,7 +537,8 @@
       </div>
 
       <p class="login_status" id="coord_login_status" role="status" aria-live="polite"></p>
-      <form class="login_password_form" id="coord_login_form" method="post" autocomplete="on">
+      <iframe name="coord_cred_frame" title="" hidden></iframe>
+      <form class="login_password_form" id="coord_login_form" method="post" action="about:blank" target="coord_cred_frame" autocomplete="on">
         <input type="text" id="coord_login_username" name="username" placeholder="Nom d'utilisateur" autocomplete="username" autocapitalize="none" spellcheck="false" required />
         <input type="password" id="coord_login_password" name="password" placeholder="Mot de passe" autocomplete="current-password" required />
         <p class="login_password_error" id="coord_login_error" hidden></p>
@@ -558,32 +552,40 @@
     </div>
   </div>
 
-  <!-- Modale Paramètres (lecture seule pour l'instant : l'édition viendra plus tard) -->
+  <!-- Modale Paramètres : lecture seule ; l'icône éditer ouvre le mode édition
+       (un seul identifiant à la fois, adresse mail obligatoire). -->
   <div class="login_modal_overlay" id="coord_settings_modal">
     <div class="login_modal">
       <div class="settings_header">
         <h2><i class="bi bi-gear"></i> Paramètres</h2>
-        <button type="button" class="btn_settings_icon" id="coord_settings_edit" title="Éditer"><i class="bi bi-pencil"></i></button>
+        <button type="button" class="btn_settings_icon" id="coord_settings_edit" title="Modifier mes identifiants" aria-label="Modifier mes identifiants"><i class="bi bi-pencil-square"></i></button>
       </div>
       <div class="settings_form">
         <label class="settings_field"><span>Mon adresse mail</span>
-          <div class="settings_input_wrap"><input type="text" id="coord_set_email" readonly placeholder="Non renseignée" /></div>
+          <div class="settings_input_wrap"><input type="email" id="coord_set_email" readonly placeholder="Non renseignée" autocomplete="email" /></div>
         </label>
-        <label class="settings_field"><span>Mon nom d'utilisateur affiché</span>
-          <div class="settings_input_wrap"><input type="text" id="coord_set_username" readonly /></div>
+        <label class="settings_field"><span>Mon nom d'utilisateur</span>
+          <div class="settings_input_wrap"><input type="text" id="coord_set_username" readonly autocomplete="off" autocapitalize="none" spellcheck="false" /></div>
         </label>
-        <label class="settings_field"><span>Mon mot de passe</span>
+        <label class="settings_field"><span id="coord_set_password_label">Mon mot de passe</span>
           <div class="settings_input_wrap">
-            <input type="password" id="coord_set_password" readonly value="***" />
+            <input type="password" id="coord_set_password" readonly value="***" autocomplete="new-password" />
           </div>
         </label>
+        <label class="settings_field" id="coord_set_current_wrap" hidden><span>Mot de passe actuel (pour confirmer votre identité)</span>
+          <div class="settings_input_wrap"><input type="password" id="coord_set_current" placeholder="Mot de passe actuel" autocomplete="current-password" /></div>
+        </label>
       </div>
+      <p class="settings_note" id="coord_settings_hint" hidden>Un seul identifiant peut être modifié à la fois (nom d'utilisateur ou mot de passe). Une adresse mail est requise.</p>
+      <p class="settings_note" id="coord_settings_notice" hidden>Vous allez être déconnecté(e), un lien de vérification vous sera envoyé par mail.</p>
+      <p class="login_password_error" id="coord_settings_error" hidden></p>
       <div class="settings_actions">
         <button type="button" class="btn_login" id="coord_settings_close">Fermer</button>
+        <button type="button" class="btn_settings_icon" id="coord_settings_cancel" hidden>Annuler</button>
+        <button type="button" class="btn_login" id="coord_settings_validate" hidden>Valider</button>
       </div>
     </div>
   </div>
-
 
   <!-- ============================================================
        Modale "Guide" : mode d'emploi détaillé de class.html
@@ -1021,10 +1023,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!coordUser) {
     ouvrirModaleConnexion();
   } else {
-    // Session restaurée : pas de modale, donc indicateur au-dessus du tableau.
-    const indicateur = document.getElementById("coord_classes_loading");
-    indicateur.hidden = false;
-    afficherClasses().finally(() => { indicateur.hidden = true; });
+    // Session restaurée : pas de modale ; l'indicateur de chargement est le
+    // trait bas de la ligne d'en-têtes (géré par loadPPClasses).
+    afficherClasses();
   }
 });
 
@@ -1105,7 +1106,10 @@ function etatConnexion(libelle) {
   form.classList.toggle("is_connecting", actif);
   label.classList.toggle("is_active", actif);
   if (actif) label.textContent = libelle;
-  form.querySelectorAll("input, button").forEach((el) => { el.disabled = actif; });
+  // readOnly (et non disabled) : un champ désactivé n'est pas vu par le
+  // gestionnaire de mots de passe du navigateur.
+  form.querySelectorAll("input").forEach((el) => { el.readOnly = actif; });
+  form.querySelectorAll("button").forEach((el) => { el.disabled = actif; });
 }
 
 async function onSubmitLogin(e) {
@@ -1123,18 +1127,26 @@ async function onSubmitLogin(e) {
     const resterConnecte = document.getElementById("coord_login_remember").checked;
     setCoordUser(user, resterConnecte);
     proposerEnregistrementIdentifiants(username, password);
+    soumettreFormulaireNatif();
     mettreAJourEtatConnexion();
 
-    // La modale reste affichée jusqu'à la fin du chargement des classes.
-    etatConnexion("Chargement de mes classes");
-    await afficherClasses();
+    // Connecté : on masque la modale et le tableau prend le relais
+    // (« Chargement de mes classes » + trait des en-têtes).
     document.getElementById("coord_login_modal").classList.remove("is_visible");
+    afficherClasses();
   } catch (err) {
     errorEl.textContent = err.message;
     errorEl.hidden = false;
   } finally {
     etatConnexion(null);
   }
+}
+
+// Vraie soumission du formulaire (vers l'iframe cachée) : c'est ce qui fait
+// proposer l'enregistrement des identifiants par Chrome, Firefox, Safari, etc.
+// N'est appelée qu'après une connexion réussie, jamais sur un mauvais mot de passe.
+function soumettreFormulaireNatif() {
+  try { document.getElementById("coord_login_form").submit(); } catch (err) { /* sans effet */ }
 }
 
 // Aide au gestionnaire de mots de passe du navigateur (Chrome/Edge) ;
@@ -1172,21 +1184,125 @@ function initMenuUtilisateur() {
     ouvrirParametres();
   });
   document.getElementById("coord_settings_close").addEventListener("click", fermerParametres);
-  document.getElementById("coord_settings_edit").addEventListener("click", () => {
-    // Édition à implémenter plus tard.
-  });
+  document.getElementById("coord_settings_edit").addEventListener("click", entrerEditionParametres);
+  document.getElementById("coord_settings_cancel").addEventListener("click", quitterEditionParametres);
+  document.getElementById("coord_settings_validate").addEventListener("click", validerParametres);
+  document.getElementById("coord_set_username").addEventListener("input", majExclusiviteIdentifiants);
+  document.getElementById("coord_set_password").addEventListener("input", majExclusiviteIdentifiants);
+}
+
+let parametresEnEdition = false;
+const $set = (id) => document.getElementById(id);
+
+// Affiche les valeurs actuelles, en lecture seule. Le mot de passe est
+// représenté par autant de points que de caractères (longueur fournie par
+// le serveur à la connexion ; le mot de passe lui-même n'est jamais envoyé).
+function afficherParametresLectureSeule() {
+  parametresEnEdition = false;
+  $set("coord_set_email").value = coordUser["Email"] || "";
+  $set("coord_set_username").value = coordUser["Nom d'utilisateur"] || "";
+  const n = Number(coordUser["M2pLongueur"]) || 0;
+  $set("coord_set_password").value = n > 0 ? "*".repeat(n) : "***";
+  $set("coord_set_current").value = "";
+  ["coord_set_email", "coord_set_username", "coord_set_password"].forEach((id) => { $set(id).readOnly = true; });
+  $set("coord_set_password").placeholder = "";
+  $set("coord_set_password_label").textContent = "Mon mot de passe";
+  $set("coord_set_current_wrap").hidden = true;
+  $set("coord_settings_hint").hidden = true;
+  $set("coord_settings_notice").hidden = true;
+  $set("coord_settings_error").hidden = true;
+  $set("coord_settings_edit").disabled = false;
+  $set("coord_settings_close").hidden = false;
+  $set("coord_settings_cancel").hidden = true;
+  $set("coord_settings_validate").hidden = true;
+  $set("coord_settings_validate").disabled = false;
+  $set("coord_set_username").closest(".settings_field").classList.remove("is_locked");
+  $set("coord_set_password").closest(".settings_field").classList.remove("is_locked");
+}
+
+function entrerEditionParametres() {
+  if (!coordUser) return;
+  parametresEnEdition = true;
+  $set("coord_set_email").readOnly = false;
+  $set("coord_set_username").readOnly = false;
+  const mdp = $set("coord_set_password");
+  mdp.readOnly = false;
+  mdp.value = "";
+  mdp.placeholder = "Laisser vide pour le conserver";
+  $set("coord_set_password_label").textContent = "Nouveau mot de passe";
+  $set("coord_set_current_wrap").hidden = false;
+  $set("coord_settings_hint").hidden = false;
+  $set("coord_settings_notice").hidden = false;
+  $set("coord_settings_edit").disabled = true;
+  $set("coord_settings_close").hidden = true;
+  $set("coord_settings_cancel").hidden = false;
+  $set("coord_settings_validate").hidden = false;
+  $set("coord_set_email").focus();
+}
+
+function quitterEditionParametres() {
+  if (coordUser) afficherParametresLectureSeule();
+}
+
+// Un seul identifiant à la fois : dès que l'un est modifié, l'autre est verrouillé.
+function nomModifie() {
+  return $set("coord_set_username").value.trim() !== String(coordUser["Nom d'utilisateur"] || "");
+}
+function majExclusiviteIdentifiants() {
+  if (!parametresEnEdition) return;
+  const nom = nomModifie();
+  const mdp = $set("coord_set_password").value !== "";
+  $set("coord_set_username").readOnly = mdp;
+  $set("coord_set_password").readOnly = nom;
+  $set("coord_set_username").closest(".settings_field").classList.toggle("is_locked", mdp);
+  $set("coord_set_password").closest(".settings_field").classList.toggle("is_locked", nom);
+}
+
+async function validerParametres() {
+  const errEl = $set("coord_settings_error");
+  const erreur = (m) => { errEl.textContent = m; errEl.hidden = false; };
+  errEl.hidden = true;
+
+  const email = $set("coord_set_email").value.trim();
+  const nouveauNom = nomModifie() ? $set("coord_set_username").value.trim() : "";
+  const nouveauM2p = $set("coord_set_password").value;
+  const actuel = $set("coord_set_current").value;
+
+  if (!email) return erreur("Une adresse mail est requise pour modifier vos identifiants.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return erreur("Adresse mail invalide.");
+  if (!nouveauNom && !nouveauM2p) return erreur("Modifiez votre nom d'utilisateur ou votre mot de passe.");
+  if (nouveauNom && nouveauM2p) return erreur("Un seul identifiant peut être modifié à la fois.");
+  if (nouveauM2p && nouveauM2p.length < 6) return erreur("Le nouveau mot de passe doit contenir au moins 6 caractères.");
+  if (!actuel) return erreur("Saisissez votre mot de passe actuel pour confirmer.");
+
+  const btn = $set("coord_settings_validate");
+  btn.disabled = true;
+  try {
+    await apiCall("getChangementIdentifiantCoord", {
+      username: coordUser["Nom d'utilisateur"],
+      motDePasseActuel: actuel,
+      nouveauNom, nouveauM2p, email,
+    });
+    const notice = $set("coord_settings_notice");
+    notice.textContent = "Lien de vérification envoyé à " + email + " (valable 1 heure). La modification sera appliquée une fois confirmée. Vous allez être déconnecté(e).";
+    notice.hidden = false;
+    $set("coord_settings_hint").hidden = true;
+    setTimeout(() => { fermerParametres(); deconnecterCoord(); }, 2500);
+  } catch (err) {
+    erreur(err.message);
+    btn.disabled = false;
+  }
 }
 
 function ouvrirParametres() {
   if (!coordUser) return;
-  // L'adresse mail n'existe pas encore dans l'onglet "coord" : vide accepté.
-  document.getElementById("coord_set_email").value = coordUser["Email"] || "";
-  document.getElementById("coord_set_username").value = coordUser["Nom d'utilisateur"] || "";
+  afficherParametresLectureSeule();
   document.getElementById("coord_settings_modal").classList.add("is_visible");
 }
 
 function fermerParametres() {
   document.getElementById("coord_settings_modal").classList.remove("is_visible");
+  if (coordUser) afficherParametresLectureSeule();
 }
 
 /* ---------------- Modale Guide (mode d'emploi de class.html) ---------------- */
@@ -1357,7 +1473,9 @@ function moduleVisiblePourCoordUser(nomModule) {
 
 async function loadPPClasses() {
   const tbody = document.getElementById("pp_classe_table_body");
-  tbody.innerHTML = "";
+  // Ligne de chargement + trait animé sous les en-têtes (css/spinner.css).
+  tbody.innerHTML = Spinner.tableRow(5, "Chargement de mes classes");
+  document.getElementById("pp_classe_empty").hidden = true;
 
   try {
     const [classes, modules] = await Promise.all([
