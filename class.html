@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Formation à distance — URSAPP</title>
+  <link rel="icon" type="image/png" href="ursapp.png" />
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1051,12 +1052,11 @@
             <form id="enseignant_form" class="matiere_form">
               <input type="hidden" id="enseignant_row" />
               <div class="matiere_form_grid">
-                <!-- Nom/Prénom modifiables uniquement à la création : en
-                     édition, ce nom sert d'identifiant partagé avec les
-                     matières du plan d'étude, les regroupements G2 et les
-                     séances d'examen — le renommer casserait ces liens (voir
-                     openEnseignantForm/openEnseignantFormNouveau, qui basculent
-                     l'attribut readonly selon le mode). -->
+                <!-- Tous les champs sont modifiables, Nom/Prénom compris. Un
+                     changement de nom est répercuté sur le plan d'étude, les
+                     séances d'examen G2 et la Coordination de la classe (voir
+                     onSubmitEnseignantForm). Un changement de CIN/Banque/RIB
+                     est répercuté sur la Coordination et la facturation. -->
                 <label class="ens_new_cin">CIN
                   <input type="text" id="enseignant_cin" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 chiffres" />
                 </label>
@@ -2874,22 +2874,9 @@
       }).join("");
     }
 
-    // Bascule les champs Nom/Prénom en lecture seule (édition, le nom sert
-    // d'identifiant partagé avec matieres[].enseignant, les regroupements G2
-    // et les séances d'examen) ou modifiables (création d'un nouvel
-    // enseignant, aucune référence existante à préserver).
-    function setEnseignantNomModifiable(modifiable) {
-      document.getElementById("enseignant_prenom").readOnly = !modifiable;
-      document.getElementById("enseignant_nom").readOnly = !modifiable;
-      const title = modifiable ? "" : "Non modifiable : utilisé comme identifiant ailleurs dans la classe";
-      document.getElementById("enseignant_prenom").title = title;
-      document.getElementById("enseignant_nom").title = title;
-    }
-
     // Ouvre la modale Enseignant en édition, pré-remplie depuis la base
     // ensform (mêmes champs que l'ajout rapide depuis la modale Matière,
-    // hormis Nom/Prénom qui restent non modifiables — voir
-    // setEnseignantNomModifiable).
+    // tous modifiables).
     function openEnseignantForm(nomComplet) {
       const rec = (ensFormCache || []).find((e) => nomCompletEns(e) === nomComplet) || {};
       const coordonnees = rec["Coordonnées"] || "";
@@ -2905,7 +2892,6 @@
       document.getElementById("enseignant_banque").value = rec["Banque"] || "";
       document.getElementById("enseignant_rib").value = rec["RIB"] || "";
       document.getElementById("enseignant_fonction").value = rec["Fonction"] || "";
-      setEnseignantNomModifiable(false);
       openFormModal("enseignant_modal", "enseignant_form");
     }
 
@@ -2917,7 +2903,6 @@
       document.getElementById("enseignant_modal_titre").textContent = "Nouvel enseignant";
       document.getElementById("enseignant_row").value = "";
       document.getElementById("enseignant_role").value = "Enseignant";
-      setEnseignantNomModifiable(true);
       openFormModal("enseignant_modal", "enseignant_form");
     }
 
@@ -2932,10 +2917,28 @@
       // fiche ancienne sans CIN reste modifiable).
       const lu = lireEnseignantDepuisChamps("enseignant_", !row);
       if (!lu) return;
+      const ancienRec = row ? (ensFormCache || []).find((x) => Number(x._row) === Number(row)) : null;
+      const ancienNom = ancienRec ? nomCompletEns(ancienRec) : "";
+      const nouveauNom = lu.nomComplet;
+      const nomChange = !!ancienRec && ancienNom !== nouveauNom;
+
+      if (nomChange) {
+        // Le nom complet sert d'identifiant : on refuse un doublon exact.
+        const doublon = (ensFormCache || []).some((x) =>
+          Number(x._row) !== Number(row) && nomCompletEns(x).trim().toLowerCase() === nouveauNom.toLowerCase());
+        if (doublon) {
+          alert(`Un autre intervenant s'appelle déjà « ${nouveauNom} ».`);
+          return;
+        }
+        if (!confirm(`Le nom passe de « ${ancienNom} » à « ${nouveauNom} ».\n\n` +
+          `Il sera mis à jour dans le plan d'étude, les examens (G2) et la coordination de cette classe. ` +
+          `Les autres classes qui utilisent l'ancien nom devront être corrigées séparément.\n\nContinuer ?`)) return;
+      }
+
       const record = {
         ...lu.record,
         // Création : établissement de la classe ; édition : on conserve celui déjà enregistré.
-        "Etablissement": (row && (ensFormCache || []).find((x) => Number(x._row) === Number(row))?.["Etablissement"]) || etablissementClasse()
+        "Etablissement": (ancienRec && ancienRec["Etablissement"]) || etablissementClasse()
       };
       const submitBtn = document.querySelector("#enseignant_form button[type=submit]");
       if (submitBtn) { submitBtn.disabled = true; }
@@ -2944,6 +2947,7 @@
           await apiCallDirect("updateEnsForm", { _row: row, record });
           const idx = (ensFormCache || []).findIndex((e) => Number(e._row) === Number(row));
           if (idx >= 0) ensFormCache[idx] = { ...record, _row: Number(row) };
+          repercuterModifEnseignant(ancienRec, ancienNom, nouveauNom, record);
         } else {
           await apiCallDirect("createEnsForm", { record });
           // Recharge depuis le serveur pour récupérer le _row réel de la
@@ -2957,6 +2961,55 @@
       } finally {
         if (submitBtn) { submitBtn.disabled = false; }
       }
+    }
+
+    // Répercute une modification de la fiche enseignant (base ensform) sur
+    // les données de la classe :
+    //  - nom changé → plan d'étude (matieres[].enseignant), séances d'examen
+    //    G2 (examens[].seances[].enseignant) et Coordination (intervenants[].nom) ;
+    //  - CIN / Banque / RIB changés → lignes de Coordination du même
+    //    intervenant (copie stockée sur la ligne). Les listes enseignants de
+    //    la facturation (mémoires, liste des intervenants, feuille de
+    //    vérification) relisent ensFormCache à chaque génération : elles sont
+    //    déjà à jour.
+    // La classe est ensuite marquée « à enregistrer ».
+    function repercuterModifEnseignant(ancienRec, ancienNom, nouveauNom, record) {
+      if (!ancienRec) return;
+      let modifie = false;
+
+      if (ancienNom !== nouveauNom) {
+        (matieres || []).forEach((m) => {
+          if (m && m.enseignant === ancienNom) { m.enseignant = nouveauNom; modifie = true; }
+        });
+        (examens || []).forEach((ex) => (ex.seances || []).forEach((s) => {
+          if (s && s.enseignant === ancienNom) { s.enseignant = nouveauNom; modifie = true; }
+        }));
+        (intervenants || []).forEach((it) => {
+          if (it && it.nom === ancienNom) { it.nom = nouveauNom; modifie = true; }
+        });
+      }
+
+      const champs = [["CIN", "cin"], ["Banque", "banque"], ["RIB", "rib"]];
+      (intervenants || []).forEach((it) => {
+        if (!it || it.nom !== nouveauNom) return;
+        champs.forEach(([cle, prop]) => {
+          const avant = String(ancienRec[cle] || "");
+          const apres = String(record[cle] || "");
+          if (avant !== apres) { it[prop] = apres; modifie = true; }
+        });
+      });
+
+      // Facturation : les infos bancaires peuvent avoir changé même sans
+      // ligne de coordination concernée → on rafraîchit l'alerte et les vues.
+      const bancaireChange = champs.some(([cle]) => String(ancienRec[cle] || "") !== String(record[cle] || ""));
+      if (modifie || bancaireChange) {
+        rafraichirSelectEnseignants();
+        renderPlanTable();
+        renderFrais();
+        renderExamens();
+        majAlerteEnseignants();
+      }
+      if (modifie) setUnsavedChanges(true);
     }
 
     function totalPourcentFI(m) {
@@ -5748,10 +5801,10 @@
 <meta charset="utf-8">
 <title>Impression de vérification</title>
 <style>
-  body { font-family: Arial, sans-serif; color: #16262a; padding: 24px; }
+  body { font-family: Arial, sans-serif; color: #0f214d; padding: 24px; }
   .header-title { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
   .sub-header-info { text-align: center; font-size: 13px; font-weight: bold; margin-bottom: 12px; }
-  h2 { margin-top: 28px; border-bottom: 2px solid #16262a; padding-bottom: 4px; font-size: 16px; }
+  h2 { margin-top: 28px; border-bottom: 2px solid #0f214d; padding-bottom: 4px; font-size: 16px; }
   table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
   table th, table td { border: 1px solid #444; padding: 4px 6px; text-align: left; }
   .print_fiche_table { table-layout: auto; width: auto; max-width: 560px; margin: 8px auto 0; }
@@ -6818,7 +6871,7 @@
 <title>Dossier de facturation</title>
 <base href="${document.baseURI}">
 <style>
-  body { font-family: Arial, sans-serif; color: #16262a; padding: 24px; }
+  body { font-family: Arial, sans-serif; color: #0f214d; padding: 24px; }
   table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
   table th, table td { border: 1px solid #444; padding: 4px 6px; text-align: left; }
   .print_section { page-break-inside: avoid; }
@@ -9439,5 +9492,6 @@
       return data.result;
     }
   </script>
+  <script src="js/navbar_mobile.js"></script>
 </body>
 </html>
