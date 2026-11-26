@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Promotion professionnelle — URSAPP</title>
+  <link rel="icon" type="image/png" href="ursapp.png" />
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
   <link rel="stylesheet" href="css/variables.css" />
@@ -117,12 +118,6 @@
     .pp_table td.inscrit_actions_cell {
       text-align: left;
       vertical-align: middle;
-    }
-    .inscrit_actions_group {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--space_2);
     }
     .inscrit_selection_count {
       font-size: var(--fs_sm);
@@ -473,6 +468,7 @@
     }
   </style>
   <script src="js/session.js"></script>
+  <script src="js/permissions.js"></script>
 </head>
 <body data-nav-mode="toggle">
 
@@ -508,7 +504,7 @@
     </aside>
 
     <main class="app_content">
-      <section id="campagne" class="panel">
+      <section id="campagne" class="panel" data-perm="pp.campagne">
         <div class="panel_header">
           <h2><i class="bi bi-megaphone"></i> Campagne</h2>
           <div class="panel_header_actions">
@@ -577,14 +573,14 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="campagne_table_body"><tr class="table_state_row"><td colspan="7"><span class="spinner" role="status" aria-label="Chargement"></span></td></tr></tbody>
+          <tbody id="campagne_table_body"><tr class="table_state_row table_loading_row"><td colspan="7" role="status">Chargement…</td></tr></tbody>
         </table>
         <div class="empty_state" id="campagne_empty" hidden>
           <i class="bi bi-inbox"></i>Aucune campagne enregistrée.
         </div>
       </section>
 
-      <section id="demandes" class="panel">
+      <section id="demandes" class="panel" data-perm="pp.demandes">
         <div class="panel_header">
           <h2><i class="bi bi-person-lines-fill"></i> Demandes</h2>
           <div class="panel_header_actions">
@@ -691,14 +687,14 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="demande_table_body"><tr class="table_state_row"><td colspan="6"><span class="spinner" role="status" aria-label="Chargement"></span></td></tr></tbody>
+          <tbody id="demande_table_body"><tr class="table_state_row table_loading_row"><td colspan="6" role="status">Chargement…</td></tr></tbody>
         </table>
         <div class="empty_state" id="demande_empty" hidden>
           <i class="bi bi-inbox"></i>Aucune demande enregistrée.
         </div>
       </section>
 
-      <section id="dossiers" class="panel">
+      <section id="dossiers" class="panel" data-perm="pp.dossiers">
         <div class="panel_header">
           <h2><i class="bi bi-folder2-open"></i> Dossiers</h2>
           <span class="dossier_pending" id="dossier_pending" hidden>
@@ -773,6 +769,14 @@
                 <label>Nom
                   <input type="text" name="Nom" required />
                 </label>
+                <div class="demande_coord_field">
+                  <span>Coordonnées</span>
+                  <div class="demande_coord_group">
+                    <label>Tél <input type="tel" id="vers_inscrit_coord_tel" /></label>
+                    <label>Tél2 <input type="tel" id="vers_inscrit_coord_tel2" /></label>
+                    <label>Email <input type="email" id="vers_inscrit_coord_email" /></label>
+                  </div>
+                </div>
                 <label>Classe
                   <select id="vers_inscrit_classe" required>
                     <option value="">----</option>
@@ -781,13 +785,12 @@
                 <label>Année
                   <input type="text" name="Année" required placeholder="rempli selon la classe choisie" />
                 </label>
-                <div class="demande_coord_field">
-                  <span>Coordonnées</span>
-                  <div class="demande_coord_group">
-                    <label>Tél <input type="tel" id="vers_inscrit_coord_tel" /></label>
-                    <label>Tél2 <input type="tel" id="vers_inscrit_coord_tel2" /></label>
-                    <label>Email <input type="email" id="vers_inscrit_coord_email" /></label>
-                  </div>
+                <!-- Moyen de paiement (mêmes valeurs que l'observation "Frais" de
+                     Inscrits, INSCRIT_FRAIS_OPTIONS) : un seul choix, obligatoire pour
+                     valider le passage ; écrit dans "Frais N" (N = rang de l'Année). -->
+                <div class="dossier_obs">
+                  <span>Moyen de paiement</span>
+                  <div class="dossier_obs_options" id="vers_inscrit_frais_options"></div>
                 </div>
                 <div class="matiere_form_actions">
                   <button type="submit" class="btn_success"><i class="bi bi-check-lg"></i> Enregistrer</button>
@@ -809,14 +812,14 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="dossier_table_body"><tr class="table_state_row"><td colspan="7"><span class="spinner" role="status" aria-label="Chargement"></span></td></tr></tbody>
+          <tbody id="dossier_table_body"><tr class="table_state_row table_loading_row"><td colspan="7" role="status">Chargement…</td></tr></tbody>
         </table>
         <div class="empty_state" id="dossier_empty" hidden>
           <i class="bi bi-inbox"></i>Aucun dossier enregistré.
         </div>
       </section>
 
-      <section id="inscrits" class="panel">
+      <section id="inscrits" class="panel" data-perm="pp.inscrits">
         <div class="panel_header">
           <h2><i class="bi bi-people"></i> Inscrits</h2>
           <span class="dossier_pending" id="inscrit_pending" hidden>
@@ -941,7 +944,7 @@
               <div class="demandes_specialite_filters" id="inscrit_liste_filtres" style="margin-bottom: var(--space_3);"></div>
               <div class="inscrits_check_list">
                 <table>
-                  <thead><tr><th>CIN</th><th>Nom et prénom</th><th>Versement des frais</th></tr></thead>
+                  <thead><tr><th>N°</th><th>CIN</th><th>Nom et prénom</th><th>Versement des frais</th></tr></thead>
                   <tbody id="inscrit_liste_body"></tbody>
                 </table>
               </div>
@@ -962,16 +965,16 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="inscrit_table_body"><tr class="table_state_row"><td colspan="7"><span class="spinner" role="status" aria-label="Chargement"></span></td></tr></tbody>
+          <tbody id="inscrit_table_body"><tr class="table_state_row table_loading_row"><td colspan="7" role="status">Chargement…</td></tr></tbody>
         </table>
         <div class="empty_state" id="inscrit_empty" hidden>
           <i class="bi bi-inbox"></i>Aucun inscrit enregistré.
         </div>
       </section>
 
-      <section id="classes" class="panel">
+      <section id="classes" class="panel" data-perm="pp.classes">
         <div class="panel_header">
-          <h2><i class="bi bi-book"></i> Classes et modules</h2>
+          <h2><i class="bi bi-book"></i> Classes et actions modulaires</h2>
           <span class="panel_header_actions">
             <button type="button" id="pp_btn_nouvelle_classe" class="btn_seal no_mobile"><i class="bi bi-plus-lg"></i> Nouvelle classe</button>
           </span>
@@ -1004,7 +1007,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="pp_classe_table_body"><tr class="table_state_row"><td colspan="6"><span class="spinner" role="status" aria-label="Chargement"></span></td></tr></tbody>
+          <tbody id="pp_classe_table_body"><tr class="table_state_row table_loading_row"><td colspan="6" role="status">Chargement…</td></tr></tbody>
         </table>
         <div class="empty_state" id="pp_classe_empty" hidden>
           <i class="bi bi-inbox"></i>Aucune classe ni module enregistré.
@@ -1022,7 +1025,7 @@
            coordination : une classe fraîchement créée n'a ni l'un ni
            l'autre pour l'instant, ils se gèrent depuis class.html une
            fois la classe ouverte. -->
-      <div class="modal_overlay" id="classe_fiche_modal">
+      <div class="modal_overlay" id="classe_fiche_modal" data-perm="pp.classes">
         <div class="modal_dialog">
           <div class="modal_header">
             <div class="modal_titre_type">
@@ -1177,7 +1180,7 @@
              même fiche (mêmes radios Profession OK / Non, même calcul d'observation) ;
              "nouveau" part d'un formulaire vide et crée la ligne, "edition" est pré-remplie,
              met à jour la ligne et propose "Supprimer". -->
-      <div class="modal_overlay" id="dossier_modal">
+      <div class="modal_overlay" id="dossier_modal" data-perm="pp.dossiers">
         <div class="modal_dialog">
           <div class="modal_header">
             <h3 id="dossier_modal_titre">Vers dossiers</h3>
@@ -1234,7 +1237,7 @@
       <!-- MODALE "EN-TÊTES ATTENDUS" de l'import Excel (Demandes) : affiche les
            en-têtes à mettre en 1ère ligne du fichier, puis ouvre le choix du
            fichier. Voir ouvrirModaleEntetes(). -->
-      <div class="modal_overlay" id="entetes_modal">
+      <div class="modal_overlay" id="entetes_modal" data-perm="pp.demandes">
         <div class="modal_dialog">
           <div class="modal_header">
             <h3 id="entetes_titre">Importer un fichier Excel</h3>
@@ -1431,11 +1434,11 @@ function renderCampagneTable() {
       <td>${c["الترقيم"] || ""}</td>
       <td>${ouiNonBadgeCampagne(c["على المراسلة"])}</td>
       <td>${ouiNonBadgeCampagne(c["على الظرف"])}</td>
-      <td>
+      <td><div class="row_btns">
         <button type="button" class="btn_info campagne_row_afficher" data-row="${c._row}">
           <i class="bi bi-eye"></i> Afficher
         </button>
-      </td>
+      </div></td>
     </tr>`).join("");
 }
 
@@ -1589,6 +1592,8 @@ function ppVerrouEntrer(id) {
   if (PP_SECTIONS_VERROU.includes(ppVerrou.courant)) ppVerrouQuitter(ppVerrou.courant);
   ppVerrou.courant = id;
   if (!PP_SECTIONS_VERROU.includes(id)) return;
+  // Section en Lecture (droits) : pas de verrou d'édition, pour ne pas bloquer un éditeur.
+  if (window.URSPerm && !URSPerm.peutEditer("pp." + id)) return;
   ppVerrou.etat[id] = "verif";                         // lecture seule le temps de la vérification
   ppAppliquerEtatVerrou(id);
   ppVerrouVerifier(id);
@@ -1614,6 +1619,12 @@ document.addEventListener("submit", (e) => {
 }, true);
 
 function showPPSection(id) {
+  // Droits (permissions.js) : une section non autorisée est remplacée par la
+  // première section autorisée (ordre de la sidebar).
+  if (window.URSPerm) {
+    id = URSPerm.sectionPPAutorisee(id);
+    if (!id) { window.location.replace("index.html"); return; }
+  }
   document.querySelectorAll("main.app_content > section.panel").forEach((s) => { s.hidden = s.id !== id; });
   ppVerrouEntrer(id);
   document.querySelectorAll(".sidebar_section_link[href^='#']").forEach((l) =>
@@ -1948,7 +1959,7 @@ function renderDemandeTable() {
       <td>${d["Nom"] || ""}</td>
       <td><span class="demande_tel_tooltip" tabindex="0" data-tooltip="${escapeHtmlDemande(tooltip)}">${tel || "—"}</span></td>
       <td>${d["Spécialité"] || ""}</td>
-      <td>
+      <td><div class="row_btns">
         <button type="button" class="btn_info demande_row_afficher" data-row="${d._row}">
           <i class="bi bi-eye"></i> Afficher
         </button>
@@ -1958,7 +1969,7 @@ function renderDemandeTable() {
         <button type="button" class="btn_danger demande_row_supprimer" data-row="${d._row}">
           <i class="bi bi-trash3"></i> Supprimer
         </button>
-      </td>
+      </div></td>
     </tr>`;
   }).join("");
 }
@@ -2792,7 +2803,7 @@ function renderDossierTable() {
       <td><span class="demande_tel_tooltip" tabindex="0" data-tooltip="${escapeHtmlDemande(tooltip)}">${escapeHtmlDemande(tel) || "—"}</span></td>
       <td>${escapeHtmlDemande(d["Spécialité"])}</td>
       <td>${badgeObservationDossier(String(d["Observations"] || "").trim(), d._row, dossierPending.has(cleDossierPending(d)))}</td>
-      <td>
+      <td><div class="row_btns">
         <button type="button" class="btn_info dossier_row_afficher" data-row="${d._row}">
           <i class="bi bi-eye"></i> Afficher
         </button>
@@ -2802,7 +2813,7 @@ function renderDossierTable() {
         <button type="button" class="btn_danger dossier_row_archiver" data-row="${d._row}">
           <i class="bi bi-archive"></i> Archiver
         </button>
-      </td>
+      </div></td>
     </tr>`;
   }).join("");
 }
@@ -2840,6 +2851,14 @@ function anneeInscritDepuisModule(m) {
   return ["Modulaire", m["Abréviation"] || m["Module"] || "", promo].filter(Boolean).join(" ");
 }
 
+// Moyens de paiement de la modale "Vers inscrits" : une case (radio) par valeur
+// de INSCRIT_FRAIS_OPTIONS, libellé court ("Frais versés (Reçu)" -> "Reçu").
+function remplirFraisVersInscrit() {
+  document.getElementById("vers_inscrit_frais_options").innerHTML = INSCRIT_FRAIS_OPTIONS.map((o) =>
+    `<label class="dossier_check"><input type="radio" name="vers_inscrit_frais" value="${escapeHtmlDemande(o)}" required /> ${escapeHtmlDemande(libelleVersementInscrit(o))}</label>`
+  ).join("");
+}
+
 // Fait clignoter le champ Classe (relance l'animation à chaque ouverture).
 function clignoterClasseVersInscrit() {
   const sel = document.getElementById("vers_inscrit_classe");
@@ -2867,9 +2886,17 @@ function majAnneeVersInscrit() {
 
 // "Vers inscrits" : modale dans la section Dossiers, pré-remplie avec le
 // dossier ; la classe se choisit parmi celles "Prévue" ou "En cours".
-async function openVersInscritForm(dossier) {
+async function openVersInscritForm(dossier, classeIdPresel) {
   const form = document.getElementById("vers_inscrit_form");
   form.reset();
+  remplirFraisVersInscrit();
+  // Classe à présélectionner (ex. classe tout juste créée depuis cette modale).
+  const preselectionner = () => {
+    if (!classeIdPresel || !versInscritClasses.some((c) => c.id === classeIdPresel)) return false;
+    document.getElementById("vers_inscrit_classe").value = classeIdPresel;
+    majAnneeVersInscrit();
+    return true;
+  };
   versInscritDossier = dossier;
   form.elements["_row"].value = dossier._row;
   form.elements["CIN"].value = normaliserCinPP(dossier["CIN"]);
@@ -2886,7 +2913,7 @@ async function openVersInscritForm(dossier) {
   if (ppClassesLoaded) {
     remplirClassesVersInscrit();
     openFormModal("vers_inscrit_modal", "vers_inscrit_form");
-    clignoterClasseVersInscrit();
+    if (!preselectionner()) clignoterClasseVersInscrit();
     return;
   }
   select.innerHTML = `<option value="">Chargement...</option>`;
@@ -2899,7 +2926,7 @@ async function openVersInscritForm(dossier) {
     if (!ppClassesLoaded) throw new Error("classes non chargées");
     remplirClassesVersInscrit();
     openFormModal("vers_inscrit_modal", "vers_inscrit_form");
-    clignoterClasseVersInscrit();
+    if (!preselectionner()) clignoterClasseVersInscrit();
   } catch (err) {
     select.innerHTML = `<option value="">Erreur de chargement</option>`;
   }
@@ -2937,34 +2964,9 @@ async function reprendreVersInscrit(dossier, modulaire, idsAvant) {
   const source = modulaire ? ppModuleListCache : ppClasseListCache;
   const nouvelles = (Array.isArray(source) ? source : []).filter((c) => !idsAvant.has(c.id));
   if (nouvelles.length !== 1) { await openVersInscritForm(dossier); return; }
-  const c = nouvelles[0];
-  const coord = dossier["Coordonnées"] || "";
-  const record = {
-    "CIN": normaliserCinPP(dossier["CIN"]),
-    "Prénom": String(dossier["Prénom"] || "").trim(),
-    "Nom": String(dossier["Nom"] || "").trim(),
-    "Coordonnées": buildCoordText(DEMANDE_COORD_LABELS, {
-      "Tél": getCoordField(coord, "Tél"),
-      "Tél2": getCoordField(coord, "Tél2"),
-      "Email": getCoordField(coord, "Email")
-    }),
-    "Année": modulaire ? anneeInscritDepuisModule(c) : anneeInscritDepuisClasse(c)
-  };
-  try {
-    await apiCallDirect("createInscritPP", { record });
-  } catch (err) {
-    alert(`Erreur lors de l'enregistrement de l'inscrit : ${err.message}`);
-    await openVersInscritForm(dossier);
-    return;
-  }
-  try {
-    if (dossier._row) await apiCallDirect("deleteDossierPP", { _row: dossier._row });
-  } catch (errSuppr) {
-    alert(`Inscrit créé, mais le dossier n'a pas pu être retiré de la liste : ${errSuppr.message}`);
-  }
-  viderRecherches("dossier_search", "inscrit_search");
-  await loadDossiers();
-  await loadInscrits();
+  // Le moyen de paiement est désormais obligatoire pour valider le passage :
+  // on rouvre la modale "Vers inscrits" avec la nouvelle classe présélectionnée.
+  await openVersInscritForm(dossier, nouvelles[0].id);
 }
 
 // Validation : crée l'inscrit (onglet "Inscrits") puis retire le dossier.
@@ -2980,8 +2982,17 @@ async function onSubmitVersInscritForm(e) {
       "Tél2": document.getElementById("vers_inscrit_coord_tel2").value.trim(),
       "Email": document.getElementById("vers_inscrit_coord_email").value.trim()
     }),
-    "Année": form.elements["Année"].value.trim()
+    "Année": form.elements["Année"].value.trim(),
+    "Frais 1": "", "Frais 2": "", "Frais 3": ""
   };
+  const moyen = form.querySelector('input[name="vers_inscrit_frais"]:checked')?.value;
+  if (!moyen) {
+    alert("Choisissez un moyen de paiement pour valider le passage.");
+    return;
+  }
+  // Le paiement va dans "Frais N", N = rang de l'année (1ère -> Frais 1...) ;
+  // "Frais 1" par défaut quand l'Année n'a pas d'ordinal (ex. module).
+  record[`Frais ${rangAnneeInscrit(record["Année"]) || 1}`] = moyen;
   const rowId = form.elements["_row"].value;
   const btn = form.querySelector('button[type="submit"]');
   setBtnSaving(btn, true);
@@ -3643,11 +3654,22 @@ function libelleVersementInscrit(val) {
   return m ? m[1] : String(val || "");
 }
 
+// Ordre de la liste : Reçu, 2 reçus, Virement, Virement commun (membres
+// regroupés), puis tout le reste (copies, sans frais).
+function rangVersementListe(insc) {
+  const v = valeurFraisInscrit(insc);
+  if (v === "Frais versés (Reçu)") return 0;
+  if (v === "Frais versés (2 reçus)") return 1;
+  if (v === "Frais versés (Virement)") return 2;
+  if (v === INSCRIT_FRAIS_COMMUN) return 3;
+  return 4;
+}
+
 function renderListeInscrits() {
   const cmp = (a, b) => String(a || "").localeCompare(String(b || ""), "fr", { sensitivity: "base" });
   const tous = inscritsCache
     .filter((i) => String(i["Année"] || "").trim() === inscritListeAnnee)
-    .sort((a, b) => cmp(a["Prénom"], b["Prénom"]) || cmp(a["Nom"], b["Nom"]));
+    .sort((a, b) => rangVersementListe(a) - rangVersementListe(b) || cmp(a["Prénom"], b["Prénom"]) || cmp(a["Nom"], b["Nom"]));
   const compteurs = { tous: tous.length, verses: tous.filter((i) => valeurFraisInscrit(i)).length };
   compteurs.sans = compteurs.tous - compteurs.verses;
   const chip = (cle, libelle) => `
@@ -3671,7 +3693,7 @@ function renderListeInscrits() {
   });
 
   document.getElementById("inscrit_liste_vide").hidden = ordonnes.length > 0;
-  document.getElementById("inscrit_liste_body").innerHTML = ordonnes.map(({ i, taille, premier }) => {
+  document.getElementById("inscrit_liste_body").innerHTML = ordonnes.map(({ i, taille, premier }, idx) => {
     const val = valeurFraisInscrit(i);
     let versement = "";
     if (taille === 1) {
@@ -3680,6 +3702,7 @@ function renderListeInscrits() {
       versement = `<td class="inscrit_liste_commun" rowspan="${taille}">${escapeHtmlDemande(libelleVersementInscrit(val))}</td>`;
     }
     return `<tr${/copie/i.test(val) ? ' class="inscrit_liste_copie"' : ""}>
+      <td>${idx + 1}</td>
       <td>${escapeHtmlDemande(normaliserCinPP(i["CIN"]))}</td>
       <td>${escapeHtmlDemande(nomInscrit(i))}</td>
       ${versement}
@@ -3713,7 +3736,7 @@ function imprimerListeInscrits() {
 </style></head><body>
 <h1>${escapeHtmlDemande(titre)}</h1>
 <p>${escapeHtmlDemande(filtre)} — imprimé le ${new Date().toLocaleDateString("fr-FR")}</p>
-<table><thead><tr><th>CIN</th><th>Nom et prénom</th><th>Versement des frais</th></tr></thead>
+<table><thead><tr><th>N°</th><th>CIN</th><th>Nom et prénom</th><th>Versement des frais</th></tr></thead>
 <tbody>${lignes}</tbody></table></body></html>`);
   doc.close();
   iframe.contentWindow.focus();
@@ -3854,7 +3877,7 @@ function renderInscritTable() {
           ? `<input type="checkbox" class="inscrit_row_checkbox" data-row="${rowKey}" ${inscritPassageSelection.has(rowKey) ? "checked" : ""} title="A réussi : passe en ${escapeHtmlDemande(nouvelleAnnee)}" />`
           : `<input type="checkbox" class="inscrit_row_checkbox" disabled title="Dernière année : pas de passage" />`)
       : `
-      <div class="inscrit_actions_group">
+      <div class="row_btns">
         <button type="button" class="btn_info inscrit_row_afficher" data-row="${insc._row}">
           <i class="bi bi-eye"></i> Afficher
         </button>
@@ -3992,6 +4015,11 @@ function wireNouvelleClasseModal() {
   document.getElementById("pp_btn_nouvelle_classe")?.addEventListener("click", () => ouvrirNouvelleClasse(""));
 
   document.getElementById("pp_classe_table_body")?.addEventListener("click", (e) => {
+    const suivant = e.target.closest(".pp_btn_suivant");
+    if (suivant) {
+      creerSemestreSuivant(suivant);
+      return;
+    }
     const btn = e.target.closest(".pp_btn_editer");
     if (!btn) return;
     ouvrirEditionClasse(btn.dataset.id);
@@ -4535,6 +4563,68 @@ function rangEtatClasse(c) {
   return { "En cours": 0, "Close": 1, "Prévue": 2, "Facturée": 3 }[brut] ?? 1;
 }
 
+/* ---------------- Semestre suivant ----------------
+   Sur la ligne du DERNIER semestre existant d'une classe (même groupe =
+   nom de fichier sans les 2 derniers segments : "<Sigle>_<Classe>_Pr<promo>"),
+   sauf s'il est terminal (4/4, 5/5, 6/6), un bouton crée le semestre suivant :
+     niveau   : 3/4 -> 4/4
+     semestre : 1-2026 -> 2-2026 ; 2-2026 -> 1-2027
+   La nouvelle classe est "Prévue", sans dates ni facturation, listes vides
+   (comme une création depuis "Nouvelle classe"). */
+function infoSemestreClasse(c) {
+  const base = (c.name || "").replace(/\.html?$/i, "");
+  const parts = base.split("_");
+  const niveauBrut = String(c["Niveau"] || parts[parts.length - 2] || "").trim().replace("-", "/");
+  const mN = niveauBrut.match(/^(\d+)\s*\/\s*(\d+)$/);
+  const semBrut = String(c["Semestre"] || parts[parts.length - 1] || "").trim();
+  const mS = semBrut.match(/^([12])\s*[-\/]\s*(\d{4})$/);
+  if (!mN) return null;
+  return {
+    groupe: parts.slice(0, -2).join("_"),
+    i: Number(mN[1]), n: Number(mN[2]),
+    sem: mS ? Number(mS[1]) : 0, annee: mS ? Number(mS[2]) : 0
+  };
+}
+
+function semestreSuivant(info) {
+  const niveau = `${info.i + 1}/${info.n}`;
+  if (!info.sem) return { niveau, semestre: "" };
+  const semestre = info.sem === 1 ? `2-${info.annee}` : `1-${info.annee + 1}`;
+  return { niveau, semestre };
+}
+
+async function creerSemestreSuivant(btn) {
+  const c = ppClasseListCache.find((x) => x.id === btn.dataset.id);
+  const info = c && infoSemestreClasse(c);
+  if (!info || info.i >= info.n) return;
+  const suiv = semestreSuivant(info);
+  if (!confirm("Créer la classe du semestre suivant ?")) return;
+  setBtnSaving(btn, true);
+  try {
+    const data = await apiCallDirect("chargerClasse", { fileId: c.id });
+    const f = data.classe || {};
+    const classe = {
+      ...f,
+      niveau: suiv.niveau,
+      semestre: suiv.semestre,
+      etat: "Prévue",
+      dateDebut: "", dateFin: "",
+      facturationStatut: "", facturationDateReception: "", facturationDateTransfert: "",
+      numeroMemoire: "", dateMemoire: ""
+    };
+    await apiCallDirect("exportClasseToDrive", {
+      classe,
+      matieres: [], regroupements: [], tutorat: [], etudiants: [],
+      intervenants: [], examens: [], encadrements: [], soutenances: [],
+      fileId: null
+    });
+    await loadPPClasses();
+  } catch (err) {
+    alert(`Erreur lors de la création du semestre suivant : ${err.message}`);
+    setBtnSaving(btn, false);
+  }
+}
+
 function renderPPClasseTable(query) {
   const tbody = document.getElementById("pp_classe_table_body");
   const emptyEl = document.getElementById("pp_classe_empty");
@@ -4616,6 +4706,24 @@ function renderPPClasseTable(query) {
     return `<span class="etat_badge ${cls}">${libelle}</span>`;
   };
 
+  // Dernier semestre de chaque groupe de classes (hors modules) : le plus
+  // grand niveau existant. Le bouton n'y figure que s'il n'est pas terminal.
+  const dernierParGroupe = {};
+  ppClasseListCache.forEach((c) => {
+    const info = infoSemestreClasse(c);
+    if (!info) return;
+    if (!dernierParGroupe[info.groupe] || info.i > dernierParGroupe[info.groupe]) dernierParGroupe[info.groupe] = info.i;
+  });
+  const boutonSuivant = (c) => {
+    if (c._type === "module") return "";
+    const info = infoSemestreClasse(c);
+    if (!info || info.i >= info.n || info.i !== dernierParGroupe[info.groupe]) return "";
+    const s = semestreSuivant(info);
+    return `<button type="button" class="btn_success pp_btn_suivant" data-id="${c.id}" title="Créer ${s.niveau}${s.semestre ? ` · ${s.semestre}` : ""}">
+          <i class="bi bi-arrow-right-circle"></i> Semestre suivant
+        </button>`;
+  };
+
   tbody.innerHTML = filtered.map((c) => {
     const estModule = c._type === "module";
     return `
@@ -4625,19 +4733,21 @@ function renderPPClasseTable(query) {
       <td>${c["Fin"] || ""}</td>
       <td>${etatBadge(c)}</td>
       <td>${estModule ? "----" : labelFacturation(c)}</td>
-      <td>
+      <td><div class="row_btns">
         <button type="button" class="btn_primary ${estModule ? "pp_module_btn_editer" : "pp_btn_editer"}" data-id="${c.id}">
           <i class="bi bi-pencil-square"></i> Editer
         </button>
         <a class="btn_info" href="${estModule ? `mod.html?module=${c.id}` : urlClasse(c)}">
           <i class="bi bi-eye"></i> Afficher
         </a>
-      </td>
+        ${boutonSuivant(c)}
+      </div></td>
     </tr>`;
   }).join("");
 }
 
 async function apiCallDirect(action, payload = {}) {
+  if (window.URSPerm) URSPerm.verifierAppel(action, payload); // droits (permissions.js)
   // Filet de sécurité : aucune écriture Demandes / Dossiers / Inscrits tant que
   // la section affichée est en lecture seule (voir "Verrou des sections").
   if (/^(create|update|delete|archiver)(Demande|Dossier|Inscrit)PP$/.test(action) && ppSectionLectureSeule()) {
@@ -4655,5 +4765,6 @@ async function apiCallDirect(action, payload = {}) {
 }
 
   </script>
+  <script src="js/navbar_mobile.js"></script>
 </body>
 </html>
