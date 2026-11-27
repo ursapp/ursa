@@ -4472,7 +4472,7 @@
     const ATTENDANCE_FIT_SCRIPT = `<script>
 (function () {
   var probe = document.createElement('div');
-  probe.style.cssText = 'position:absolute;visibility:hidden;height:277mm;width:1px';
+  probe.style.cssText = 'position:absolute;visibility:hidden;height:285mm;width:1px';
   document.body.appendChild(probe);
   var dispo = probe.offsetHeight - 2;
   document.body.removeChild(probe);
@@ -4482,24 +4482,26 @@
     var font = h < 13 ? 8 : h < 16 ? 9 : h < 19 ? 10 : 11;
     for (var i = 0; i < cells.length; i++) { cells[i].style.height = h + 'px'; cells[i].style.fontSize = font + 'px'; }
   }
-  // Mode 1 page : tout le document tient dans dispo. Mode 2 pages (data-saut) :
-  // page 1 = en-tête + tableau jusqu'à la ligne du saut ; page 2 = en-tête
-  // du tableau répété + lignes restantes.
+  // Toujours UNE seule page A4 : on mesure le bas réel du tableau (et non
+  // documentElement.scrollHeight, qui dépend de la hauteur de la fenêtre),
+  // on réduit la hauteur des lignes, puis en dernier recours on applique un
+  // zoom pour que tout tienne.
   var table = document.querySelector('table.attendance-grid');
-  var saut = parseInt(table.getAttribute('data-saut') || '0', 10);
-  function tient() {
-    if (!saut) return document.documentElement.scrollHeight <= dispo;
-    var rows = table.querySelectorAll('tbody tr');
-    var thead = table.querySelector('thead').getBoundingClientRect().height;
-    var p1 = table.getBoundingClientRect().top + window.scrollY + thead;
-    var p2 = thead;
-    for (var i = 0; i < rows.length; i++) {
-      var rh = rows[i].getBoundingClientRect().height;
-      if (i < saut) p1 += rh; else p2 += rh;
-    }
-    return p1 <= dispo && p2 <= dispo;
+  var limite = dispo - 8; // marge de sécurité (écran / impression)
+  function bas() {
+    return table.getBoundingClientRect().bottom + (window.pageYOffset || 0);
   }
+  function tient() { return bas() <= limite; }
   while (h > 10 && !tient()) { h--; appliquer(); }
+  if (!tient()) {
+    var z = limite / bas();
+    document.body.style.zoom = z;
+    var essais = 0;
+    while (essais++ < 8 && table.getBoundingClientRect().bottom + (window.pageYOffset || 0) > limite * z + 0.5) {
+      z *= 0.97;
+      document.body.style.zoom = z;
+    }
+  }
 })();
 <\/script>`;
 
@@ -4509,7 +4511,7 @@
 
       const partnerVal = document.getElementById("classe_partenaire")?.value || "";
       const partenaireObj = partenairesCache.find(p => (p["Sigle"] || p["Etablissement"]) === partnerVal);
-      const etablissementNom = partenaireObj ? (partenaireObj["Etablissement"] || partenaireObj["Sigle"]) : partnerVal;
+      const etablissementNom = partenaireObj ? (partenaireObj["Sigle"] || partenaireObj["Etablissement"]) : partnerVal;
 
       const classeVal = document.getElementById("classe_classe")?.value || "";
       const specVal = document.getElementById("classe_specialite")?.value || "";
@@ -4585,7 +4587,7 @@
       // une seule page A4, quel que soit le nombre d'inscrits : on répartit
       // la hauteur disponible (page moins marges, en-tête et lignes de
       // séance) sur le nombre de lignes étudiants à imprimer.
-      const pageHeightPx = 1047; // A4 (297mm) - marges 10mm haut/bas, en px CSS
+      const pageHeightPx = 1077; // A4 (297mm) - marges 10mm haut/bas, en px CSS
       const headerBlockPx = 90; // titre + sous-en-tête + ligne date/semaine
       const tableHeaderPx = columns.length > 0 ? 155 : 26; // 5 lignes d'en-tête (dont enseignant 70px) vs 1 seule
       const availableForRowsPx = Math.max(pageHeightPx - headerBlockPx - tableHeaderPx, 200);
@@ -4593,7 +4595,7 @@
       // <= 30 étudiants : une seule page, lignes étendues (27 px max, réduites au
       // besoin par ATTENDANCE_FIT_SCRIPT) ; au-delà : lignes de 24 px réparties
       // sur deux pages (en-tête du tableau répété sur chacune).
-      const unePage = rowCountForSizing <= 30;
+      const unePage = true; // toujours une seule page A4
       const rowHeightPx = unePage
         ? Math.max(10, Math.min(27, Math.floor(availableForRowsPx / rowCountForSizing)))
         : (rowCountForSizing <= 60 ? 24 : rowCountForSizing <= 70 ? 22 : 20);
@@ -4616,19 +4618,19 @@
   <style>
     @page {
       size: A4 portrait;
-      margin: 10mm 12mm 10mm 12mm;
+      margin: 6mm 8mm 6mm 8mm;
     }
     body {
       font-family: Arial, Helvetica, sans-serif;
       color: #000;
       margin: 0;
-      padding: 0 20px;
-      width: 186mm;
+      padding: 0;
+      width: 194mm;
       box-sizing: border-box;
       font-size: 14px;
     }
     .header-title {
-      text-align: center;
+      text-align: left;
       font-size: 16px;
       font-weight: bold;
       margin-bottom: 4px;
@@ -8510,7 +8512,7 @@
 
       const partnerVal = document.getElementById("classe_partenaire")?.value || "";
       const partenaireObj = partenairesCache.find(p => (p["Sigle"] || p["Etablissement"]) === partnerVal);
-      const etablissementNom = partenaireObj ? (partenaireObj["Etablissement"] || partenaireObj["Sigle"]) : partnerVal;
+      const etablissementNom = partenaireObj ? (partenaireObj["Sigle"] || partenaireObj["Etablissement"]) : partnerVal;
 
       const classeVal = document.getElementById("classe_classe")?.value || "";
       const specVal = document.getElementById("classe_specialite")?.value || "";
@@ -8576,7 +8578,7 @@
             `;
           }).join('');
 
-      const pageHeightPx = 1047;
+      const pageHeightPx = 1077;
       const headerBlockPx = 90;
       const tableHeaderPx = columns.length > 0 ? 155 : 26;
       const availableForRowsPx = Math.max(pageHeightPx - headerBlockPx - tableHeaderPx, 200);
@@ -8584,7 +8586,7 @@
       // <= 30 étudiants : une seule page, lignes étendues (27 px max, réduites au
       // besoin par ATTENDANCE_FIT_SCRIPT) ; au-delà : lignes de 24 px réparties
       // sur deux pages (en-tête du tableau répété sur chacune).
-      const unePage = rowCountForSizing <= 30;
+      const unePage = true; // toujours une seule page A4
       const rowHeightPx = unePage
         ? Math.max(10, Math.min(27, Math.floor(availableForRowsPx / rowCountForSizing)))
         : (rowCountForSizing <= 60 ? 24 : rowCountForSizing <= 70 ? 22 : 20);
@@ -8605,9 +8607,9 @@
   <meta charset="utf-8">
   <title>Feuille de présence — Examen</title>
   <style>
-    @page { size: A4 portrait; margin: 10mm 12mm 10mm 12mm; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 0; padding: 0 20px; width: 186mm; box-sizing: border-box; font-size: 14px; }
-    .header-title { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
+    @page { size: A4 portrait; margin: 6mm 8mm 6mm 8mm; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 0; padding: 0; width: 194mm; box-sizing: border-box; font-size: 14px; }
+    .header-title { text-align: left; font-size: 16px; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
     .sub-header-info { text-align: center; font-size: 13px; font-weight: bold; margin-bottom: 12px; }
     .meta-line { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; margin-bottom: 12px; }
     .meta-line .meta-center { flex: 1; text-align: center; font-size: 14px; font-weight: bold; }
